@@ -3,6 +3,8 @@
 #include <esp_log.h>
 #include <esp_netif_sntp.h>
 #include <freertos/task.h>
+#include <esp_app_desc.h>
+
 
 #include "KMPProDinoESP32.h"
 #include "web.h"
@@ -42,6 +44,8 @@ void setup() {
         delay(100);
     }
     ESP_LOGI(TAG, "Nibe MQTT Gateway is starting...");
+    const esp_app_desc_t *app_desc = esp_app_get_description();
+    ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
     KMPProDinoESP32.begin(ProDino_ESP32_Ethernet);
     KMPProDinoESP32.setStatusLed(blue);

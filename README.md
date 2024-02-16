@@ -9,15 +9,15 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [ ] connection to Nibe heatpump VVM310/S2125 via RS485
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
-- [ ]configurable set of of published Nibe registers/coils
-- [ ]supports writing to Nibe registers
+- [ ] configurable set of of published Nibe registers/coils
+- [ ] supports writing to Nibe registers
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
 - [x] supports Home Assistant MQTT auto-discovery
 - [x] simple web UI for info and administration
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
-- [ ]logging via MQTT topic (as alternative to serial interface)
+- [ ] logging via MQTT topic (as alternative to serial interface)
 
 ## Prerequisites
 

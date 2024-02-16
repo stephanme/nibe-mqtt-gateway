@@ -4,6 +4,7 @@
 #include <ETH.h>
 #include <SPIFFS.h>
 #include <Update.h>
+#include <esp_app_desc.h>
 
 #include "KMPProDinoESP32.h"
 
@@ -38,7 +39,7 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 <h1>Nibe MQTT Gateway</h1>
 <h3>Info</h3>
 <table>
-<tr><td>Version</td><td>0.1</td></tr>
+<tr><td>Version</td><td>%s</td></tr>
 <tr><td>Hostname</td><td>%s</td></tr>
 <tr><td>MQTT Broker</td><td>%s</td></tr>
 <tr><td>Init status</td><td>0x%04x</td></tr>
@@ -59,10 +60,12 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 
 void NibeMqttGwWebServer::handleGetRoot() {
     String hostname = ETH.getHostname();
-    size_t len = strlen(ROOT_HTML) + hostname.length() + configManager.getConfig().mqtt.brokerUri.length() + 10;
+    const esp_app_desc_t *app_desc = esp_app_get_description();
+    size_t len = strlen(ROOT_HTML) + strlen(app_desc->version) + hostname.length() +
+                 configManager.getConfig().mqtt.brokerUri.length() + 10;
     char rootHtml[len];
-    snprintf(rootHtml, len, ROOT_HTML, hostname.c_str(), configManager.getConfig().mqtt.brokerUri.c_str(), init_status,
-             mqttClient.status());
+    snprintf(rootHtml, len, ROOT_HTML, app_desc->version, hostname.c_str(), configManager.getConfig().mqtt.brokerUri.c_str(),
+             init_status, mqttClient.status());
     httpServer.send(200, "text/html", rootHtml);
 }
 
