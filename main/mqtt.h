@@ -42,7 +42,7 @@ class MqttClient {
     const String& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
 
     esp_err_t begin(const MqttConfig& config);
-    esp_err_t status() { return _status; };
+    esp_err_t status() const { return _status; };
 
     esp_err_t registerLifecycleCallback(MqttClientLifecycleCallback* callback);
 

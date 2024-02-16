@@ -9,15 +9,15 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [ ] connection to Nibe heatpump VVM310/S2125 via RS485
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
-- configurable set of of published Nibe registers/coils
-- supports writing to Nibe registers
+- [ ]configurable set of of published Nibe registers/coils
+- [ ]supports writing to Nibe registers
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
 - [x] supports Home Assistant MQTT auto-discovery
 - [x] simple web UI for info and administration
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
-- logging via MQTT topic (as alternative to serial interface)
+- [ ]logging via MQTT topic (as alternative to serial interface)
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
 
 Additionally helpful:
-- VS Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension)
+- Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension)
 
 ## Installation
 
@@ -57,13 +57,13 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 
 When uploading a configuration, nibe-mqtt-gateway stores it in flash memory and reboots.
 
-- http://nibegw/config shows the current configuration as json, use as template
-- create a `config.json` file with correct configuratio
+- http://nibegw/config shows the current configuration as json, save e.g. as `config.json` and use as template
+- adapt `config.json` file (MQTT broker URL and credentials etc.)
 - upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config`
 
 ### Trouble Shooting
 
-The pixel LED shows the status of nibe-mqtt-gateway:
+The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
 - blue - initializing, waiting for IP address (blue blinking)
 - green blinking - running ok, connected with MQTT broker
 - orange blinking - error, got IP address but e.g. no connected with MQTT broker, check http://nibegw or logs
@@ -77,9 +77,10 @@ Web UI:
 Depending on the configuration, logs are available via Serial interface or the MQTT topic `nibegw/logs`.
 
 ## To Do
-[ ] replace [PR #12692](https://github.com/espressif/esp-idf/pull/12692) by better solution mentioned in [#12682](https://github.com/espressif/esp-idf/issues/12682) once available on branch release-5.1
-[ ] switch to esp-dif 5.1.3 once released
-[ ] use arduino-esp32 as managed component once version >=3.0.0-alpha3 is available
+
+- [ ] replace [PR #12692](https://github.com/espressif/esp-idf/pull/12692) by better solution mentioned in [#12682](https://github.com/espressif/esp-idf/issues/12682) once available on branch release-5.1
+- [ ] switch to esp-dif 5.1.3 once released
+- [ ] use arduino-esp32 as managed component once version >=3.0.0-alpha3 is available
 
 ## Credits
 
