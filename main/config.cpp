@@ -11,14 +11,24 @@ static const char* TAG = "config";
 
 NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
     // initialize with default values
-    config.mqtt = {
-        .brokerUri = "mqtt://mosquitto",
-        .user = "",
-        .password = "",
-        .clientId = "",
-        .rootTopic = "nibegw",
-        .discoveryPrefix = "homeassistant",
-        .hostname = ETH.getHostname(),
+    config = {
+        .mqtt =
+            {
+                .brokerUri = "mqtt://mosquitto",
+                .user = "",
+                .password = "",
+                .clientId = "",
+                .rootTopic = "nibegw",
+                .discoveryPrefix = "homeassistant",
+                .hostname = ETH.getHostname(),
+                .logTopic = "nibegw/log",
+            },
+        .logging =
+            {
+                .mqttLoggingEnabled = false,
+                .stdoutLoggingEnabled = true,
+                .logTopic = "nibegw/log",
+            },
     };
 }
 
@@ -54,6 +64,11 @@ const String NibeMqttGwConfigManager::getConfigAsJson() {
     doc["mqtt"]["clientId"] = config.mqtt.clientId;
     doc["mqtt"]["rootTopic"] = config.mqtt.rootTopic;
     doc["mqtt"]["discoveryPrefix"] = config.mqtt.discoveryPrefix;
+
+    doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
+    doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
+    doc["logging"]["logTopic"] = config.logging.logTopic;
+
     String json;
     serializeJsonPretty(doc, json);
     return json;
@@ -108,6 +123,12 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const String& jsonString, NibeMqttG
     config.mqtt.rootTopic = doc["mqtt"]["rootTopic"] | "nibegw";
     config.mqtt.discoveryPrefix = doc["mqtt"]["discoveryPrefix"] | "homeassistant";
     config.mqtt.hostname = ETH.getHostname();
+
+    config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;
+    config.logging.stdoutLoggingEnabled = doc["logging"]["stdoutLoggingEnabled"] | true;
+    config.logging.logTopic = doc["logging"]["logTopic"] | "nibegw/log";
+
+    config.mqtt.logTopic = config.logging.logTopic;
 
     return ESP_OK;
 }

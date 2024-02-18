@@ -16,9 +16,10 @@ static const char *TAG = "nibegw";
 
 #define ESP_INIT_NETWORK 0x100
 #define ESP_INIT_CONFIG 0x101
-#define ESP_INIT_MQTT 0x102
-#define ESP_INIT_RELAY 0x103
-#define ESP_INIT_TASK 0x104
+#define ESP_INIT_LOGGING 0x102
+#define ESP_INIT_MQTT 0x103
+#define ESP_INIT_RELAY 0x104
+#define ESP_INIT_TASK 0x105
 static esp_err_t init_status = ESP_OK;
 
 void pollingTask(void *pvParameters);
@@ -36,6 +37,7 @@ MqttRelay relays[] = {
 
 
 void setup() {
+    esp_err_t err;
     delay(1000);
 
     Serial.begin(115200);
@@ -43,19 +45,29 @@ void setup() {
     while (!Serial) {
         delay(100);
     }
-    ESP_LOGI(TAG, "Nibe MQTT Gateway is starting...");
-    const esp_app_desc_t *app_desc = esp_app_get_description();
-    ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
     KMPProDinoESP32.begin(ProDino_ESP32_Ethernet);
     KMPProDinoESP32.setStatusLed(blue);
     // disable GPIO logging
     esp_log_level_set("gpio", ESP_LOG_WARN);
 
+    // early init of logging
     if (configManager.begin() != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize config manager");
         init_status = ESP_INIT_CONFIG;
     }
+    const NibeMqttGwConfig& config = configManager.getConfig();
+    if (config.logging.mqttLoggingEnabled) {
+        err = MqttLogging::begin(config.logging, mqttClient);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Could not initialize MQTT logging");
+            init_status = ESP_INIT_LOGGING;
+        }
+    }
+
+    ESP_LOGI(TAG, "Nibe MQTT Gateway is starting...");
+    const esp_app_desc_t *app_desc = esp_app_get_description();
+    ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
     httpServer.begin();
 
@@ -66,7 +78,7 @@ void setup() {
     }
 
     // build clientId from hostname and mac address
-    esp_err_t err = mqttClient.begin(configManager.getConfig().mqtt);
+    err = mqttClient.begin(config.mqtt);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize MQTT client");
         init_status = ESP_INIT_MQTT;

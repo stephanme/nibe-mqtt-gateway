@@ -19,8 +19,16 @@ struct MqttConfig {
     String rootTopic;
     String discoveryPrefix;
     String hostname;
+
+    // do not log for logTopic, would lead to recursion
+    String logTopic;
 };
 
+enum MqttQOS {
+    QOS0 = 0,
+    QOS1 = 1,
+    QOS2 = 2,
+};
 class MqttSubscriptionCallback {
    public:
     virtual void onMqttMessage(const String& topic, const String& payload) = 0;
@@ -47,7 +55,9 @@ class MqttClient {
     esp_err_t registerLifecycleCallback(MqttClientLifecycleCallback* callback);
 
     int publishAvailability();
-    int publish(const String& topic, const String& payload, int qos = 0, int retain = 0);
+    int publish(const String& topic, const String& payload, MqttQOS qos = QOS0, bool retain = false);
+    int publish(const String& topic, const char* payload, MqttQOS qos = QOS0, bool retain = false);
+    int publish(const String& topic, const char* payload, int length, MqttQOS qos = QOS0, bool retain = false);
     int subscribe(const String& topic, MqttSubscriptionCallback* callback, int qos = 0);
 
    private:

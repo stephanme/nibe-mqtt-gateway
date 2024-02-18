@@ -17,7 +17,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
-- [ ] logging via MQTT topic (as alternative to serial interface)
+- [x] logging via MQTT topic (as alternative to serial interface)
 
 ## Prerequisites
 
@@ -74,7 +74,11 @@ Web UI:
 - http://nibegw/update - OTA update and upload of file system
 - http://nibegw/metrics - Prometheus endpoint with some insights like heap, uptime and execution times
 
-Depending on the configuration, logs are available via Serial interface or the MQTT topic `nibegw/logs`.
+Depending on the configuration, logs are available via Serial interface or the MQTT topic `nibegw/log`.
+Show logging over MQTT:
+```
+mosquitto_sub --url 'mqtt://<user>:<password>@<broker>/nibegw/log'
+```
 
 ## To Do
 
@@ -88,6 +92,7 @@ Used source code and libraries
 - [arduino-esp32](https://github.com/espressif/arduino-esp32) - Arduino core for the ESP32, [LGPL v2.1](https://github.com/espressif/arduino-esp32/blob/master/LICENSE.md)
 - [ArduinoJson](https://arduinojson.org/) - JSON Library, [MIT License](https://github.com/bblanchon/ArduinoJson/blob/7.x/LICENSE.txt)
 - [esp-idf](https://github.com/espressif/esp-idf) - Espressif IoT Development Framework, [Apache License 2.0](https://github.com/espressif/esp-idf/blob/master/LICENSE)
+- [esp-idf-net-logging](https://github.com/nopnop2002/esp-idf-net-logging) - Redirect esp-idf logging to the network, [MIT License](https://github.com/nopnop2002/esp-idf-net-logging/blob/main/LICENSE)
 - [org.openhab.binding.nibeheatpump](https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.nibeheatpump) - nibegw, [Eclipse Public License 2.0](https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.nibeheatpump/NOTICE)
 - [ProDinoESP32](https://github.com/kmpelectronics/ProDinoESP32) - KMP ProDino ESP32 examples library
 

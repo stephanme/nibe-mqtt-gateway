@@ -2,9 +2,11 @@
 #define _config_h_
 
 #include "mqtt.h"
+#include "mqtt_logging.h"
 
 struct NibeMqttGwConfig {
     MqttConfig mqtt;
+    LogConfig logging;
 };
 
 // Configuration is stored in SPIFFS as JSON file.

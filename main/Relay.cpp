@@ -39,7 +39,7 @@ int MqttRelay::begin(MqttClient* mqttClient) {
                           stateTopic.length() + mqttClient->getDeviceDiscoveryInfo().length() + 1];
     sprintf(discoveryPayload, DISCOVERY_PAYLOAD, mqttTopic.c_str(), mqttTopic.c_str(), name.c_str(), commandTopic.c_str(),
             stateTopic.c_str(), mqttClient->getDeviceDiscoveryInfo().c_str());
-    mqttClient->publish(discoveryTopic, discoveryPayload, 0, 1);
+    mqttClient->publish(discoveryTopic, discoveryPayload, QOS0, true);
     return 0;
 }
 
@@ -54,8 +54,7 @@ bool MqttRelay::getRelayState(void) { return KMPProDinoESP32.getRelayState(relay
 void MqttRelay::publishState() { publishState(getRelayState()); }
 
 void MqttRelay::publishState(bool state) {
-    String payload = state ? "ON" : "OFF";
-    mqttClient->publish(stateTopic, payload);
+    mqttClient->publish(stateTopic, state ? "ON" : "OFF");
 }
 
 void MqttRelay::onMqttMessage(const String& topic, const String& payload) { setRelayState(payload == "ON"); }

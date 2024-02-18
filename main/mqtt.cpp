@@ -10,7 +10,7 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 "device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"0.1","configuration_url":"http://%s.fritz.box"}
 )";
 
-MqttClient::MqttClient() {}
+MqttClient::MqttClient() { _status = ESP_MQTT_DISCONNECTED; }
 
 esp_err_t MqttClient::begin(const MqttConfig& config) {
     // check required config
@@ -90,12 +90,28 @@ esp_err_t MqttClient::registerLifecycleCallback(MqttClientLifecycleCallback* cal
     return ESP_OK;
 }
 
-int MqttClient::publishAvailability() { return publish(availabilityTopic, "online", 0, 1); }
+int MqttClient::publishAvailability() { return publish(availabilityTopic, "online", 0, QOS0, true); }
 
-int MqttClient::publish(const String& topic, const String& payload, int qos, int retain) {
-    // TODO: publish vs enqueue
-    int msg_id = esp_mqtt_client_publish(client, topic.c_str(), payload.c_str(), 0, qos, retain);
-    ESP_LOGI(TAG, "publish msg_id=%d, topic=%s, payload=%s", msg_id, topic.c_str(), payload.c_str());
+int MqttClient::publish(const String& topic, const String& payload, MqttQOS qos, bool retain) {
+    return publish(topic, payload.c_str(), 0, qos, retain);
+}
+
+int MqttClient::publish(const String& topic, const char* payload, MqttQOS qos, bool retain) {
+    return publish(topic, payload, 0, qos, retain);
+}
+
+int MqttClient::publish(const String& topic, const char* payload, int length, MqttQOS qos, bool retain) {
+    int msg_id = esp_mqtt_client_publish(client, topic.c_str(), payload, length, qos, retain);
+    // avoid log checks if not enabled
+    if (CONFIG_LOG_MAXIMUM_LEVEL >= ESP_LOG_INFO) {
+        if (topic != config->logTopic) {
+            if (length == 0) {
+                ESP_LOGI(TAG, "publish msg_id=%d, topic=%s, payload=%s", msg_id, topic.c_str(), payload);
+            } else {
+                ESP_LOGI(TAG, "publish msg_id=%d, topic=%s, payload=%.*s", msg_id, topic.c_str(), length, payload);
+            }
+        }
+    }
     return msg_id;
 }
 
