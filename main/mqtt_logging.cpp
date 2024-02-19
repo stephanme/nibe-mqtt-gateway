@@ -21,25 +21,27 @@ esp_err_t MqttLogging::begin(const LogConfig &config, MqttClient &mqttClient) {
     instance.stdoutLoggingEnabled = config.stdoutLoggingEnabled;
     instance.mqttClient = &mqttClient;
 
-    // TODO: RingBuffer vs MessageBuffer?
     instance.logEntryRingBuffer = xRingbufferCreate(LOG_BUFFER_SIZE, RINGBUF_TYPE_NOSPLIT);
-    if (instance.logEntryRingBuffer == NULL) {
-        ESP_LOGE(TAG, "Could not create ring buffer");
+    if (instance.logEntryRingBuffer == nullptr) {
+        ESP_LOGE(TAG, "Could not create logEntryRingBuffer");
         return ESP_FAIL;
     }
+    instance.mqttStatusEventGroup = xEventGroupCreate();
+    if (instance.mqttStatusEventGroup == nullptr) {
+        ESP_LOGE(TAG, "Could not create mqttStatusEventGroup");
+        return ESP_FAIL;
+    }
+
     esp_err_t err = xTaskCreatePinnedToCore(logTask, "mqttLoggingTask", 6 * 1024, nullptr, LOG_TASK_PRIORITY,
                                             &instance.logTaskHandle, LOG_TASK_CORE);
     if (err != pdPASS) {
-        ESP_LOGE(TAG, "Could not create task");
+        ESP_LOGE(TAG, "Could not create mqttLoggingTask");
         return ESP_FAIL;
-    }
-    mqttClient.registerLifecycleCallback(&instance);
-    if (mqttClient.status() != ESP_OK) {
-        instance.onDisconnected();
     }
 
     esp_log_set_vprintf(logging_vprintf);
     ESP_LOGI(TAG, "MQTT logging enabled, topic: %s", instance.logTopic.c_str());
+    mqttClient.registerLifecycleCallback(&instance);
     return ESP_OK;
 }
 
@@ -48,13 +50,14 @@ int MqttLogging::logging_vprintf(const char *fmt, va_list l) {
     int buffer_len = vsnprintf(buffer, LOG_ITEM_SIZE, fmt, l);
     buffer_len = (buffer_len < LOG_ITEM_SIZE) ? buffer_len : LOG_ITEM_SIZE;
     if (buffer_len > 0) {
+        // remove trailing LF
+        if (buffer[buffer_len - 1] == '\n') {
+            buffer_len--;
+            buffer[buffer_len] = '\0';
+        }
         // Write to stdout
         if (instance.stdoutLoggingEnabled) {
-            fputs(buffer, stdout);
-            // append newline when buffer got truncated
-            if (buffer[buffer_len - 1] != '\n') {
-                putc('\n', stdout);
-            }
+            puts(buffer);
         }
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         // Send RingBuffer
@@ -67,24 +70,47 @@ int MqttLogging::logging_vprintf(const char *fmt, va_list l) {
     return buffer_len;
 }
 
+// C wrapper for FreeRTOS task
+void MqttLogging::logTask(void *pvParameters) { instance.logTask(); }
+
 // task is suspended on MQTT disconnect -> logs queue up in buffer until full
-void MqttLogging::logTask(void *pvParameters) {
+void MqttLogging::logTask() {
     while (1) {
         // Read from RingBuffer
         size_t item_size = 0;
-        char *buffer = (char *)xRingbufferReceive(instance.logEntryRingBuffer, &item_size, portMAX_DELAY);
+        char *buffer = (char *)xRingbufferReceive(logEntryRingBuffer, &item_size, portMAX_DELAY);
         if (item_size > 0) {
-            // remove trailing LF
-            if (buffer[item_size - 1] == '\n') {
-                item_size--;
+            // Send to MQTT, one retry on failure
+            if (publishLogMsg(buffer, item_size) < 0) {
+                // one retry
+                delay(10);
+                if (publishLogMsg(buffer, item_size) < 0) {
+                    puts("Publish log failed, dropping");
+                }
             }
-            // Send to MQTT
-            instance.mqttClient->publish(instance.logTopic, buffer, item_size);
-            vRingbufferReturnItem(instance.logEntryRingBuffer, (void *)buffer);
+
+            vRingbufferReturnItem(logEntryRingBuffer, (void *)buffer);
         }
     }
 }
 
-void MqttLogging::onConnected() { vTaskResume(logTaskHandle); }
+esp_err_t MqttLogging::publishLogMsg(char *msg, int length) {
+    // wait for event bit = MQTT connection to broker
+    // blocks = new logs can get dropped when ring buffer is full = deliver logs around the network/mqtt outage
+    EventBits_t eventBits = xEventGroupWaitBits(mqttStatusEventGroup, MQTT_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
+    if ((eventBits & MQTT_CONNECTED_BIT) == 0) {
+        return ESP_FAIL;
+    }
+    return instance.mqttClient->publish(logTopic, msg, length);
+}
 
-void MqttLogging::onDisconnected() { vTaskSuspend(logTaskHandle); }
+void MqttLogging::onConnected() {
+    xEventGroupSetBits(mqttStatusEventGroup, MQTT_CONNECTED_BIT);
+    ESP_LOGI(TAG, "MQTT logging resumed");
+}
+
+// may be called from logging task
+void MqttLogging::onDisconnected() {
+    xEventGroupClearBits(mqttStatusEventGroup, MQTT_CONNECTED_BIT);
+    ESP_LOGI(TAG, "MQTT logging suspended");
+}

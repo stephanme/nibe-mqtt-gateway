@@ -93,7 +93,7 @@ void setup() {
     }
 
     // start polling task
-    // Prios: idle=0, arduino=1, mqtt=5 (default), polling=10
+    // Prios: idle=0, main_app/arduino setup/loop=1, mqtt_logging=4, mqtt=5 (default), polling=10
     err = xTaskCreatePinnedToCore(&pollingTask, "pollingTask", 4 * 1024, NULL, 10, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start polling task");

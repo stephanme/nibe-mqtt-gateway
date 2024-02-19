@@ -10,8 +10,10 @@
 // The size, in bytes, required to hold each item in the message,
 #define LOG_ITEM_SIZE 256
 
-#define LOG_TASK_PRIORITY 5
+#define LOG_TASK_PRIORITY 4
 #define LOG_TASK_CORE 1
+
+#define MQTT_CONNECTED_BIT BIT0
 
 struct LogConfig {
     bool mqttLoggingEnabled;
@@ -34,6 +36,7 @@ class MqttLogging : MqttClientLifecycleCallback {
 
     MqttClient *mqttClient;
     RingbufHandle_t logEntryRingBuffer;
+    EventGroupHandle_t mqttStatusEventGroup;
     TaskHandle_t logTaskHandle;
 
     virtual void onConnected();
@@ -41,6 +44,8 @@ class MqttLogging : MqttClientLifecycleCallback {
 
     static int logging_vprintf(const char *fmt, va_list l);
     static void logTask(void *pvParameters);
+    void logTask();
+    esp_err_t publishLogMsg(char *msg, int length);
 };
 
 #endif
