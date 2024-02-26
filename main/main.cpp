@@ -11,8 +11,13 @@
 #include "config.h"
 #include "mqtt.h"
 #include "Relay.h"
+#include "nibegw_mqtt.h"
 
-static const char *TAG = "nibegw";
+#define RS485_RX_PIN          4
+#define RS485_TX_PIN          16
+#define RS485_DIRECTION_PIN   2
+
+static const char *TAG = "main";
 
 #define ESP_INIT_NETWORK 0x100
 #define ESP_INIT_CONFIG 0x101
@@ -35,6 +40,9 @@ MqttRelay relays[] = {
     MqttRelay("relay4", "Relay 4", Relay4),
 };
 
+NibeMqttGw nibeMqttGw;
+// NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
+SimulatedNibeGw nibegw;
 
 void setup() {
     esp_err_t err;
@@ -69,6 +77,10 @@ void setup() {
     const esp_app_desc_t *app_desc = esp_app_get_description();
     ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
+    // start nibegw
+    nibeMqttGw.begin(config.nibe, mqttClient);
+    nibegw.begin(nibeMqttGw);
+
     httpServer.begin();
 
     // wait for network
@@ -93,7 +105,7 @@ void setup() {
     }
 
     // start polling task
-    // Prios: idle=0, main_app/arduino setup/loop=1, mqtt_logging=4, mqtt=5 (default), polling=10
+    // Prios: idle=0, main_app/arduino setup/loop=1, mqtt_logging=4, mqtt=5 (default), polling=10, nibegw=15
     err = xTaskCreatePinnedToCore(&pollingTask, "pollingTask", 4 * 1024, NULL, 10, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start polling task");
@@ -113,6 +125,8 @@ void pollingTask(void *pvParameters) {
         for (uint8_t i = 0; i < RELAY_COUNT; i++) {
             relays[i].publishState();
         }
+
+        nibeMqttGw.publishState();
 
         // measure runtime and calculate delay
         unsigned long runtime = millis() - start_time;

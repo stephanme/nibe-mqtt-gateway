@@ -23,6 +23,11 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
                 .hostname = ETH.getHostname(),
                 .logTopic = "nibegw/log",
             },
+        .nibe =
+            {
+                .coils = {},
+                .coilsToPoll = {},
+            },
         .logging =
             {
                 .mqttLoggingEnabled = false,
@@ -53,6 +58,10 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         ESP_LOGW(TAG, "Config file %s not found", CONFIG_FILE);
     }
 
+    // TODO: remove this and parse nibe ModbusManager file instead
+    config.nibe.coils[1] = {1, "coil1", "description1", COIL_DATA_TYPE_INT32, 10};
+    config.nibe.coils[2] = {2, "coil2", "description1", COIL_DATA_TYPE_UINT16, 1};
+
     return ESP_OK;
 }
 
@@ -64,6 +73,11 @@ const String NibeMqttGwConfigManager::getConfigAsJson() {
     doc["mqtt"]["clientId"] = config.mqtt.clientId;
     doc["mqtt"]["rootTopic"] = config.mqtt.rootTopic;
     doc["mqtt"]["discoveryPrefix"] = config.mqtt.discoveryPrefix;
+
+    JsonArray coilsToPoss = doc["nibe"]["coilsToPoll"].to<JsonArray>();
+    for (auto coil : config.nibe.coilsToPoll) {
+        coilsToPoss.add(coil);
+    }
 
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
     doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
@@ -123,6 +137,10 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const String& jsonString, NibeMqttG
     config.mqtt.rootTopic = doc["mqtt"]["rootTopic"] | "nibegw";
     config.mqtt.discoveryPrefix = doc["mqtt"]["discoveryPrefix"] | "homeassistant";
     config.mqtt.hostname = ETH.getHostname();
+
+    for (auto coil : doc["nibe"]["coilsToPoll"].as<JsonArray>()) {
+        config.nibe.coilsToPoll.push_back(coil.as<uint16_t>());
+    }
 
     config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;
     config.logging.stdoutLoggingEnabled = doc["logging"]["stdoutLoggingEnabled"] | true;

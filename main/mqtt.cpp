@@ -10,13 +10,8 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 "device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"0.1","configuration_url":"http://%s.fritz.box"}
 )";
 
-static MqttConfig defaultConfig = {
-    .brokerUri = "mqtt://uninitialized",
-};
-
 MqttClient::MqttClient() {
     _status = ESP_MQTT_DISCONNECTED;
-    config = &defaultConfig;
 }
 
 esp_err_t MqttClient::begin(const MqttConfig& config) {

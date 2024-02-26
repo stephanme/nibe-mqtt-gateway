@@ -3,9 +3,11 @@
 
 #include "mqtt.h"
 #include "mqtt_logging.h"
+#include "nibegw_mqtt.h"
 
 struct NibeMqttGwConfig {
     MqttConfig mqtt;
+    NibeMqttConfig nibe;
     LogConfig logging;
 };
 
