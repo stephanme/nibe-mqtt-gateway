@@ -1,6 +1,8 @@
 #ifndef _mqtt_logging_h_
 #define _mqtt_logging_h_
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
 #include <freertos/ringbuf.h>
 
 #include "mqtt.h"
@@ -18,7 +20,7 @@
 struct LogConfig {
     bool mqttLoggingEnabled;
     bool stdoutLoggingEnabled;
-    String logTopic;
+    std::string logTopic;
 };
 
 // singleton, as there can be only one esp_log_set_vprintf
@@ -32,7 +34,7 @@ class MqttLogging : MqttClientLifecycleCallback {
 
     // configuration
     bool stdoutLoggingEnabled;
-    String logTopic;
+    std::string logTopic;
 
     MqttClient *mqttClient;
     RingbufHandle_t logEntryRingBuffer;

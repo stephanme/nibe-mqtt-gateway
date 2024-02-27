@@ -1,9 +1,10 @@
 #ifndef _mqtt_h_
 #define _mqtt_h_
 
-#include <Arduino.h>
 #include <esp_err.h>
 #include <mqtt_client.h>
+
+#include <string>
 
 #define MAX_SUBSCRIPTIONS 10
 
@@ -11,17 +12,17 @@
 #define ESP_MQTT_DISCONNECTED 0x101
 
 struct MqttConfig {
-    String brokerUri;
-    String user;
-    String password;
-    String clientId;
+    std::string brokerUri;
+    std::string user;
+    std::string password;
+    std::string clientId;
 
-    String rootTopic;
-    String discoveryPrefix;
-    String hostname;
+    std::string rootTopic;
+    std::string discoveryPrefix;
+    std::string hostname;
 
     // do not log for logTopic, would lead to recursion
-    String logTopic;
+    std::string logTopic;
 };
 
 enum MqttQOS {
@@ -31,7 +32,7 @@ enum MqttQOS {
 };
 class MqttSubscriptionCallback {
    public:
-    virtual void onMqttMessage(const String& topic, const String& payload) = 0;
+    virtual void onMqttMessage(const std::string& topic, const std::string& payload) = 0;
 };
 
 class MqttClientLifecycleCallback {
@@ -40,14 +41,14 @@ class MqttClientLifecycleCallback {
     virtual void onDisconnected() = 0;
 };
 
-typedef void (MqttSubscriptionCallback::*MqttCallbackFunction)(String, String);
+typedef void (MqttSubscriptionCallback::*MqttCallbackFunction)(std::string, std::string);
 
 class MqttClient {
    public:
     MqttClient();
     const MqttConfig& getConfig() { return *config; }
-    const String& getAvailabilityTopic() { return availabilityTopic; }
-    const String& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
+    const std::string& getAvailabilityTopic() { return availabilityTopic; }
+    const std::string& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
 
     esp_err_t begin(const MqttConfig& config);
     esp_err_t status() const { return _status; };
@@ -55,21 +56,21 @@ class MqttClient {
     esp_err_t registerLifecycleCallback(MqttClientLifecycleCallback* callback);
 
     int publishAvailability();
-    int publish(const String& topic, const String& payload, MqttQOS qos = QOS0, bool retain = false);
-    int publish(const String& topic, const char* payload, MqttQOS qos = QOS0, bool retain = false);
-    int publish(const String& topic, const char* payload, int length, MqttQOS qos = QOS0, bool retain = false);
-    int subscribe(const String& topic, MqttSubscriptionCallback* callback, int qos = 0);
+    int publish(const std::string& topic, const std::string& payload, MqttQOS qos = QOS0, bool retain = false);
+    int publish(const std::string& topic, const char* payload, MqttQOS qos = QOS0, bool retain = false);
+    int publish(const std::string& topic, const char* payload, int length, MqttQOS qos = QOS0, bool retain = false);
+    int subscribe(const std::string& topic, MqttSubscriptionCallback* callback, int qos = 0);
 
    private:
     const MqttConfig* config;
     esp_err_t _status;
-    String availabilityTopic;
-    String deviceDiscoveryInfo;
+    std::string availabilityTopic;
+    std::string deviceDiscoveryInfo;
     esp_mqtt_client_handle_t client;
     MqttClientLifecycleCallback* lifecycleCallbacks[MAX_SUBSCRIPTIONS];
     int lifecycleCallbackCount = 0;
     struct {
-        String topic;
+        std::string topic;
         int qos;
         MqttSubscriptionCallback* callback;
     } subscriptions[MAX_SUBSCRIPTIONS];

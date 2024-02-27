@@ -2,8 +2,6 @@
 
 #include <esp_log.h>
 #include <esp_system.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/event_groups.h>
 #include <freertos/task.h>
 
 static const char *TAG = "mqttlog";
@@ -83,7 +81,7 @@ void MqttLogging::logTask() {
             // Send to MQTT, one retry on failure
             if (publishLogMsg(buffer, item_size) < 0) {
                 // one retry
-                delay(10);
+                vTaskDelay(10 / portTICK_PERIOD_MS);
                 if (publishLogMsg(buffer, item_size) < 0) {
                     puts("Publish log failed, dropping");
                 }

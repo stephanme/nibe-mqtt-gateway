@@ -15,7 +15,7 @@ static const char* DISCOVERY_PAYLOAD = R"({
 %s
 })";
 
-MqttRelay::MqttRelay(const String& mqttTopic, const String& name, enum Relay relay) {
+MqttRelay::MqttRelay(const std::string& mqttTopic, const std::string& name, enum Relay relay) {
     this->mqttTopic = mqttTopic;
     this->name = name;
     this->relay = relay;
@@ -30,11 +30,11 @@ int MqttRelay::begin(MqttClient* mqttClient) {
     ESP_LOGI(TAG, "MQTT topic: %s", stateTopic.c_str());
 
     // subscribe to 'set' topic
-    String commandTopic = mqttClient->getConfig().rootTopic + "/" + mqttTopic + "/set";
+    std::string commandTopic = mqttClient->getConfig().rootTopic + "/" + mqttTopic + "/set";
     mqttClient->subscribe(commandTopic, this);
 
     // publish MQTT discovery, TODO: move to onConnected() callback?
-    String discoveryTopic = mqttClient->getConfig().discoveryPrefix + "/switch/" + mqttTopic + "/config";
+    std::string discoveryTopic = mqttClient->getConfig().discoveryPrefix + "/switch/" + mqttTopic + "/config";
     char discoveryPayload[strlen(DISCOVERY_PAYLOAD) + 2 * mqttTopic.length() + name.length() + commandTopic.length() +
                           stateTopic.length() + mqttClient->getDeviceDiscoveryInfo().length() + 1];
     sprintf(discoveryPayload, DISCOVERY_PAYLOAD, mqttTopic.c_str(), mqttTopic.c_str(), name.c_str(), commandTopic.c_str(),
@@ -53,8 +53,6 @@ bool MqttRelay::getRelayState(void) { return KMPProDinoESP32.getRelayState(relay
 
 void MqttRelay::publishState() { publishState(getRelayState()); }
 
-void MqttRelay::publishState(bool state) {
-    mqttClient->publish(stateTopic, state ? "ON" : "OFF");
-}
+void MqttRelay::publishState(bool state) { mqttClient->publish(stateTopic, state ? "ON" : "OFF"); }
 
-void MqttRelay::onMqttMessage(const String& topic, const String& payload) { setRelayState(payload == "ON"); }
+void MqttRelay::onMqttMessage(const std::string& topic, const std::string& payload) { setRelayState(payload == "ON"); }

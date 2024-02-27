@@ -29,9 +29,9 @@ enum CoilMode {
 class Coil {
    public:
     uint16_t id;
-    char* title;
-    char* info;
-    char* unit;
+    const char* title;
+    const char* info;
+    const char* unit;
     CoilDataType dataType;  // = size
     int factor;
     int minValue;
@@ -44,7 +44,7 @@ class Coil {
 };
 
 struct NibeMqttConfig {
-    std::unordered_map<uint16_t, Coil> coils; // TODO const Coil, but doesn't work
+    std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
     std::vector<uint16_t> coilsToPoll;
 };
 

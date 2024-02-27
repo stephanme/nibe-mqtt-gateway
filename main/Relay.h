@@ -3,12 +3,14 @@
 
 #include <Arduino.h>
 
+#include <string>
+
 #include "KMPProDinoESP32.h"
 #include "mqtt.h"
 
 class MqttRelay : MqttSubscriptionCallback {
    public:
-    MqttRelay(const String& mqttTopic, const String& name, Relay relay);
+    MqttRelay(const std::string& mqttTopic, const std::string& name, Relay relay);
 
     int begin(MqttClient* mqttClient);
 
@@ -16,17 +18,17 @@ class MqttRelay : MqttSubscriptionCallback {
     bool getRelayState(void);
     void publishState();
 
-    const String& getName(void) { return name; }
+    const std::string& getName(void) { return name; }
 
    private:
-    String mqttTopic;
-    String name;
+    std::string mqttTopic;
+    std::string name;
     enum Relay relay;
     MqttClient* mqttClient;
 
-    String stateTopic;
+    std::string stateTopic;
 
-    void onMqttMessage(const String& topic, const String& payload);
+    void onMqttMessage(const std::string& topic, const std::string& payload);
     void publishState(bool state);
 };
 

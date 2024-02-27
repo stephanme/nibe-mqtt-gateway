@@ -10,9 +10,7 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 "device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"0.1","configuration_url":"http://%s.fritz.box"}
 )";
 
-MqttClient::MqttClient() {
-    _status = ESP_MQTT_DISCONNECTED;
-}
+MqttClient::MqttClient() { _status = ESP_MQTT_DISCONNECTED; }
 
 esp_err_t MqttClient::begin(const MqttConfig& config) {
     // check required config
@@ -101,15 +99,15 @@ esp_err_t MqttClient::registerLifecycleCallback(MqttClientLifecycleCallback* cal
 
 int MqttClient::publishAvailability() { return publish(availabilityTopic, "online", 0, QOS0, true); }
 
-int MqttClient::publish(const String& topic, const String& payload, MqttQOS qos, bool retain) {
+int MqttClient::publish(const std::string& topic, const std::string& payload, MqttQOS qos, bool retain) {
     return publish(topic, payload.c_str(), 0, qos, retain);
 }
 
-int MqttClient::publish(const String& topic, const char* payload, MqttQOS qos, bool retain) {
+int MqttClient::publish(const std::string& topic, const char* payload, MqttQOS qos, bool retain) {
     return publish(topic, payload, 0, qos, retain);
 }
 
-int MqttClient::publish(const String& topic, const char* payload, int length, MqttQOS qos, bool retain) {
+int MqttClient::publish(const std::string& topic, const char* payload, int length, MqttQOS qos, bool retain) {
     int msg_id = esp_mqtt_client_publish(client, topic.c_str(), payload, length, qos, retain);
     // avoid log checks if not enabled
     if (CONFIG_LOG_MAXIMUM_LEVEL >= ESP_LOG_INFO) {
@@ -125,7 +123,7 @@ int MqttClient::publish(const String& topic, const char* payload, int length, Mq
 }
 
 // not thread safe
-int MqttClient::subscribe(const String& topic, MqttSubscriptionCallback* callback, int qos) {
+int MqttClient::subscribe(const std::string& topic, MqttSubscriptionCallback* callback, int qos) {
     if (subscriptionCount >= MAX_SUBSCRIPTIONS) {
         ESP_LOGE(TAG, "Maximum number of subscriptions reached");
         return ESP_ERR_NO_MEM;
@@ -142,9 +140,9 @@ int MqttClient::subscribe(const String& topic, MqttSubscriptionCallback* callbac
 
 void MqttClient::onDataEvent(esp_mqtt_event_handle_t event) {
     // TODO: works only well for small message data that fit into internal buffer (default 1024 bytes)
-    // TODO: get rid of extra conversion to string?
-    String topic = String((char*)event->topic, event->topic_len);
-    String data = String((char*)event->data, event->data_len);
+    // TODO: get rid of extra conversion to std::string?
+    std::string topic = std::string((char*)event->topic, event->topic_len);
+    std::string data = std::string((char*)event->data, event->data_len);
     for (size_t i = 0; i < subscriptionCount; i++) {
         // TODO: handle wildcard topics
         if (subscriptions[i].topic == topic) {
@@ -224,7 +222,7 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
                 log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
                 log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
                 log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
-                ESP_LOGE(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+                ESP_LOGE(TAG, "Last errno std::string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
             }
             mqttClient->_status = ESP_MQTT_ERROR;
             break;

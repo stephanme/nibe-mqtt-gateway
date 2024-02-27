@@ -35,7 +35,7 @@ std::string AbstractNibeGw::dataToString(const uint8_t* const data, int len) {
     s.reserve(len * 3);
     for (int i = 0; i < len; i++) {
         s += hex[data[i] >> 4];
-        s += hex[data[i] | 0xf];
+        s += hex[data[i] & 0xf];
         s += " ";
     }
     return s;

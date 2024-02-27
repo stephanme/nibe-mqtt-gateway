@@ -69,11 +69,10 @@ void NibeMqttGwWebServer::handleGetRoot() {
     httpServer.send(200, "text/html", rootHtml);
 }
 
-void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/json", configManager.getConfigAsJson()); }
+void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/json", configManager.getConfigAsJson().c_str()); }
 
 void NibeMqttGwWebServer::handlePostConfig() {
-    String configJson = httpServer.arg("plain");
-    if (configManager.saveConfig(configJson) == ESP_OK) {
+    if (configManager.saveConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
         httpServer.send(200, "text/plain", "Configuration saved. Rebooting...");
         delay(1000);
         ESP.restart();
