@@ -80,12 +80,41 @@ Show logging over MQTT:
 mosquitto_sub --url 'mqtt://<user>:<password>@<broker>/nibegw/log'
 ```
 
+## Development
+
+### Build
+
+Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension) is used as IDE.
+
+- switch target to `esp32`
+- 'Full Clean' (delete `build` directory)
+- 'Build' project
+- Upload to Prodino board either via serial interface or OTA
+- see above for configuration and trouble shooting
+
+### Unit Testing
+
+Parts of the code base have unit tests using [Unity](https://www.throwtheswitch.org/unity) that can run on the Linux/Mac (see [ESP-IDF - Running Applications on Host](https://docs.espressif.com/projects/esp-idf/en/release-v5.1/esp32/api-guides/host-apps.html)).
+
+How to run unit tests using vscode:
+- switch target to `linux`
+- 'Full Clean' (delete `build` directory)
+- 'Build' project, ignore the error on running `esp_idf_size`
+- 'Monitor' runs the unit tests and prints results to console
+  - attention: 'Monitor' doesn't build -> an explicit 'Build' is needed after any source change
+
+Implementation:
+- tests are located in a special `test` component, this component picks source files from `main` that can be tested 
+- any code that depends on `arduino-esp32` can't run on the host emulation and therefore is not testable easily, this includes any usage of the Arduino String class
+
 ## To Do
 
 - [ ] replace [PR #12692](https://github.com/espressif/esp-idf/pull/12692) by better solution mentioned in [#12682](https://github.com/espressif/esp-idf/issues/12682) once available on branch release-5.1
 - [ ] switch to esp-dif 5.1.3 once released
 - [ ] use arduino-esp32 as managed component once version >=3.0.0-alpha3 is available
-
+- [ ] smoother unit testing development cycle: vscode task, less Arduino dependencies
+- [ ] debugging, at least for unit tests on host
+ 
 ## Credits
 
 Used source code and libraries
@@ -95,6 +124,7 @@ Used source code and libraries
 - [esp-idf-net-logging](https://github.com/nopnop2002/esp-idf-net-logging) - Redirect esp-idf logging to the network, [MIT License](https://github.com/nopnop2002/esp-idf-net-logging/blob/main/LICENSE)
 - [org.openhab.binding.nibeheatpump](https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.nibeheatpump) - nibegw, [Eclipse Public License 2.0](https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.nibeheatpump/NOTICE)
 - [ProDinoESP32](https://github.com/kmpelectronics/ProDinoESP32) - KMP ProDino ESP32 examples library
+- [Unity](https://www.throwtheswitch.org/unity) - Unit testing for C
 
 Inspiration and ideas
 - [nibe-mqtt](https://github.com/yozik04/nibe-mqtt) - Nibe MQTT integration, [GPL 3.0](https://github.com/yozik04/nibe-mqtt/blob/master/LICENSE)

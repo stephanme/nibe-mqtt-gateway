@@ -5,4 +5,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+if(IDF_TARGET STREQUAL "linux")
+    # build and run unit tests
+    message("*** Running tests on linux ***")
+    set(COMPONENTS test)
+    set(EXTRA_COMPONENT_DIRS "test")
+endif()
+
 project(nibe-mqtt-gateway)
