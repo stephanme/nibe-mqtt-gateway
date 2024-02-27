@@ -35,7 +35,7 @@ void NibeMqttGw::publishState() {
 }
 
 void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
-    ESP_LOGI(TAG, "onMessageReceived: %s", dataToString(data, len).c_str());
+    ESP_LOGI(TAG, "onMessageReceived: %s", AbstractNibeGw::dataToString(data, len).c_str());
     NibeResponseMessage* msg = (NibeResponseMessage*)data;
     if (msg->cmd == NIBE_CMD_MODBUS_READ_RESP) {
         uint16_t coilAddress = std::byteswap(msg->readResponse.coilAddress);
@@ -47,7 +47,7 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
         const Coil& coil = iter->second;
         // TODO: should check data consistency (len vs data type)
         // decode raw data
-        String value = decodeCoilData(coil, msg->readResponse); 
+        std::string value = coil.decodeCoilData(msg->readResponse); 
         // publish data to mqtt
         ESP_LOGI(TAG, "NIBE_CMD_MODBUS_READ_RESP: coil=%d, value=%s",  coilAddress, value.c_str());
     } else {
@@ -77,57 +77,4 @@ int NibeMqttGw::onWriteTokenReceived(uint8_t* data) {
     // TODO: send data to nibe
     ESP_LOGI(TAG, "onWriteTokenReceived");
     return 0;
-}
-
-String NibeMqttGw::dataToString(const uint8_t* const data, int len) {
-    String s;
-    s.reserve(len * 3);
-    for (int i = 0; i < len; i++) {
-        s += String(data[i], HEX);
-        s += " ";
-    }
-    return s;
-}
-
-String NibeMqttGw::decodeCoilData(const Coil& coil, const NibeReadResponseData& data) {
-    String value;
-    switch (coil.dataType) {
-        case COIL_DATA_TYPE_UINT8:
-            value = formatNumber(coil, (uint32_t)data.value[0]);
-            break;
-        case COIL_DATA_TYPE_INT8:
-            value = formatNumber(coil, (int32_t)data.value[0]);
-            break;
-        case COIL_DATA_TYPE_UINT16:
-            value = formatNumber(coil, (uint32_t)std::byteswap(*(uint16_t*)data.value));
-            break;
-        case COIL_DATA_TYPE_INT16:
-            value = formatNumber(coil, (int32_t)std::byteswap(*(int16_t*)data.value));
-            break;
-        case COIL_DATA_TYPE_UINT32:
-            value = formatNumber(coil, std::byteswap(*(uint32_t*)data.value));
-            break;
-        case COIL_DATA_TYPE_INT32:
-            value = formatNumber(coil, std::byteswap(*(int32_t*)data.value));
-            break;
-        default:
-            ESP_LOGW(TAG, "Coil %s has unknown data type %d", coil.name.c_str(), coil.dataType);
-            break;
-    }
-    return value;
-}
-
-// avoid FP arithmetic
-String NibeMqttGw::formatNumber(const Coil& coil, auto value) {
-    if (coil.scaleFactor == 1) {
-        return String(value);
-    } else if (coil.scaleFactor == 10) {
-        return String(value / 10) + "." + String(value % 10);
-    } else if (coil.scaleFactor == 100) {
-        return String(value / 100) + "." + String(value % 100);
-    } else {
-        char s[30];
-        snprintf(s, sizeof(s), "%f", (float)value / coil.scaleFactor);
-        return s;
-    }
 }

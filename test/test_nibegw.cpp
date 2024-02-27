@@ -33,3 +33,10 @@ TEST_CASE("NibeResponseMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(0x01, response->readResponse.value[0]);
     TEST_ASSERT_EQUAL_HEX8(0x02, response->readResponse.value[1]);
 }
+
+TEST_CASE("dataToString", "[nibegw]") {
+    uint8_t data[] = {0x12, 0x34, 0xCD, 0xEF};
+    TEST_ASSERT_EQUAL_STRING("", AbstractNibeGw::dataToString(data, 0).c_str());
+    TEST_ASSERT_EQUAL_STRING("12 34 ", AbstractNibeGw::dataToString(data, 2).c_str());
+    TEST_ASSERT_EQUAL_STRING("12 34 CD EF ", AbstractNibeGw::dataToString(data, 4).c_str());
+}

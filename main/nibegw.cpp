@@ -28,6 +28,19 @@
 
 static const char* TAG = "nibegw";
 
+static char hex[] = "0123456789ABCDEF";
+
+std::string AbstractNibeGw::dataToString(const uint8_t* const data, int len) {
+    std::string s;
+    s.reserve(len * 3);
+    for (int i = 0; i < len; i++) {
+        s += hex[data[i] >> 4];
+        s += hex[data[i] | 0xf];
+        s += " ";
+    }
+    return s;
+}
+
 esp_err_t SimulatedNibeGw::begin(NibeGwCallback& callback) {
     ESP_LOGI(TAG, "SimulatedNibeGw::begin");
     this->callback = &callback;

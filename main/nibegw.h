@@ -51,6 +51,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <string>
+
 // state machine states
 enum eState {
     STATE_WAIT_START,
@@ -142,6 +144,9 @@ class AbstractNibeGw {
         }
         return chksum;
     }
+
+    // for logging and debugging
+    static std::string dataToString(const uint8_t* const data, int len);
 };
 
 // for testing

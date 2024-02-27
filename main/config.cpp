@@ -59,8 +59,10 @@ esp_err_t NibeMqttGwConfigManager::begin() {
     }
 
     // TODO: remove this and parse nibe ModbusManager file instead
-    config.nibe.coils[1] = {1, "coil1", "description1", COIL_DATA_TYPE_INT32, 10};
-    config.nibe.coils[2] = {2, "coil2", "description1", COIL_DATA_TYPE_UINT16, 1};
+    Coil c = {1, "coil1", "info", "unit", COIL_DATA_TYPE_UINT8, 10, 0, 0, 0, COIL_MODE_READ};
+    config.nibe.coils[1] = c;
+    c = {2, "coil2", "info", "unit", COIL_DATA_TYPE_UINT16, 1, 0, 0, 0, COIL_MODE_READ};
+    config.nibe.coils[2] = c;
 
     return ESP_OK;
 }

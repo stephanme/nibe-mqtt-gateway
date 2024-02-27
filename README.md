@@ -87,6 +87,7 @@ mosquitto_sub --url 'mqtt://<user>:<password>@<broker>/nibegw/log'
 Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension) is used as IDE.
 
 - switch target to `esp32`
+- delete `sdkconfig` file
 - 'Full Clean' (delete `build` directory)
 - 'Build' project
 - Upload to Prodino board either via serial interface or OTA
@@ -98,6 +99,7 @@ Parts of the code base have unit tests using [Unity](https://www.throwtheswitch.
 
 How to run unit tests using vscode:
 - switch target to `linux`
+- delete `sdkconfig` file
 - 'Full Clean' (delete `build` directory)
 - 'Build' project, ignore the error on running `esp_idf_size`
 - 'Monitor' runs the unit tests and prints results to console
