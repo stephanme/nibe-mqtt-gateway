@@ -3,7 +3,6 @@
 #include <ArduinoJson.h>
 #include <esp_log.h>
 
-#include <sstream>
 #include <istream>
 #include <streambuf>
 
@@ -21,19 +20,34 @@ class ArduinoStream : public std::streambuf {
 
    public:
     ArduinoStream(Stream& stream) : stream(stream) {
-        setg(&ch, &ch + 1, &ch + 1); // buffer is initially full (= nothing to read)
+        setg(&ch, &ch + 1, &ch + 1);  // buffer is initially full (= nothing to read)
     }
 
     int_type underflow() override {
         if (stream.available() > 0) {
             ch = stream.read();
-            setg(&ch, &ch, &ch+1); // make one read position available
+            setg(&ch, &ch, &ch + 1);  // make one read position available
             return ch;
         }
         return traits_type::eof();
     }
 };
 #endif
+
+// streambuf that operates on passed in data (no memory allocation)
+struct externbuf : public std::streambuf {
+    externbuf(const char* data, unsigned int len) : begin(data), crt(data), end(data + len) {}
+
+    int_type underflow() { return crt == end ? traits_type::eof() : traits_type::to_int_type(*crt); }
+    int_type uflow() { return crt == end ? traits_type::eof() : traits_type::to_int_type(*crt++); }
+    int_type pbackfail(int_type ch) {
+        bool cond = crt == begin || (ch != traits_type::eof() && ch != crt[-1]);
+        return cond ? traits_type::eof() : traits_type::to_int_type(*--crt);
+    }
+    std::streamsize showmanyc() { return end - crt; }
+
+    const char *begin, *crt, *end;
+};
 
 static const char* TAG = "config";
 
@@ -310,8 +324,8 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* csv) {
 }
 
 esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>& coils) {
-    ESP_LOGI(TAG, "parseNibeModbusCSV: %s", csv);
-    std::istringstream is(csv);
+    externbuf buf(csv, strlen(csv));
+    std::istream is(&buf);
     return parseNibeModbusCSV(is, coils);
 }
 
@@ -378,7 +392,8 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
 // - doesn't handle escaping of quotes
 // - could save memory by string de-duplication (unit, empty info)
 esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, Coil& coil) {
-    std::istringstream is(line);
+    externbuf buf(line.c_str(), line.size());
+    std::istream is(&buf);
     std::string token;
     try {
         // Title

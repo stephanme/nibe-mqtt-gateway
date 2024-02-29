@@ -33,11 +33,16 @@ class NibeMqttGwWebServer {
     bool _authenticated = false;
     String _updaterError;
 
+    // TODO: try to use stream
+    String nibeConfigUpload;
+
     void handleGetRoot();
     void handleGetConfig();
     void handlePostConfig();
     void handleGetNibeConfig();
     void handlePostNibeConfig();
+    void handlePostNibeConfigUpload();
+    void setNibeConfigUpdateError(const char* err);
     void handlePostReboot();
     void handleGetMetrics();
     void handleNotFound();
@@ -46,6 +51,8 @@ class NibeMqttGwWebServer {
     void handlePostUpdate();
     void handlePostUpload();
     void setUpdaterError();
+
+    void send200AndReboot(const char *msg);
 };
 
 #endif

@@ -113,7 +113,7 @@ void setup() {
     }
 
     KMPProDinoESP32.offStatusLed();
-    ESP_LOGI(TAG, "Nibe MQTT Gateway is started. Status: %x, InitTme: %ul", init_status, millis());
+    ESP_LOGI(TAG, "Nibe MQTT Gateway is started. Status: %x, took %lu ms", init_status, millis());
     httpServer.setMetricInitStatus(init_status);
 }
 

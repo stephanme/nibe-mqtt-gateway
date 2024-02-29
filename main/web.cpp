@@ -10,6 +10,8 @@
 
 #define ROOT_REDIRECT_HTML R"(<META http-equiv="refresh" content="5;URL=/">)"
 
+static const char *TAG = "web";
+
 NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient)
     : httpServer(port), configManager(configManager), mqttClient(mqttClient) {}
 
@@ -20,7 +22,8 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/config", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetConfig, this));
     httpServer.on("/config", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostConfig, this));
     httpServer.on("/config/nibe", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetNibeConfig, this));
-    httpServer.on("/config/nibe", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeConfig, this));
+    httpServer.on("/config/nibe", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeConfig, this),
+                  std::bind(&NibeMqttGwWebServer::handlePostNibeConfigUpload, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
 
@@ -78,9 +81,7 @@ void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/
 
 void NibeMqttGwWebServer::handlePostConfig() {
     if (configManager.saveConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
-        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Configuration saved. Rebooting...");
-        delay(1000);
-        ESP.restart();
+         send200AndReboot(ROOT_REDIRECT_HTML "Configuration saved. Rebooting...");
     } else {
         // TODO: better err msg
         httpServer.send(400, "text/plain", "Invalid configuration. Check logs.");
@@ -91,14 +92,43 @@ void NibeMqttGwWebServer::handleGetNibeConfig() {
     httpServer.send(200, "text/plain", configManager.getNibeModbusConfig().c_str());
 }
 
+void NibeMqttGwWebServer::handlePostNibeConfigUpload() {
+    HTTPUpload &upload = httpServer.upload();
+
+    if (upload.status == UPLOAD_FILE_START) {
+        _updaterError.clear();
+        nibeConfigUpload.clear();
+        nibeConfigUpload.reserve(80000);  // TODO: max size
+        ESP_LOGI(TAG, "Upload nibe config: %s", upload.filename.c_str());
+    } else if (upload.status == UPLOAD_FILE_WRITE && !_updaterError.length()) {
+        nibeConfigUpload += String(upload.buf, upload.currentSize);
+    } else if (upload.status == UPLOAD_FILE_END && !_updaterError.length()) {
+        ESP_LOGI(TAG, "Upload nibe config finished: %u bytes", upload.totalSize);
+        if (configManager.saveNibeModbusConfig(nibeConfigUpload.c_str()) == ESP_OK) {
+            ESP_LOGI(TAG, "Nibe config update Success - Rebooting...");
+        } else {
+            setNibeConfigUpdateError("Invalid nibe modbus configuration. Check logs.");
+        }
+        nibeConfigUpload.clear();
+        nibeConfigUpload.trim();
+    } else if (upload.status == UPLOAD_FILE_ABORTED) {
+        nibeConfigUpload.clear();
+        nibeConfigUpload.trim();
+        ESP_LOGW(TAG, "Nibe config upload was aborted");
+    }
+}
+
+void NibeMqttGwWebServer::setNibeConfigUpdateError(const char *err) {
+    _updaterError = err;
+    ESP_LOGE(TAG, "%s", _updaterError.c_str());
+}
+
 void NibeMqttGwWebServer::handlePostNibeConfig() {
-    if (configManager.saveNibeModbusConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
-        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Nibe Modbus configuration saved. Rebooting...");
-        delay(1000);
-        ESP.restart();
+    if (_updaterError.isEmpty()) {
+        send200AndReboot(ROOT_REDIRECT_HTML "Nibe Modbus configuration saved. Rebooting...");
     } else {
         // TODO: better err msg
-        httpServer.send(400, "text/plain", "Invalid nibe modbux configuration. Check logs.");
+        httpServer.send(400, "text/plain", _updaterError);
     }
 }
 
@@ -189,11 +219,7 @@ void NibeMqttGwWebServer::handlePostUpdate() {
     if (Update.hasError()) {
         httpServer.send(200, "text/html", String("Update error: ") + _updaterError);
     } else {
-        httpServer.client().setNoDelay(true);
-        httpServer.send_P(200, "text/html", OTA_SUCCESS);
-        delay(100);
-        httpServer.client().stop();
-        ESP.restart();
+        send200AndReboot(OTA_SUCCESS);
     }
 }
 
@@ -243,4 +269,13 @@ void NibeMqttGwWebServer::handlePostUpload() {
         ESP_LOGW(OTA_TAG, "Update was aborted");
     }
     delay(0);
+}
+
+void NibeMqttGwWebServer::send200AndReboot(const char *msg) {
+    httpServer.client().setNoDelay(true);
+    httpServer.send(200, "text/html", msg);
+    delay(1000);
+    httpServer.client().stop();
+    delay(100);
+    ESP.restart();
 }

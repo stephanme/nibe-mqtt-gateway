@@ -72,7 +72,7 @@ Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
 - use Nibe ModbusManager to get a CSV with all coil. Save e.g. as `nibe-modbus.csv`
 - (optional) delete coils that will never be needed, e.g. because of add-ons/hardware that is not installed 
-- upload `nibe-modbus.csv` (attention: `--data-binary` to preserve line breaks): `curl -X POST -H "Content-Type: application/json" --data-binary @nibe-modbus.csv http://nibegw/config`
+- upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
 
 ### Trouble Shooting
