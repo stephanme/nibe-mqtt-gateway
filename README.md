@@ -55,11 +55,25 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 
 ### Configuration
 
-When uploading a configuration, nibe-mqtt-gateway stores it in flash memory and reboots.
+The configuration consists of two parts:
+- general configuration json `config.json` like MQTT broker url and credentials, heatpump coils to be polled, logging etc.
+- a Nibe ModbusManager file that defines all available coils, `nibe-modbus.csv`
 
+When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory and reboots to activate the configuration change.
+
+General configuration:
 - http://nibegw/config shows the current configuration as json, save e.g. as `config.json` and use as template
 - adapt `config.json` file (MQTT broker URL and credentials etc.)
-- upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config`
+- upload `config.json`: `curl -X POST -H "Content-Type: text/plain" -d @config.json http://nibegw/config/nibe`
+
+TODO: document configuration json format
+
+Nibe Modbus configuration:
+- http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
+- use Nibe ModbusManager to get a CSV with all coil. Save e.g. as `nibe-modbus.csv`
+- (optional) delete coils that will never be needed, e.g. because of add-ons/hardware that is not installed 
+- upload `nibe-modbus.csv` (attention: `--data-binary` to preserve line breaks): `curl -X POST -H "Content-Type: application/json" --data-binary @nibe-modbus.csv http://nibegw/config`
+
 
 ### Trouble Shooting
 

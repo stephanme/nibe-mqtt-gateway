@@ -9,6 +9,7 @@
 
 // configuration
 enum CoilDataType {
+    COIL_DATA_TYPE_UNKNOWN,
     COIL_DATA_TYPE_UINT8,
     COIL_DATA_TYPE_INT8,
     COIL_DATA_TYPE_UINT16,
@@ -19,6 +20,7 @@ enum CoilDataType {
 };
 
 enum CoilMode {
+    COIL_MODE_UNKNOWN = 0x00,
     COIL_MODE_READ = 0x01,
     COIL_MODE_WRITE = 0x02,
     COIL_MODE_READ_WRITE = COIL_MODE_READ | COIL_MODE_WRITE,
@@ -26,12 +28,14 @@ enum CoilMode {
 
 // represents coil configuration from ModbusManager
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
+//
+// TODO: make immutable? memory overhead - especially strings?
 class Coil {
    public:
     uint16_t id;
-    const char* title;
-    const char* info;
-    const char* unit;
+    std::string title;
+    std::string info;
+    std::string unit;
     CoilDataType dataType;  // = size
     int factor;
     int minValue;
@@ -39,8 +43,24 @@ class Coil {
     int defaultValue;
     CoilMode mode;
 
+    Coil() {}
+    Coil(uint16_t id, const std::string& title, const std::string& info, const std::string& unit, CoilDataType dataType,
+         int factor, int minValue, int maxValue, int defaultValue, CoilMode mode)
+        : id(id),
+          title(title),
+          info(info),
+          unit(unit),
+          dataType(dataType),
+          factor(factor),
+          minValue(minValue),
+          maxValue(maxValue),
+          defaultValue(defaultValue),
+          mode(mode) {}
+
     std::string decodeCoilData(const NibeReadResponseData& data) const;
     std::string formatNumber(auto value) const;
+
+    bool operator==(const Coil& other) const = default;
 };
 
 struct NibeMqttConfig {

@@ -36,6 +36,8 @@ class NibeMqttGwWebServer {
     void handleGetRoot();
     void handleGetConfig();
     void handlePostConfig();
+    void handleGetNibeConfig();
+    void handlePostNibeConfig();
     void handlePostReboot();
     void handleGetMetrics();
     void handleNotFound();

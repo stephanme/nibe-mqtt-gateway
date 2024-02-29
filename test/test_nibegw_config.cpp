@@ -3,7 +3,7 @@
 #include "nibegw_config.h"
 
 TEST_CASE("formatNumber", "[nibegw_config]") {
-    Coil c = {0, nullptr, nullptr, nullptr, COIL_DATA_TYPE_UINT8, 1, 0, 0, 0, COIL_MODE_READ};
+    Coil c = {0, "", "", "", COIL_DATA_TYPE_UINT8, 1, 0, 0, 0, COIL_MODE_READ};
     TEST_ASSERT_EQUAL_STRING("0", c.formatNumber(0).c_str());
     TEST_ASSERT_EQUAL_STRING("10", c.formatNumber(10).c_str());
     TEST_ASSERT_EQUAL_STRING("-1000", c.formatNumber(-1000l).c_str());
@@ -29,7 +29,7 @@ TEST_CASE("formatNumber", "[nibegw_config]") {
 }
 
 TEST_CASE("decodeCoilData", "[nibegw_config]") {
-    Coil c = {0, nullptr, nullptr, nullptr, COIL_DATA_TYPE_UINT8, 1, 0, 0, 0, COIL_MODE_READ};
+    Coil c = {0, "", "", "", COIL_DATA_TYPE_UINT8, 1, 0, 0, 0, COIL_MODE_READ};
     NibeReadResponseData data1234 = {
         .coilAddress = 0,
         .value = {1, 2, 3, 4}

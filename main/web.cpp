@@ -8,6 +8,8 @@
 
 #include "KMPProDinoESP32.h"
 
+#define ROOT_REDIRECT_HTML R"(<META http-equiv="refresh" content="5;URL=/">)"
+
 NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient)
     : httpServer(port), configManager(configManager), mqttClient(mqttClient) {}
 
@@ -17,6 +19,8 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetRoot, this));
     httpServer.on("/config", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetConfig, this));
     httpServer.on("/config", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostConfig, this));
+    httpServer.on("/config/nibe", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetNibeConfig, this));
+    httpServer.on("/config/nibe", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeConfig, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
 
@@ -48,6 +52,7 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 <h3>Links</h3>
 <ul>
 <li><a href="./config">Configuration</a>, POST to set new configuration (triggers reboot)</li>
+<li><a href="./config/nibe">Nibe Modbus Configuration</a>, POST to set new configuration (triggers reboot)</li>
 <li><a href="./update">Firmware Upload</a> (triggers reboot)</li>
 <li><a href="./metrics">Metrics</a></li>
 </ul>
@@ -73,7 +78,7 @@ void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/
 
 void NibeMqttGwWebServer::handlePostConfig() {
     if (configManager.saveConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
-        httpServer.send(200, "text/plain", "Configuration saved. Rebooting...");
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Configuration saved. Rebooting...");
         delay(1000);
         ESP.restart();
     } else {
@@ -82,10 +87,23 @@ void NibeMqttGwWebServer::handlePostConfig() {
     }
 }
 
-static const char *REBOOT_HTML = R"(<META http-equiv="refresh" content="5;URL=/">Rebooting...)";
+void NibeMqttGwWebServer::handleGetNibeConfig() {
+    httpServer.send(200, "text/plain", configManager.getNibeModbusConfig().c_str());
+}
+
+void NibeMqttGwWebServer::handlePostNibeConfig() {
+    if (configManager.saveNibeModbusConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Nibe Modbus configuration saved. Rebooting...");
+        delay(1000);
+        ESP.restart();
+    } else {
+        // TODO: better err msg
+        httpServer.send(400, "text/plain", "Invalid nibe modbux configuration. Check logs.");
+    }
+}
 
 void NibeMqttGwWebServer::handlePostReboot() {
-    httpServer.send(200, "text/html", REBOOT_HTML);
+    httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Rebooting...");
     delay(1000);
     ESP.restart();
 }

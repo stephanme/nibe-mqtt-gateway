@@ -5,3 +5,4 @@ config.json
 .DS_Store
 dependencies.lock
 sdkconfig.old
+nibe-modbus*.csv
