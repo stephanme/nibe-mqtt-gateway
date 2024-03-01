@@ -30,13 +30,13 @@ class NibeMqttGwConfigManager {
     NibeMqttGwConfig config;
 
     esp_err_t parseJson(const char* configJson, NibeMqttGwConfig& config);
-    static esp_err_t parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>& coils);
+    static esp_err_t parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils);
     static CoilDataType nibeModbusSizeToDataType(const std::string& size);
     static CoilMode nibeModbusMode(const std::string& size);
 
     // for testing only
    public:
-    static esp_err_t parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>& coils);
+    static esp_err_t parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils);
     static esp_err_t parseNibeModbusCSVLine(const std::string& line, Coil& coil);
     static esp_err_t getNextCsvToken(std::istream& is, std::string& token);
 };

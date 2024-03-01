@@ -295,16 +295,19 @@ const std::string NibeMqttGwConfigManager::getNibeModbusConfig() {
 }
 
 esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* csv) {
+#if CONFIG_IDF_TARGET_LINUX
     std::unordered_map<uint16_t, Coil> tmpCoils;
-    if (parseNibeModbusCSV(csv, tmpCoils) != ESP_OK) {
+    if (parseNibeModbusCSV(csv, &tmpCoils) != ESP_OK) {
         return ESP_FAIL;
     }
-
-#if CONFIG_IDF_TARGET_LINUX
     ESP_LOGW(TAG, "Skip writing config on Linux target");
     // store for testing
     config.nibe.coils = tmpCoils;
 #else
+    // validate csv
+    if (parseNibeModbusCSV(csv, nullptr) != ESP_OK) {
+        return ESP_FAIL;
+    }
     // write to file
     File file = LittleFS.open(NIBE_MODBUS_FILE, FILE_WRITE);
     if (!file) {
@@ -323,7 +326,7 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* csv) {
     return ESP_OK;
 }
 
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>& coils) {
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils) {
     externbuf buf(csv, strlen(csv));
     std::istream is(&buf);
     return parseNibeModbusCSV(is, coils);
@@ -336,7 +339,9 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unor
 // Database: 8310
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>& coils) {
+//
+// if coils is null, the input is only checked for format
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils) {
     std::string line;
     line.reserve(256);
     int line_num = 0;
@@ -377,11 +382,14 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
             continue;
         }
         Coil coil;
-        if (parseNibeModbusCSVLine(line, coil) != ESP_OK) {
-            ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Format error: %s", line_num, line.c_str());
+        esp_err_t err = parseNibeModbusCSVLine(line, coil);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Format error in token #%d: %s", line_num, err, line.c_str());
             return ESP_FAIL;
         }
-        coils[coil.id] = coil;
+        if (coils != nullptr) {
+            coils->operator[](coil.id) = coil;
+        }
     }
     return ESP_OK;
 }

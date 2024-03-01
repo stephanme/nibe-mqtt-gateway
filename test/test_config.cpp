@@ -92,12 +92,12 @@ Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 
 TEST_CASE("parseNibeModbusCSV", "[config]") {
     std::unordered_map<uint16_t, Coil> coils;
-    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV("", coils));
+    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV("", &coils));
     std::string badConfig = std::string(nibeModbusConfig);
     badConfig = std::regex_replace(badConfig, std::regex(";Factor;"), ";XFactor;");
-    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(badConfig.c_str(), coils));
+    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(badConfig.c_str(), &coils));
 
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(nibeModbusConfig, coils));
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(nibeModbusConfig, &coils));
     TEST_ASSERT_EQUAL(1, coils.size());
     TEST_ASSERT(coils[40004] == Coil(40004, "BT1 Outdoor Temperature", "Current outdoor temperature", CoilUnit::GradCelcius,
                                      CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
@@ -184,6 +184,6 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv", "[config]") {
     TEST_ASSERT(csv.size() > 0);  // check file was found and not empty
 
     std::unordered_map<uint16_t, Coil> coils;
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(csv.c_str(), coils));
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(csv.c_str(), &coils));
     TEST_ASSERT_GREATER_THAN(800, coils.size());
 }
