@@ -66,7 +66,7 @@ class Coil {
    public:
     uint16_t id;
     std::string title;
-    std::string info;
+    const std::string* info; // memory must be managed outside
     CoilUnit unit;
     CoilDataType dataType;  // = size
     int factor;
@@ -75,8 +75,8 @@ class Coil {
     int defaultValue;
     CoilMode mode;
 
-    Coil() {}
-    Coil(uint16_t id, const std::string& title, const std::string& info, CoilUnit unit, CoilDataType dataType, int factor,
+    Coil() = default;
+    Coil(uint16_t id, const std::string& title, const std::string* info, CoilUnit unit, CoilDataType dataType, int factor,
          int minValue, int maxValue, int defaultValue, CoilMode mode)
         : id(id),
           title(title),

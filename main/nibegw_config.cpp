@@ -3,6 +3,7 @@
 #include <esp_log.h>
 
 #include <bit>
+#include <cstring>
 
 static const char* TAG = "nibegw_config";
 
@@ -28,7 +29,7 @@ std::string Coil::decodeCoilData(const NibeReadResponseData& data) const {
             value = formatNumber(std::byteswap(*(int32_t*)data.value));
             break;
         default:
-            ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, dataType);
+            ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
             break;
     }
     return value;

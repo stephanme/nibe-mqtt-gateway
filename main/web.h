@@ -33,8 +33,7 @@ class NibeMqttGwWebServer {
     bool _authenticated = false;
     String _updaterError;
 
-    // TODO: try to use stream
-    String nibeConfigUpload;
+    std::string nibeConfigUpload;
 
     void handleGetRoot();
     void handleGetConfig();

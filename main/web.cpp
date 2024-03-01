@@ -101,7 +101,7 @@ void NibeMqttGwWebServer::handlePostNibeConfigUpload() {
         nibeConfigUpload.reserve(80000);  // TODO: max size
         ESP_LOGI(TAG, "Upload nibe config: %s", upload.filename.c_str());
     } else if (upload.status == UPLOAD_FILE_WRITE && !_updaterError.length()) {
-        nibeConfigUpload += String(upload.buf, upload.currentSize);
+        nibeConfigUpload.append((char*)upload.buf, upload.currentSize);
     } else if (upload.status == UPLOAD_FILE_END && !_updaterError.length()) {
         ESP_LOGI(TAG, "Upload nibe config finished: %u bytes", upload.totalSize);
         if (configManager.saveNibeModbusConfig(nibeConfigUpload.c_str()) == ESP_OK) {
@@ -110,12 +110,13 @@ void NibeMqttGwWebServer::handlePostNibeConfigUpload() {
             setNibeConfigUpdateError("Invalid nibe modbus configuration. Check logs.");
         }
         nibeConfigUpload.clear();
-        nibeConfigUpload.trim();
+        nibeConfigUpload.shrink_to_fit();
     } else if (upload.status == UPLOAD_FILE_ABORTED) {
         nibeConfigUpload.clear();
-        nibeConfigUpload.trim();
+        nibeConfigUpload.shrink_to_fit();
         ESP_LOGW(TAG, "Nibe config upload was aborted");
     }
+    delay(0);
 }
 
 void NibeMqttGwWebServer::setNibeConfigUpdateError(const char *err) {
@@ -133,9 +134,7 @@ void NibeMqttGwWebServer::handlePostNibeConfig() {
 }
 
 void NibeMqttGwWebServer::handlePostReboot() {
-    httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Rebooting...");
-    delay(1000);
-    ESP.restart();
+    send200AndReboot(ROOT_REDIRECT_HTML "Rebooting...");
 }
 
 static const char *METRICS_DATA = R"(# nibe_mqtt_gateway metrics
