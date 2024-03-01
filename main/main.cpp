@@ -77,6 +77,13 @@ void setup() {
     const esp_app_desc_t *app_desc = esp_app_get_description();
     ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
+    // mqtt client
+    err = mqttClient.begin(config.mqtt);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize MQTT client");
+        init_status = ESP_INIT_MQTT;
+    }
+
     // start nibegw
     nibeMqttGw.begin(config.nibe, mqttClient);
     nibegw.begin(nibeMqttGw);
@@ -87,13 +94,6 @@ void setup() {
     while (!ETH.hasIP()) {
         KMPProDinoESP32.processStatusLed(blue, 1000);
         delay(500);
-    }
-
-    // build clientId from hostname and mac address
-    err = mqttClient.begin(config.mqtt);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Could not initialize MQTT client");
-        init_status = ESP_INIT_MQTT;
     }
 
     for (uint8_t i = 0; i < RELAY_COUNT; i++) {

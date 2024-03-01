@@ -1,14 +1,13 @@
 #ifndef _nibegw_mqtt_h_
 #define _nibegw_mqtt_h_
 
+#include <freertos/ringbuf.h>
+
 #include "mqtt.h"
 #include "nibegw.h"
 #include "nibegw_config.h"
 
-#include <freertos/ringbuf.h>
-
 #define READ_COILS_RING_BUFFER_SIZE 256  // max number of coils to poll
-
 
 class NibeMqttGw : public NibeGwCallback {
    public:
@@ -16,7 +15,7 @@ class NibeMqttGw : public NibeGwCallback {
 
     esp_err_t begin(const NibeMqttConfig& config, MqttClient& mqttClient);
 
-    void publishState(); 
+    void publishState();
 
     // NibeGwCallback
     void onMessageReceived(const uint8_t* const data, int len);
@@ -26,6 +25,8 @@ class NibeMqttGw : public NibeGwCallback {
    private:
     const NibeMqttConfig* config;
     MqttClient* mqttClient;
+
+    std::string nibeRootTopic;
 
     RingbufHandle_t readCoilsRingBuffer;
 };

@@ -1,14 +1,12 @@
 #include "nibegw_mqtt.h"
 
 #include <esp_log.h>
-#include <bit>
 
+#include <bit>
 
 static const char* TAG = "nibegw_mqtt";
 
-NibeMqttGw::NibeMqttGw() {
-    mqttClient = NULL;
-}
+NibeMqttGw::NibeMqttGw() { mqttClient = nullptr; }
 
 esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient) {
     this->config = &config;
@@ -20,6 +18,7 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
         return ESP_FAIL;
     }
 
+    nibeRootTopic = mqttClient.getConfig().rootTopic + "/coils/";
     return ESP_OK;
 }
 
@@ -47,9 +46,10 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
         const Coil& coil = iter->second;
         // TODO: should check data consistency (len vs data type)
         // decode raw data
-        std::string value = coil.decodeCoilData(msg->readResponse); 
+        std::string value = coil.decodeCoilData(msg->readResponse);
         // publish data to mqtt
-        ESP_LOGI(TAG, "NIBE_CMD_MODBUS_READ_RESP: coil=%d, value=%s",  coilAddress, value.c_str());
+        // TODO: use more descriptive topic (title-coilAddress)?
+        mqttClient->publish(nibeRootTopic + std::to_string(coilAddress), value);
     } else {
         ESP_LOGI(TAG, "Unknown message cmd=%x", msg->cmd);
     }
@@ -57,19 +57,19 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
 
 int NibeMqttGw::onReadTokenReceived(uint8_t* data) {
     size_t item_size;
-    uint16_t *coilAddressPtr = (uint16_t *)xRingbufferReceive(readCoilsRingBuffer, &item_size, 0);
+    uint16_t* coilAddressPtr = (uint16_t*)xRingbufferReceive(readCoilsRingBuffer, &item_size, 0);
     if (coilAddressPtr == nullptr) {
         return 0;
     }
     uint16_t coilAddress = *coilAddressPtr;
-    vRingbufferReturnItem(readCoilsRingBuffer, (void *)coilAddressPtr);
+    vRingbufferReturnItem(readCoilsRingBuffer, (void*)coilAddressPtr);
 
     ESP_LOGI(TAG, "onReadTokenReceived, read coil %d", coilAddress);
     NibeReadRequestMessage* readRequest = (NibeReadRequestMessage*)data;
     readRequest->start = NIBE_REQUEST_START;
     readRequest->cmd = NIBE_CMD_MODBUS_READ_REQ;
     readRequest->coilAddress = std::byteswap((uint16_t)coilAddress);
-    readRequest->chksum = AbstractNibeGw::calcCheckSum(data, sizeof(NibeReadRequestMessage) - 1); // TODO: calculate checksum
+    readRequest->chksum = AbstractNibeGw::calcCheckSum(data, sizeof(NibeReadRequestMessage) - 1);
     return sizeof(NibeReadRequestMessage);
 }
 
