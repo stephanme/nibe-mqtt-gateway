@@ -38,6 +38,7 @@ class NibeMqttGwConfigManager {
    public:
     static esp_err_t parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>& coils);
     static esp_err_t parseNibeModbusCSVLine(const std::string& line, Coil& coil);
+    static esp_err_t getNextCsvToken(std::istream& is, std::string& token);
 };
 
 #endif

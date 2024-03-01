@@ -8,23 +8,55 @@
 #include "nibegw.h"
 
 // configuration
-enum CoilDataType {
-    COIL_DATA_TYPE_UNKNOWN,
-    COIL_DATA_TYPE_UINT8,
-    COIL_DATA_TYPE_INT8,
-    COIL_DATA_TYPE_UINT16,
-    COIL_DATA_TYPE_INT16,
-    COIL_DATA_TYPE_UINT32,
-    COIL_DATA_TYPE_INT32,
-    COIL_DATA_TYPE_DATE,
+enum class CoilDataType {
+    Unknown,
+    UInt8,
+    Int8,
+    UInt16,
+    Int16,
+    UInt32,
+    Int32,
+    // Date?
 };
 
-enum CoilMode {
-    COIL_MODE_UNKNOWN = 0x00,
-    COIL_MODE_READ = 0x01,
-    COIL_MODE_WRITE = 0x02,
-    COIL_MODE_READ_WRITE = COIL_MODE_READ | COIL_MODE_WRITE,
+enum class CoilMode {
+    Unknown = 0x00,
+    Read = 0x01,
+    Write = 0x02,
+    ReadWrite = Read | Write,
 };
+
+enum class CoilUnit {
+    Unknown,
+    NoUnit,  // no unit
+
+    GradCelcius,       // °C
+    Percent,           // %
+    LiterPerMinute,    // l/min
+    KiloPascal,        // kPa
+    Bar,               // bar
+    RelativeHumidity,  // %RH
+    RPM,               // rpm
+
+    Volt,          // V
+    Ampere,        // A
+    Watt,          // W
+    KiloWatt,      // kW
+    WattHour,      // Wh
+    KiloWattHour,  // kWh
+    Hertz,         // Hz
+
+    Seconds,  // s, secs
+    Minutes,  // min
+    Hours,    // h, hrs
+    Days,     // days
+    Months,   // months
+
+};
+
+#define GRAD_CELCIUS \
+    "\xB0"           \
+    "C"  // °C in ISO-8859-1
 
 // represents coil configuration from ModbusManager
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
@@ -35,7 +67,7 @@ class Coil {
     uint16_t id;
     std::string title;
     std::string info;
-    std::string unit;
+    CoilUnit unit;
     CoilDataType dataType;  // = size
     int factor;
     int minValue;
@@ -44,8 +76,8 @@ class Coil {
     CoilMode mode;
 
     Coil() {}
-    Coil(uint16_t id, const std::string& title, const std::string& info, const std::string& unit, CoilDataType dataType,
-         int factor, int minValue, int maxValue, int defaultValue, CoilMode mode)
+    Coil(uint16_t id, const std::string& title, const std::string& info, CoilUnit unit, CoilDataType dataType, int factor,
+         int minValue, int maxValue, int defaultValue, CoilMode mode)
         : id(id),
           title(title),
           info(info),
@@ -59,6 +91,8 @@ class Coil {
 
     std::string decodeCoilData(const NibeReadResponseData& data) const;
     std::string formatNumber(auto value) const;
+    const char* unitAsString();
+    static CoilUnit stringToUnit(const char* unit);
 
     bool operator==(const Coil& other) const = default;
 };

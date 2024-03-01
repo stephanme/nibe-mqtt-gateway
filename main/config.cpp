@@ -235,24 +235,24 @@ const std::string NibeMqttGwConfigManager::getNibeModbusConfig() {
         Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
         )";
     for (auto [id, coil] : config.nibe.coils) {
-        csv += "\"" + coil.title + "\";\"" + coil.info + "\";" + std::to_string(coil.id) + ";\"" + coil.unit + "\";";
+        csv += "\"" + coil.title + "\";\"" + coil.info + "\";" + std::to_string(coil.id) + ";\"" + coil.unitAsString() + "\";";
         switch (coil.dataType) {
-            case COIL_DATA_TYPE_INT8:
+            case CoilDataType::Int8:
                 csv += "s8;";
                 break;
-            case COIL_DATA_TYPE_INT16:
+            case CoilDataType::Int16:
                 csv += "s16;";
                 break;
-            case COIL_DATA_TYPE_INT32:
+            case CoilDataType::Int32:
                 csv += "s32;";
                 break;
-            case COIL_DATA_TYPE_UINT8:
+            case CoilDataType::UInt8:
                 csv += "u8;";
                 break;
-            case COIL_DATA_TYPE_UINT16:
+            case CoilDataType::UInt16:
                 csv += "u16;";
                 break;
-            case COIL_DATA_TYPE_UINT32:
+            case CoilDataType::UInt32:
                 csv += "u32;";
                 break;
             default:
@@ -262,13 +262,13 @@ const std::string NibeMqttGwConfigManager::getNibeModbusConfig() {
         csv += std::to_string(coil.factor) + ";" + std::to_string(coil.minValue) + ";" + std::to_string(coil.maxValue) + ";" +
                std::to_string(coil.defaultValue) + ";";
         switch (coil.mode) {
-            case COIL_MODE_READ:
+            case CoilMode::Read:
                 csv += "R;";
                 break;
-            case COIL_MODE_WRITE:
+            case CoilMode::Write:
                 csv += "W;";
                 break;
-            case COIL_MODE_READ_WRITE:
+            case CoilMode::ReadWrite:
                 csv += "RW;";
                 break;
             default:
@@ -370,6 +370,9 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
     while (is) {
         std::getline(is, line);
         line_num++;
+        // if (line_num % 50 == 0) {
+        //     ESP_LOGI(TAG, "Nibe Modbus CSV, line %d, minHeap %lu", line_num, ESP.getMinFreeHeap());
+        // }
         if (line.empty()) {
             continue;
         }
@@ -387,6 +390,8 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
+// returns ESP_OK if correctly parsed and coil is valid or the number of the bad token
+//
 // Limitations:
 // - expects double quotes around strings for title, info, unit; no quotes for other fields
 // - doesn't handle escaping of quotes
@@ -395,74 +400,125 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& lin
     externbuf buf(line.c_str(), line.size());
     std::istream is(&buf);
     std::string token;
+    esp_err_t token_num = 1;  //
     try {
-        // Title
-        std::getline(is, token, ';');
-        if (!is || token.size() < 2 || !token.starts_with('"') || !token.ends_with('"')) return ESP_FAIL;
-        coil.title = token.substr(1, token.size() - 2);
-        // Info
-        std::getline(is, token, ';');
-        if (!is || token.size() < 2 || !token.starts_with('"') || !token.ends_with('"')) return ESP_FAIL;
-        coil.info = token.substr(1, token.size() - 2);
+        // Title (mandatory)
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
+        if (token.empty()) return token_num;
+        coil.title = token;
+        token_num++;
+        // Info (optional)
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
+        coil.info = token;
+        token_num++;
         // ID
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
-        coil.id = std::stoi(token);  // TODO: error handling
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
+        if (token.empty()) return token_num;
+        coil.id = std::stoi(token);
+        token_num++;
         // Unit
-        std::getline(is, token, ';');
-        if (!is || token.size() < 2 || !token.starts_with('"') || !token.ends_with('"')) return ESP_FAIL;
-        coil.unit = token.substr(1, token.size() - 2);
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
+        coil.unit = Coil::stringToUnit(token.c_str());
+        if (coil.unit == CoilUnit::Unknown) return token_num;
+        token_num++;
         // Size
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.dataType = nibeModbusSizeToDataType(token);
-        if (coil.dataType == COIL_DATA_TYPE_UNKNOWN) return ESP_FAIL;
+        if (coil.dataType == CoilDataType::Unknown) return token_num;
+        token_num++;
         // Factor
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.factor = std::stoi(token);
+        token_num++;
         // Min
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.minValue = std::stoi(token);
+        token_num++;
         // Max
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.maxValue = std::stoi(token);
+        token_num++;
         // Default
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.defaultValue = std::stoi(token);
+        token_num++;
         // Mode
-        std::getline(is, token, ';');
-        if (!is || token.empty()) return ESP_FAIL;
+        if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         coil.mode = nibeModbusMode(token);
-        if (coil.mode == COIL_MODE_UNKNOWN) return ESP_FAIL;
+        if (coil.mode == CoilMode::Unknown) return token_num;
 
         return ESP_OK;
-    } catch (const std::invalid_argument& e) {
-        // TODO: is not catched on linux but works on esp32, unclear why
-        return ESP_FAIL;
+#if CONFIG_IDF_TARGET_LINUX
     } catch (...) {
         // for linux only to get tests green
+        // don't use on esp32 because it hides OOMs
+        return token_num;
+    }
+#else
+    } catch (const std::invalid_argument& e) {
+        // TODO: is not caught on linux but works on esp32, unclear why
+        return token_num;
+    }
+#endif
+}
+
+// Reads next CSV token and stores it in 'token', reads ; separator
+// handles quoting
+esp_err_t NibeMqttGwConfigManager::getNextCsvToken(std::istream& is, std::string& token) {
+    token.clear();
+
+    bool quoted = false;
+    int c = is.get();
+    if (c == EOF) {
         return ESP_FAIL;
     }
+    if (c == '"') {
+        quoted = true;
+        c = is.get();
+    }
+    while (1) {
+        if (quoted) {
+            if (c == EOF) {
+                return ESP_FAIL;
+            } else if (c == '"') {
+                c = is.get();
+                if (c == '"') {
+                    // "" within quoted string
+                    token.push_back(c);
+                    c = is.get();
+                } else {
+                    quoted = false;
+                }
+            } else {
+                token.push_back(c);
+                c = is.get();
+            }
+        } else {
+            if (c == ';' || c == EOF) {
+                return ESP_OK;
+            } else {
+                token.push_back(c);
+                c = is.get();
+            }
+        }
+    }
+    return ESP_OK;
 }
 
 CoilDataType NibeMqttGwConfigManager::nibeModbusSizeToDataType(const std::string& size) {
     // TODO: more data types like date, needs additional metadata because not encoded in CSV
-    if (size == "s8") return COIL_DATA_TYPE_INT8;
-    if (size == "s16") return COIL_DATA_TYPE_INT16;
-    if (size == "s32") return COIL_DATA_TYPE_INT32;
-    if (size == "u8") return COIL_DATA_TYPE_UINT8;
-    if (size == "u16") return COIL_DATA_TYPE_UINT16;
-    if (size == "u32") return COIL_DATA_TYPE_UINT32;
-    return COIL_DATA_TYPE_UNKNOWN;
+    if (size == "s8") return CoilDataType::Int8;
+    if (size == "s16") return CoilDataType::Int16;
+    if (size == "s32") return CoilDataType::Int32;
+    if (size == "u8") return CoilDataType::UInt8;
+    if (size == "u16") return CoilDataType::UInt16;
+    if (size == "u32") return CoilDataType::UInt32;
+    return CoilDataType::Unknown;
 }
 
 CoilMode NibeMqttGwConfigManager::nibeModbusMode(const std::string& mode) {
-    if (mode == "R") return COIL_MODE_READ;
-    if (mode == "W") return COIL_MODE_WRITE;
-    if (mode == "RW") return COIL_MODE_READ_WRITE;
-    return COIL_MODE_UNKNOWN;
+    if (mode == "R") return CoilMode::Read;
+    if (mode == "W") return CoilMode::Write;
+    if (mode == "R/W") return CoilMode::ReadWrite;
+    return CoilMode::Unknown;
 }
