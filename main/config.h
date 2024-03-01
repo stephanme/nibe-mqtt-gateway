@@ -24,7 +24,7 @@ class NibeMqttGwConfigManager {
     esp_err_t saveConfig(const char* configJson);
 
     const std::string getNibeModbusConfig();
-    esp_err_t saveNibeModbusConfig(const char* csv);
+    esp_err_t saveNibeModbusConfig(const char* uploadFileName);
 
    private:
     static const std::string EMPTY_STRING;
@@ -48,5 +48,33 @@ class NibeMqttGwConfigManager {
     static esp_err_t parseNibeModbusCSVLine(const std::string& line, Coil& coil, string_deduplicate_t* coilInfoSet);
     static esp_err_t getNextCsvToken(std::istream& is, std::string& token);
 };
+
+
+#if CONFIG_IDF_TARGET_LINUX
+#else
+#include <LittleFS.h>
+
+// adapter to use std::stream with Arduino Stream
+// implements reading only
+// see https://en.cppreference.com/w/cpp/io/basic_streambuf/underflow
+class ArduinoStream : public std::streambuf {
+    Stream& stream;
+    char ch;
+
+   public:
+    ArduinoStream(Stream& stream) : stream(stream) {
+        setg(&ch, &ch + 1, &ch + 1);  // buffer is initially full (= nothing to read)
+    }
+
+    int_type underflow() override {
+        if (stream.available() > 0) {
+            ch = stream.read();
+            setg(&ch, &ch, &ch + 1);  // make one read position available
+            return ch;
+        }
+        return traits_type::eof();
+    }
+};
+#endif
 
 #endif

@@ -9,29 +9,6 @@
 #if CONFIG_IDF_TARGET_LINUX
 #else
 #include <ETH.h>
-#include <LittleFS.h>
-
-// adapter to use std::stream with Arduino Stream
-// implements reading only
-// see https://en.cppreference.com/w/cpp/io/basic_streambuf/underflow
-class ArduinoStream : public std::streambuf {
-    Stream& stream;
-    char ch;
-
-   public:
-    ArduinoStream(Stream& stream) : stream(stream) {
-        setg(&ch, &ch + 1, &ch + 1);  // buffer is initially full (= nothing to read)
-    }
-
-    int_type underflow() override {
-        if (stream.available() > 0) {
-            ch = stream.read();
-            setg(&ch, &ch, &ch + 1);  // make one read position available
-            return ch;
-        }
-        return traits_type::eof();
-    }
-};
 #endif
 
 // streambuf that operates on passed in data (no memory allocation)
@@ -247,10 +224,11 @@ const std::string NibeMqttGwConfigManager::getNibeModbusConfig() {
     return csv;
 }
 
-esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* csv) {
+esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileName) {
 #if CONFIG_IDF_TARGET_LINUX
+    // uploadFileName = csv - only for testing
     std::unordered_map<uint16_t, Coil> tmpCoils;
-    if (parseNibeModbusCSV(csv, &tmpCoils, &coilInfos) != ESP_OK) {
+    if (parseNibeModbusCSV(uploadFileName, &tmpCoils, &coilInfos) != ESP_OK) {
         return ESP_FAIL;
     }
     ESP_LOGW(TAG, "Skip writing config on Linux target");
@@ -258,22 +236,24 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* csv) {
     config.nibe.coils = tmpCoils;
 #else
     // validate csv
-    if (parseNibeModbusCSV(csv, nullptr, nullptr) != ESP_OK) {
-        return ESP_FAIL;
-    }
-    // write to file
-    File file = LittleFS.open(NIBE_MODBUS_FILE, FILE_WRITE);
+    File file = LittleFS.open(uploadFileName);
     if (!file) {
-        ESP_LOGE(TAG, "Failed to nibe modbus config file %s", NIBE_MODBUS_FILE);
+        ESP_LOGE(TAG, "Failed to open nibe modbus config file %s", uploadFileName);
         return ESP_FAIL;
     }
-    if (!file.print(csv)) {
-        ESP_LOGE(TAG, "Failed to write nibe modbus config file %s", NIBE_MODBUS_FILE);
+    ArduinoStream as(file);
+    std::istream is(&as);
+    if (parseNibeModbusCSV(is, nullptr, nullptr) != ESP_OK) {
         file.close();
         return ESP_FAIL;
     }
-
     file.close();
+
+    // delete old config and rename upload file
+    if (!LittleFS.remove(NIBE_MODBUS_FILE) || !LittleFS.rename(uploadFileName, NIBE_MODBUS_FILE)) {
+        ESP_LOGE(TAG, "Failed to save nibe modbus config file %s", NIBE_MODBUS_FILE);
+        return ESP_FAIL;
+    }
 #endif
 
     return ESP_OK;

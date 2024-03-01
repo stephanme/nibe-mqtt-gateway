@@ -9,6 +9,7 @@
 #include "KMPProDinoESP32.h"
 
 #define ROOT_REDIRECT_HTML R"(<META http-equiv="refresh" content="5;URL=/">)"
+#define NIBE_MODBUS_UPLOAD_FILE "/nibe_modbus_upload.csv"
 
 static const char *TAG = "web";
 
@@ -97,24 +98,25 @@ void NibeMqttGwWebServer::handlePostNibeConfigUpload() {
 
     if (upload.status == UPLOAD_FILE_START) {
         _updaterError.clear();
-        nibeConfigUpload.clear();
-        nibeConfigUpload.reserve(80000);  // TODO: max size
         ESP_LOGI(TAG, "Upload nibe config: %s", upload.filename.c_str());
+        nibeConfigUploadFile = LittleFS.open(NIBE_MODBUS_UPLOAD_FILE, FILE_WRITE);
+        if (!nibeConfigUploadFile) {
+            setNibeConfigUpdateError("Failed to open file: " NIBE_MODBUS_UPLOAD_FILE);
+        }
     } else if (upload.status == UPLOAD_FILE_WRITE && !_updaterError.length()) {
-        nibeConfigUpload.append((char*)upload.buf, upload.currentSize);
+        if (nibeConfigUploadFile.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            setNibeConfigUpdateError("Failed to write file: " NIBE_MODBUS_UPLOAD_FILE);
+        }
     } else if (upload.status == UPLOAD_FILE_END && !_updaterError.length()) {
         ESP_LOGI(TAG, "Upload nibe config finished: %u bytes", upload.totalSize);
-        if (configManager.saveNibeModbusConfig(nibeConfigUpload.c_str()) == ESP_OK) {
-            ESP_LOGI(TAG, "Nibe config update Success - Rebooting...");
-        } else {
+        nibeConfigUploadFile.close();
+
+        if (configManager.saveNibeModbusConfig(NIBE_MODBUS_UPLOAD_FILE) != ESP_OK) {
             setNibeConfigUpdateError("Invalid nibe modbus configuration. Check logs.");
         }
-        nibeConfigUpload.clear();
-        nibeConfigUpload.shrink_to_fit();
     } else if (upload.status == UPLOAD_FILE_ABORTED) {
-        nibeConfigUpload.clear();
-        nibeConfigUpload.shrink_to_fit();
         ESP_LOGW(TAG, "Nibe config upload was aborted");
+        nibeConfigUploadFile.close();
     }
     delay(0);
 }
@@ -275,6 +277,6 @@ void NibeMqttGwWebServer::send200AndReboot(const char *msg) {
     httpServer.send(200, "text/html", msg);
     delay(1000);
     httpServer.client().stop();
-    delay(100);
+    delay(1000);
     ESP.restart();
 }

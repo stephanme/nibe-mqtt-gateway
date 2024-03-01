@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WebServer.h>
+#include <LittleFS.h>
 
 #include "config.h"
 #include "mqtt.h"
@@ -33,7 +34,7 @@ class NibeMqttGwWebServer {
     bool _authenticated = false;
     String _updaterError;
 
-    std::string nibeConfigUpload;
+    File nibeConfigUploadFile;
 
     void handleGetRoot();
     void handleGetConfig();
