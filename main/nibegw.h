@@ -61,6 +61,7 @@ enum eState {
     STATE_CRC_FAILURE,
 };
 
+#define NIBE_GW_TASK_STACK_SIZE 10 * 1024
 #define NIBE_GW_TASK_PRIORITY 15
 
 // message buffer for RS-485 communication. Max message length is 80 uint8_ts + 6 uint8_ts header

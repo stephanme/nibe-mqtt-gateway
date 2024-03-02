@@ -34,7 +34,7 @@ int MqttRelay::begin(MqttClient* mqttClient) {
     mqttClient->subscribe(commandTopic, this);
 
     // publish MQTT discovery, TODO: move to onConnected() callback?
-    std::string discoveryTopic = mqttClient->getConfig().discoveryPrefix + "/switch/" + mqttTopic + "/config";
+    std::string discoveryTopic = mqttClient->getConfig().discoveryPrefix + "/switch/nibegw/" + mqttTopic + "/config";
     char discoveryPayload[strlen(DISCOVERY_PAYLOAD) + 2 * mqttTopic.length() + name.length() + commandTopic.length() +
                           stateTopic.length() + mqttClient->getDeviceDiscoveryInfo().length() + 1];
     sprintf(discoveryPayload, DISCOVERY_PAYLOAD, mqttTopic.c_str(), mqttTopic.c_str(), name.c_str(), commandTopic.c_str(),

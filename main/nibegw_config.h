@@ -54,10 +54,6 @@ enum class CoilUnit {
 
 };
 
-#define GRAD_CELCIUS \
-    "\xB0"           \
-    "C"  // °C in ISO-8859-1
-
 // represents coil configuration from ModbusManager
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 //
@@ -91,7 +87,7 @@ class Coil {
 
     std::string decodeCoilData(const NibeReadResponseData& data) const;
     std::string formatNumber(auto value) const;
-    const char* unitAsString();
+    const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
 
     bool operator==(const Coil& other) const = default;

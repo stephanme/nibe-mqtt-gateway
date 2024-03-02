@@ -1,13 +1,14 @@
 #include "mqtt.h"
 
 #include <esp_log.h>
+#include <esp_app_desc.h>
 
 static const char* TAG = "mqtt";
 
 // TODO: hostname and mac address
 static const char* DEVICE_DISCOVERY_INFO = R"(
 "availability": [{"topic":"%s"}],
-"device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"0.1","configuration_url":"http://%s.fritz.box"}
+"device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"%s","configuration_url":"http://%s.fritz.box"}
 )";
 
 MqttClient::MqttClient() { _status = ESP_MQTT_DISCONNECTED; }
@@ -41,10 +42,11 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
     availabilityTopic = config.rootTopic;
     availabilityTopic += "/availability";
 
+    const esp_app_desc_t *app_desc = esp_app_get_description();
     size_t len =
-        strlen(DEVICE_DISCOVERY_INFO) + availabilityTopic.length() + config.clientId.length() + config.hostname.length() + 1;
+        strlen(DEVICE_DISCOVERY_INFO) + availabilityTopic.length() + config.clientId.length() + strlen(app_desc->version) + config.hostname.length() + 1;
     char str[len];
-    snprintf(str, len, DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.clientId.c_str(), config.hostname.c_str());
+    snprintf(str, len, DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.clientId.c_str(), app_desc->version ,config.hostname.c_str());
     deviceDiscoveryInfo = str;
 
     ESP_LOGI(TAG, "MQTT Broker URL: %s", config.brokerUri.c_str());

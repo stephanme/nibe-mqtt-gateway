@@ -2,6 +2,7 @@
 #define _nibegw_mqtt_h_
 
 #include <freertos/ringbuf.h>
+#include <unordered_set>
 
 #include "mqtt.h"
 #include "nibegw.h"
@@ -27,8 +28,11 @@ class NibeMqttGw : public NibeGwCallback {
     MqttClient* mqttClient;
 
     std::string nibeRootTopic;
+    std::unordered_set<uint16_t> announcedCoils;
 
     RingbufHandle_t readCoilsRingBuffer;
+
+    void announceCoil(const Coil& coil);
 };
 
 #endif

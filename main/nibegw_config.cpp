@@ -42,7 +42,11 @@ CoilUnit Coil::stringToUnit(const char* unit) {
         return CoilUnit::NoUnit;
     } else if (strcmp(unit, " ") == 0) {
         return CoilUnit::NoUnit;
-    } else if (strcmp(unit, GRAD_CELCIUS) == 0) {  // °C in ISO-8859-1
+    } else if (strcmp(unit, "°C") == 0) {  // °C in UTF-8
+        return CoilUnit::GradCelcius;
+    } else if (strcmp(unit,
+                      "\xB0"
+                      "C") == 0) {  // °C in ISO-8859-1
         return CoilUnit::GradCelcius;
     } else if (strcmp(unit,
                       "\xba"
@@ -93,12 +97,12 @@ CoilUnit Coil::stringToUnit(const char* unit) {
     }
 }
 
-const char* Coil::unitAsString() {
+const char* Coil::unitAsString() const {
     switch (unit) {
         case CoilUnit::NoUnit:
             return "";
         case CoilUnit::GradCelcius:
-            return GRAD_CELCIUS;
+            return "°C"; // UTF-8
         case CoilUnit::Percent:
             return "%";
         case CoilUnit::LiterPerMinute:

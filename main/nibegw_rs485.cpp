@@ -45,7 +45,7 @@ NibeGw::NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, in
 esp_err_t NibeGw::begin(NibeGwCallback& callback) {
     ESP_LOGI(TAG, "NibeGw::begin");
     this->callback = &callback;
-    int err = xTaskCreatePinnedToCore(&task, "nibegwTask", 6 * 1024, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
+    int err = xTaskCreatePinnedToCore(&task, "nibegwTask", NIBE_GW_TASK_STACK_SIZE, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start nibegw task");
         return ESP_FAIL;

@@ -44,7 +44,7 @@ std::string AbstractNibeGw::dataToString(const uint8_t* const data, int len) {
 esp_err_t SimulatedNibeGw::begin(NibeGwCallback& callback) {
     ESP_LOGI(TAG, "SimulatedNibeGw::begin");
     this->callback = &callback;
-    int err = xTaskCreatePinnedToCore(&task, "nibegwTask", 6 * 1024, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
+    int err = xTaskCreatePinnedToCore(&task, "nibegwTask", NIBE_GW_TASK_STACK_SIZE, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start nibegw task");
         return ESP_FAIL;

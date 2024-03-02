@@ -50,9 +50,74 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
         // publish data to mqtt
         // TODO: use more descriptive topic (title-coilAddress)?
         mqttClient->publish(nibeRootTopic + std::to_string(coilAddress), value);
+
+        // announce coil on first appearance
+        if (announcedCoils.find(coilAddress) == announcedCoils.end()) {
+            announceCoil(coil);
+        }
     } else {
         ESP_LOGI(TAG, "Unknown message cmd=%x", msg->cmd);
     }
+}
+
+static const char* DISCOVERY_PAYLOAD = R"({
+"object_id":"nibegw-coil-%u",
+"unique_id":"nibegw-coil-%u",
+"name":"%s",
+"state_topic":"%s",
+%s
+%s
+})";
+
+void NibeMqttGw::announceCoil(const Coil& coil) {
+    ESP_LOGI(TAG, "Announcing coil %u", coil.id);
+
+    const char* component = "sensor";
+
+    char stateTopic[64];
+    snprintf(stateTopic, sizeof(stateTopic), "%s%u", nibeRootTopic.c_str(), coil.id);
+    char unit[128];
+    switch (coil.unit) {
+        case CoilUnit::Unknown:
+        case CoilUnit::NoUnit:
+            unit[0] = '\0';
+            break;
+        case CoilUnit::GradCelcius:
+            snprintf(unit, sizeof(unit),
+                     R"("unit_of_measurement":"%s","device_class":"temperature","state_class":"measurement",)",
+                     coil.unitAsString());
+            break;
+        case CoilUnit::Hours:
+        case CoilUnit::Minutes:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration",)", coil.unitAsString());
+            break;
+        case CoilUnit::Watt:
+        case CoilUnit::KiloWatt:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power",)", coil.unitAsString());
+            break;
+        case CoilUnit::WattHour:
+        case CoilUnit::KiloWattHour:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy",)", coil.unitAsString());
+            break;
+        case CoilUnit::Hertz:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency",)", coil.unitAsString());
+            break;
+        default:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s",)", coil.unitAsString());
+            break;
+    }
+    // TODO: writable coils
+
+    // !!! if crash (strlen in ROM) -> stack too small (nibegw.h: NIBE_GW_TASK_STACK_SIZE) or incorrect format string!!!
+    char discoveryTopic[64];
+    snprintf(discoveryTopic, sizeof(discoveryTopic), "%s/%s/nibegw/coil-%u/config",
+             mqttClient->getConfig().discoveryPrefix.c_str(), component, coil.id);
+    char discoveryPayload[1024];
+    snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, coil.id, coil.id, coil.title.c_str(), stateTopic,
+             unit, mqttClient->getDeviceDiscoveryInfo().c_str());
+
+    mqttClient->publish(discoveryTopic, discoveryPayload, QOS0, true);
+    announcedCoils.insert(coil.id);
 }
 
 int NibeMqttGw::onReadTokenReceived(uint8_t* data) {
