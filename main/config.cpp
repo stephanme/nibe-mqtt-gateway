@@ -31,8 +31,6 @@ static const char* TAG = "config";
 #define CONFIG_FILE "/config.json"
 #define NIBE_MODBUS_FILE "/nibe_modbus.csv"
 
-const std::string NibeMqttGwConfigManager::EMPTY_STRING = "";
-
 NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
     // initialize with default values
     config = {
@@ -103,7 +101,7 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         ESP_LOGI(TAG, "Reading nibe modbus config file %s", NIBE_MODBUS_FILE);
         ArduinoStream as(file);
         std::istream is(&as);
-        if (parseNibeModbusCSV(is, &config.nibe.coils, &coilInfos) != ESP_OK) {
+        if (parseNibeModbusCSV(is, &config.nibe.coils) != ESP_OK) {
             file.close();
             return ESP_FAIL;
         }
@@ -228,7 +226,7 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
 #if CONFIG_IDF_TARGET_LINUX
     // uploadFileName = csv - only for testing
     std::unordered_map<uint16_t, Coil> tmpCoils;
-    if (parseNibeModbusCSV(uploadFileName, &tmpCoils, &coilInfos) != ESP_OK) {
+    if (parseNibeModbusCSV(uploadFileName, &tmpCoils) != ESP_OK) {
         return ESP_FAIL;
     }
     ESP_LOGW(TAG, "Skip writing config on Linux target");
@@ -243,7 +241,7 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
     }
     ArduinoStream as(file);
     std::istream is(&as);
-    if (parseNibeModbusCSV(is, nullptr, nullptr) != ESP_OK) {
+    if (parseNibeModbusCSV(is, nullptr) != ESP_OK) {
         file.close();
         return ESP_FAIL;
     }
@@ -259,11 +257,10 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
     return ESP_OK;
 }
 
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils,
-                                                      string_deduplicate_t* coilInfoSet) {
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils) {
     externbuf buf(csv, strlen(csv));
     std::istream is(&buf);
-    return parseNibeModbusCSV(is, coils, coilInfoSet);
+    return parseNibeModbusCSV(is, coils);
 }
 
 // Nibe ModbusManager CSV format:
@@ -275,8 +272,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unor
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
 // if coils is null, the input is only checked for format
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils,
-                                                      string_deduplicate_t* coilInfoSet) {
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils) {
     std::string line;
     line.reserve(256);
     int line_num = 0;
@@ -317,7 +313,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
             continue;
         }
         Coil coil;
-        esp_err_t err = parseNibeModbusCSVLine(line, coil, coilInfoSet);
+        esp_err_t err = parseNibeModbusCSVLine(line, coil);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Format error in token #%d: %s", line_num, err, line.c_str());
             return ESP_FAIL;
@@ -334,32 +330,19 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
 // returns ESP_OK if correctly parsed and coil is valid or the number of the bad token
-//
-// Limitations:
-// - expects double quotes around strings for title, info, unit; no quotes for other fields
-// - doesn't handle escaping of quotes
-// - could save memory by string de-duplication (unit, empty info)
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, Coil& coil,
-                                                          string_deduplicate_t* coilInfoSet) {
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, Coil& coil) {
     externbuf buf(line.c_str(), line.size());
     std::istream is(&buf);
     std::string token;
-    esp_err_t token_num = 1;  //
+    esp_err_t token_num = 1;  // returned as err msg
     try {
         // Title (mandatory)
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         if (token.empty()) return token_num;
         coil.title = token;
         token_num++;
-        // Info (optional)
+        // Info (optional), ignored
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        if (coilInfoSet != nullptr) {
-            // de-duplicate
-            coil.info = (*coilInfoSet->insert({token, &token}).first).second;
-        } else {
-            // don't store info w/o coilInfoSet since token is a temporary
-            coil.info = &EMPTY_STRING;
-        }
         token_num++;
         // ID
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
