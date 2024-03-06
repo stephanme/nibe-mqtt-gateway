@@ -83,7 +83,7 @@ void IRAM_ATTR EnergyMeter::gpio_interrupt_handler(void* args) {
 void EnergyMeter::task(void* pvParameters) {
     EnergyMeter* meter = (EnergyMeter*)pvParameters;
     while (1) {
-        xTaskNotifyWait(0, 0, 0, portMAX_DELAY);
+        xTaskNotifyWait(0, ULONG_MAX, 0, portMAX_DELAY);
 
         meter->energyInWh++;
         ESP_LOGI(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, meter->energyInWh);
