@@ -67,7 +67,7 @@ static const char* DISCOVERY_PAYLOAD = R"({
 "state_topic":"%s",
 "unit_of_measurement":"kWh",
 "device_class":"energy",
-"state_class":"total_increasing:,
+"state_class":"total_increasing",
 %s
 })";
 
