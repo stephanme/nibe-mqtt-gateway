@@ -10,7 +10,22 @@ static const char* TAG = "energy_meter";
 esp_err_t EnergyMeter::begin() {
     ESP_LOGI(TAG, "EnergyMeter::begin");
 
-    int err = xTaskCreatePinnedToCore(&task, "energyMeterTask", 6 * 1024, this, 11, &taskHandle, 1);
+    // read persisted energyInWh value
+    int err;
+    err = nvs_open(NIBEGW_NVS_NAMESPACE, NVS_READWRITE, &nvsHandle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_open failed: %d", err);
+        return err;
+    }
+    err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, &energyInWh);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGI(TAG, "nvs_get_u32: key %s not found", NIBEGW_NVS_KEY_ENERGY_IN_WH);
+    } else if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_get_u32(%s)  failed: %d", NIBEGW_NVS_KEY_ENERGY_IN_WH, err);
+        return err;
+    }
+
+    err = xTaskCreatePinnedToCore(&task, "energyMeterTask", 6 * 1024, this, ENERGY_METER_TASK_PRIORITY, &taskHandle, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start energyMeterTask task");
         return ESP_FAIL;
@@ -96,10 +111,24 @@ void EnergyMeter::task(void* pvParameters) {
 }
 
 esp_err_t EnergyMeter::publishState() {
-    ESP_LOGI(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
+    auto e = energyInWh;
+    ESP_LOGI(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, e);
+
+    // store in nvs if changed
+    if (e != lastStoredEnergyInWh) {
+        lastStoredEnergyInWh = e;
+        int err = nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, e);
+        if (err == ESP_OK) {
+            err = nvs_commit(nvsHandle);
+        }
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "nvs_set_u32/nvs_commit(%s) failed: %d", NIBEGW_NVS_KEY_ENERGY_IN_WH, err);
+        }
+    }
+
     // TODO: move to util class, tests
-    auto s = std::to_string(energyInWh / 1000);
-    auto remainder = energyInWh % 1000;
+    auto s = std::to_string(e / 1000);
+    auto remainder = e % 1000;
     if (remainder < 10) {
         s += ".00";
     } else if (remainder < 100) {

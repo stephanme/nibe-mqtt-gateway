@@ -11,14 +11,15 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] direct connection to MQTT broker
 - [ ] configurable set of of published Nibe registers/coils
 - [ ] supports writing to Nibe registers
+- [x] energy meter connected via S0 interface to OptIn1, persisted in nvs
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
 - [x] supports Home Assistant MQTT auto-discovery
 - [x] simple web UI for info and administration
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
+- [ ] nibe coils and other measurements as Prometheus metrics
 - [x] logging via MQTT topic (as alternative to serial interface)
-- [x] energy meter connected via S0 interface to OptIn1
 
 ## Prerequisites
 
@@ -28,7 +29,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - ESP-IDF v5.1.3, use branch release-5.1 until released
   - since the PRODINo ESP32 Ethernet v1 board doesn't wire the W5500 interrupt line, [PR #12692](https://github.com/espressif/esp-idf/pull/12692) needs to be cherry-picked on top, TODO: check
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
-- energy meter with S0 interface, e.g. DRT 428D
+- energy meter with [S0 interface](https://de.wikipedia.org/wiki/S0-Schnittstelle), e.g. DRT 428D
 
 Additionally helpful:
 - Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension)
