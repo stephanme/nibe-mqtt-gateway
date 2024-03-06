@@ -7,11 +7,12 @@
 
 #include "config.h"
 #include "energy_meter.h"
-#include "mqtt.h"
+#include "nibegw_mqtt.h"
 
 class NibeMqttGwWebServer {
    public:
-    NibeMqttGwWebServer(int port, NibeMqttGwConfigManager& configManager, const MqttClient& mqttClient, EnergyMeter& energyMeter);
+    NibeMqttGwWebServer(int port, NibeMqttGwConfigManager& configManager, const MqttClient& mqttClient, NibeMqttGw& nibeMqttGw,
+                        EnergyMeter& energyMeter);
 
     void begin();
     void handleClient();
@@ -24,6 +25,7 @@ class NibeMqttGwWebServer {
 
     NibeMqttGwConfigManager& configManager;
     const MqttClient& mqttClient;
+    NibeMqttGw& nibeMqttGw;
     EnergyMeter& energyMeter;
 
     // metrics
@@ -47,6 +49,8 @@ class NibeMqttGwWebServer {
     void setNibeConfigUpdateError(const char* err);
     void handlePostEnergyMeter();
     void handlePostReboot();
+    void handlePostCoil();
+
     void handleGetMetrics();
     void handleNotFound();
 

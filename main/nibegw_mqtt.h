@@ -2,6 +2,7 @@
 #define _nibegw_mqtt_h_
 
 #include <freertos/ringbuf.h>
+
 #include <unordered_set>
 
 #include "mqtt.h"
@@ -16,7 +17,10 @@ class NibeMqttGw : public NibeGwCallback {
 
     esp_err_t begin(const NibeMqttConfig& config, MqttClient& mqttClient);
 
+    // request and publish configured coils to mqtt
     void publishState();
+    // request and publish a single coil
+    void requestCoil(uint16_t coilAddress);
 
     // NibeGwCallback
     void onMessageReceived(const uint8_t* const data, int len);

@@ -25,11 +25,16 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
 void NibeMqttGw::publishState() {
     // put subscribed coils into queue so that onMessageTokenReceived can send them to nibe
     ESP_LOGI(TAG, "publishState, requesting %d coils", config->coilsToPoll.size());
+
+    // TODO: clear ring buffer? - nibegw should be fast enough to keep up with the queue
     for (auto coil : config->coilsToPoll) {
-        // TODO: clear ring buffer - nibegw should be fast enough to keep up with the queue
-        if (!xRingbufferSend(readCoilsRingBuffer, &coil, sizeof(coil), 0)) {
-            ESP_LOGW(TAG, "Could not send coil %d to readCoilsRingBuffer. Buffer full.", coil);
-        }
+        requestCoil(coil);
+    }
+}
+
+void NibeMqttGw::requestCoil(uint16_t coilAddress) {
+    if (!xRingbufferSend(readCoilsRingBuffer, &coilAddress, sizeof(coilAddress), 0)) {
+        ESP_LOGW(TAG, "Could not send coil %d to readCoilsRingBuffer. Buffer full.", coilAddress);
     }
 }
 

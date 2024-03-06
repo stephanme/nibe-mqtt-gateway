@@ -48,7 +48,7 @@ NibeMqttGw nibeMqttGw;
 // NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
 SimulatedNibeGw nibegw;
 
-NibeMqttGwWebServer httpServer(80, configManager, mqttClient, energyMeter);
+NibeMqttGwWebServer httpServer(80, configManager, mqttClient, nibeMqttGw, energyMeter);
 
 void setup() {
     esp_err_t err;

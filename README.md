@@ -78,7 +78,7 @@ Nibe Modbus configuration:
 - (optional) delete coils that will never be needed, e.g. because of add-ons/hardware that is not installed 
 - upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
-Energy Meter configuration:
+Energy Meter configuration (also via UI):
 - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
 
 ### Trouble Shooting
@@ -90,7 +90,7 @@ The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
 - red blinking - OTA firmware upload in progress
 
 Web UI:
-- http://nibegw - main page with some status info
+- http://nibegw - main page with some status info and several config options
 - http://nibegw/update - OTA update and upload of file system
 - http://nibegw/metrics - Prometheus endpoint with some insights like heap, uptime and execution times
 

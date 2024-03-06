@@ -14,8 +14,8 @@
 static const char *TAG = "web";
 
 NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient,
-                                         EnergyMeter &energyMeter)
-    : httpServer(port), configManager(configManager), mqttClient(mqttClient), energyMeter(energyMeter) {}
+                                         NibeMqttGw &nibeMqttGw, EnergyMeter &energyMeter)
+    : httpServer(port), configManager(configManager), mqttClient(mqttClient), nibeMqttGw(nibeMqttGw), energyMeter(energyMeter) {}
 
 void NibeMqttGwWebServer::begin() {
     httpServer.begin();
@@ -29,6 +29,7 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/config/energymeter", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostEnergyMeter, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
+    httpServer.on("/coil", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostCoil, this));
 
     httpServer.on("/update", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetUpdate, this));
     httpServer.on("/update", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostUpdate, this),
@@ -62,8 +63,21 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 <li><a href="./update">Firmware Upload</a> (triggers reboot)</li>
 <li><a href="./metrics">Metrics</a></li>
 </ul>
+<h3>Actions</h3>
 <form action="./reboot" method="post">
   <button name="reboot" value="reboot">Reboot</button>
+</form>
+<br/>
+<form action="./coil" method="post">
+  <label for="coil">Nibe coil: </label>
+  <input type="text" id="coil" name="coil" value="">
+  <button>Request</button>
+</form>
+<br/>
+<form action="./config/energymeter" method="post">
+  <label for="energy">Energy meter [Wh]: </label>
+  <input type="text" id="energy" name="plain" value="">
+  <button>Set</button>
 </form>
 </body>
 </html>
@@ -139,15 +153,28 @@ void NibeMqttGwWebServer::handlePostNibeConfig() {
 
 void NibeMqttGwWebServer::handlePostEnergyMeter() {
     long wh = httpServer.arg("plain").toInt();
-    if (wh >= 0) {
+    if (wh > 0) {
+        ESP_LOGI(TAG, "Set energy meter to %ld Wh", wh);
         energyMeter.setEnergyInWh(wh);
-        httpServer.send(200, "text/plain", "Energy value set");
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Energy value set");
     } else {
         httpServer.send(400, "text/plain", "Invalid energy value");
     }
 }
 
 void NibeMqttGwWebServer::handlePostReboot() { send200AndReboot(ROOT_REDIRECT_HTML "Rebooting..."); }
+
+void NibeMqttGwWebServer::handlePostCoil() {
+    String coil = httpServer.arg("coil");
+    uint16_t coilAddress = coil.toInt();
+    if (coilAddress > 0) {
+        ESP_LOGI(TAG, "Requesting coil %d", coilAddress);
+        nibeMqttGw.requestCoil(coilAddress);
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Sent request to Nibe for coil " + coil);
+    } else {
+        httpServer.send(400, "text/plain", "Bad coil parameter: " + coil);
+    }
+}
 
 static const char *METRICS_DATA = R"(# nibe_mqtt_gateway metrics
 status{category="init"} %d
@@ -222,7 +249,7 @@ void NibeMqttGwWebServer::setUpdaterError() {
 void NibeMqttGwWebServer::handleGetUpdate() {
     if (_username != emptyString && _password != emptyString && !httpServer.authenticate(_username.c_str(), _password.c_str()))
         return httpServer.requestAuthentication();
-    httpServer.send_P(200, PSTR("text/html"), OTA_INDEX);
+    httpServer.send(200, "text/html", OTA_INDEX);
 }
 
 void NibeMqttGwWebServer::handlePostUpdate() {
