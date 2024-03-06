@@ -47,6 +47,38 @@ void MCP23S08Class::init(int cs) {
     digitalWrite(_cs, HIGH);
 }
 
+void MCP23S08Class::ConfigureInterrupt(uint8_t pinNumber, bool enable, bool defVal, bool intCon) {
+    if (pinNumber > MAX_PIN_POS) {
+        return;
+    }
+
+    uint8_t _gpinten = ReadRegister(GPINTEN);
+    uint8_t _defval = ReadRegister(DEFVAL);
+    uint8_t _iocon = ReadRegister(IOCON);
+
+    if (enable) {
+        _gpinten |= (1 << pinNumber);
+    } else {
+        _gpinten &= ~(1 << pinNumber);
+    }
+
+    if (defVal) {
+        _defval |= (1 << pinNumber);
+    } else {
+        _defval &= ~(1 << pinNumber);
+    }
+
+    if (intCon) {
+        _iocon |= (1 << pinNumber);
+    } else {
+        _iocon &= ~(1 << pinNumber);
+    }
+
+    WriteRegister(DEFVAL, _defval);
+    WriteRegister(IOCON, _iocon);
+    WriteRegister(GPINTEN, _gpinten);
+}
+
 /**
  * @brief Set a pin state.
  *

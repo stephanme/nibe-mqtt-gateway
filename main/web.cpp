@@ -13,8 +13,9 @@
 
 static const char *TAG = "web";
 
-NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient)
-    : httpServer(port), configManager(configManager), mqttClient(mqttClient) {}
+NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient,
+                                         EnergyMeter &energyMeter)
+    : httpServer(port), configManager(configManager), mqttClient(mqttClient), energyMeter(energyMeter) {}
 
 void NibeMqttGwWebServer::begin() {
     httpServer.begin();
@@ -25,6 +26,7 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/config/nibe", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetNibeConfig, this));
     httpServer.on("/config/nibe", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeConfig, this),
                   std::bind(&NibeMqttGwWebServer::handlePostNibeConfigUpload, this));
+    httpServer.on("/config/energymeter", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostEnergyMeter, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
 
@@ -82,7 +84,7 @@ void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/
 
 void NibeMqttGwWebServer::handlePostConfig() {
     if (configManager.saveConfig(httpServer.arg("plain").c_str()) == ESP_OK) {
-         send200AndReboot(ROOT_REDIRECT_HTML "Configuration saved. Rebooting...");
+        send200AndReboot(ROOT_REDIRECT_HTML "Configuration saved. Rebooting...");
     } else {
         // TODO: better err msg
         httpServer.send(400, "text/plain", "Invalid configuration. Check logs.");
@@ -135,9 +137,17 @@ void NibeMqttGwWebServer::handlePostNibeConfig() {
     }
 }
 
-void NibeMqttGwWebServer::handlePostReboot() {
-    send200AndReboot(ROOT_REDIRECT_HTML "Rebooting...");
+void NibeMqttGwWebServer::handlePostEnergyMeter() {
+    long wh = httpServer.arg("plain").toInt();
+    if (wh >= 0) {
+        energyMeter.setEnergyInWh(wh);
+        httpServer.send(200, "text/plain", "Energy value set");
+    } else {
+        httpServer.send(400, "text/plain", "Invalid energy value");
+    }
 }
+
+void NibeMqttGwWebServer::handlePostReboot() { send200AndReboot(ROOT_REDIRECT_HTML "Rebooting..."); }
 
 static const char *METRICS_DATA = R"(# nibe_mqtt_gateway metrics
 status{category="init"} %d

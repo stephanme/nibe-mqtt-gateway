@@ -18,6 +18,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
 - [x] logging via MQTT topic (as alternative to serial interface)
+- [x] energy meter connected via S0 interface to OptIn1
 
 ## Prerequisites
 
@@ -27,6 +28,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - ESP-IDF v5.1.3, use branch release-5.1 until released
   - since the PRODINo ESP32 Ethernet v1 board doesn't wire the W5500 interrupt line, [PR #12692](https://github.com/espressif/esp-idf/pull/12692) needs to be cherry-picked on top, TODO: check
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
+- energy meter with S0 interface, e.g. DRT 428D
 
 Additionally helpful:
 - Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension)
@@ -58,13 +60,14 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 The configuration consists of two parts:
 - general configuration json `config.json` like MQTT broker url and credentials, heatpump coils to be polled, logging etc.
 - a Nibe ModbusManager file that defines all available coils, `nibe-modbus.csv`
+- the Energy Meter value can be set to adjust it with the real meter reading
 
 When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory and reboots to activate the configuration change.
 
 General configuration:
 - http://nibegw/config shows the current configuration as json, save e.g. as `config.json` and use as template
 - adapt `config.json` file (MQTT broker URL and credentials etc.)
-- upload `config.json`: `curl -X POST -H "Content-Type: text/plain" -d @config.json http://nibegw/config/nibe`
+- upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config/nibe`
 
 TODO: document configuration json format
 
@@ -74,6 +77,8 @@ Nibe Modbus configuration:
 - (optional) delete coils that will never be needed, e.g. because of add-ons/hardware that is not installed 
 - upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
+Energy Meter configuration:
+- `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
 
 ### Trouble Shooting
 

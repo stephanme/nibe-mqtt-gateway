@@ -24,6 +24,7 @@ class MCP23S08Class
 
  public:
 	void init(int cs);
+	void ConfigureInterrupt(uint8_t pinNumber, bool enable, bool defVal, bool intCon);
 	void SetPinState(uint8_t pinNumber, bool state);
 	bool GetPinState(uint8_t pinNumber);
 	uint8_t GetPinState(void);
