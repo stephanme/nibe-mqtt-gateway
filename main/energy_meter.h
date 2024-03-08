@@ -1,10 +1,11 @@
 #ifndef _energy_meter_h_
 #define _energy_meter_h_
 
-#include "KMPProDinoESP32.h"
-#include "mqtt.h"
-
 #include <nvs.h>
+
+#include "KMPProDinoESP32.h"
+#include "metrics.h"
+#include "mqtt.h"
 
 #define ENERGY_METER_TASK_PRIORITY 11
 
@@ -18,15 +19,15 @@
 // This avoids any SPI communication with MCP23S08C but there can be only one S0 device attached.
 class EnergyMeter {
    public:
-    EnergyMeter() {}
+    EnergyMeter(Metrics& metrics) : metricEnergyInWh(metrics.addMetric("nibe_energy_meter_wh", 1)) {}
 
     esp_err_t begin();
     esp_err_t beginMqtt(MqttClient& mqttClient);
     esp_err_t publishState();
 
-    u_int32_t getEnergyInWh() { return energyInWh; }
+    u_int32_t getEnergyInWh() { return metricEnergyInWh.getValue(); }
     // for adjusting this energy meter with the real meter
-    void setEnergyInWh(u_int32_t energyInWh) { this->energyInWh = energyInWh; }
+    void setEnergyInWh(u_int32_t energyInWh) { metricEnergyInWh.setValue(energyInWh); }
 
    private:
     nvs_handle_t nvsHandle;
@@ -36,8 +37,8 @@ class EnergyMeter {
 
     TaskHandle_t taskHandle;
     u_int32_t pulseCounterISR = 0;
-    u_int32_t energyInWh = 0;
     u_int32_t lastStoredEnergyInWh = 0;
+    Metric& metricEnergyInWh;
 
     MqttClient* mqttClient;
     std::string mqttTopic;

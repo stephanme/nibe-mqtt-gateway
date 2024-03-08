@@ -1,24 +1,24 @@
 #include <Arduino.h>
 #include <ETH.h>
+#include <esp_app_desc.h>
 #include <esp_log.h>
 #include <esp_netif_sntp.h>
 #include <freertos/task.h>
-#include <esp_app_desc.h>
-
 
 #include "KMPProDinoESP32.h"
-#include "web.h"
-#include "config.h"
-#include "mqtt.h"
 #include "Relay.h"
-#include "nibegw_mqtt.h"
+#include "config.h"
 #include "energy_meter.h"
+#include "metrics.h"
+#include "mqtt.h"
+#include "nibegw_mqtt.h"
+#include "web.h"
 
-#define RS485_RX_PIN          4
-#define RS485_TX_PIN          16
-#define RS485_DIRECTION_PIN   2
+#define RS485_RX_PIN 4
+#define RS485_TX_PIN 16
+#define RS485_DIRECTION_PIN 2
 
-static const char *TAG = "main";
+static const char* TAG = "main";
 
 #define ESP_INIT_NETWORK 0x100
 #define ESP_INIT_CONFIG 0x101
@@ -30,10 +30,11 @@ static const char *TAG = "main";
 
 static esp_err_t init_status = ESP_OK;
 
-void pollingTask(void *pvParameters);
+void pollingTask(void* pvParameters);
 
+Metrics metrics;
 NibeMqttGwConfigManager configManager;
-MqttClient mqttClient;
+MqttClient mqttClient(metrics);
 
 MqttRelay relays[] = {
     MqttRelay("relay1", "Relay 1", Relay1),
@@ -42,13 +43,19 @@ MqttRelay relays[] = {
     MqttRelay("relay4", "Relay 4", Relay4),
 };
 
-EnergyMeter energyMeter;
+EnergyMeter energyMeter(metrics);
 
 NibeMqttGw nibeMqttGw;
 // NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
 SimulatedNibeGw nibegw;
 
-NibeMqttGwWebServer httpServer(80, configManager, mqttClient, nibeMqttGw, energyMeter);
+NibeMqttGwWebServer httpServer(80, metrics, configManager, nibeMqttGw, energyMeter);
+
+Metric& metricInitStatus = metrics.addMetric(R"(status{category="init"})", 1);
+Metric& metricTotalFreeBytes = metrics.addMetric(R"(esp32_total_free_bytes)", 1);
+Metric& metricMinimumFreeBytes = metrics.addMetric(R"(esp32_minimum_free_bytes)", 1);
+Metric& metricUptime = metrics.addMetric(R"(uptime)", 1);
+Metric& metricPollingTime = metrics.addMetric(R"(polling_time_ms)", 1);
 
 void setup() {
     esp_err_t err;
@@ -65,6 +72,7 @@ void setup() {
     // disable GPIO logging
     esp_log_level_set("gpio", ESP_LOG_WARN);
 
+    metrics.begin();
     // early init of logging
     if (configManager.begin() != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize config manager");
@@ -80,7 +88,7 @@ void setup() {
     }
 
     ESP_LOGI(TAG, "Nibe MQTT Gateway is starting...");
-    const esp_app_desc_t *app_desc = esp_app_get_description();
+    const esp_app_desc_t* app_desc = esp_app_get_description();
     ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
 
     // energy meter, init early to not miss pulses on reboot
@@ -135,10 +143,10 @@ void setup() {
 
     KMPProDinoESP32.offStatusLed();
     ESP_LOGI(TAG, "Nibe MQTT Gateway is started. Status: %x, took %lu ms", init_status, millis());
-    httpServer.setMetricInitStatus(init_status);
+    metricInitStatus.setValue(init_status);
 }
 
-void pollingTask(void *pvParameters) {
+void pollingTask(void* pvParameters) {
     while (1) {
         unsigned long start_time = millis();
         mqttClient.publishAvailability();
@@ -150,9 +158,14 @@ void pollingTask(void *pvParameters) {
         energyMeter.publishState();
         nibeMqttGw.publishState();
 
+        // metrics
+        metricTotalFreeBytes.setValue(ESP.getFreeHeap());
+        metricMinimumFreeBytes.setValue(ESP.getMinFreeHeap());
+        metricUptime.setValue(millis() / 1000);
+
         // measure runtime and calculate delay
         unsigned long runtime = millis() - start_time;
-        httpServer.setMetricPollingTime(runtime);
+        metricPollingTime.setValue(runtime);
         if (runtime < 30000) {
             delay(30000 - runtime);
         } else {

@@ -13,11 +13,15 @@
 
 static const char *TAG = "web";
 
-NibeMqttGwWebServer::NibeMqttGwWebServer(int port, NibeMqttGwConfigManager &configManager, const MqttClient &mqttClient,
+NibeMqttGwWebServer::NibeMqttGwWebServer(int port, Metrics &metrics, NibeMqttGwConfigManager &configManager,
                                          NibeMqttGw &nibeMqttGw, EnergyMeter &energyMeter)
-    : httpServer(port), configManager(configManager), mqttClient(mqttClient), nibeMqttGw(nibeMqttGw), energyMeter(energyMeter) {}
+    : httpServer(port), metrics(metrics), configManager(configManager), nibeMqttGw(nibeMqttGw), energyMeter(energyMeter) {}
 
 void NibeMqttGwWebServer::begin() {
+    // init order ensures that metrics exist
+    metricInitStatus = metrics.findMetric(R"(status{category="init"})");
+    metricMqttStatus = metrics.findMetric(R"(status{category="mqtt"})");
+
     httpServer.begin();
 
     httpServer.on("/", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetRoot, this));
@@ -90,7 +94,7 @@ void NibeMqttGwWebServer::handleGetRoot() {
                  configManager.getConfig().mqtt.brokerUri.length() + 10;
     char rootHtml[len];
     snprintf(rootHtml, len, ROOT_HTML, app_desc->version, hostname.c_str(), configManager.getConfig().mqtt.brokerUri.c_str(),
-             init_status, mqttClient.status());
+             metricInitStatus->getValue(), metricMqttStatus->getValue());
     httpServer.send(200, "text/html", rootHtml);
 }
 
@@ -176,22 +180,7 @@ void NibeMqttGwWebServer::handlePostCoil() {
     }
 }
 
-static const char *METRICS_DATA = R"(# nibe_mqtt_gateway metrics
-status{category="init"} %d
-status{category="mqtt"} %d
-esp32_total_free_bytes %lu
-esp32_minimum_free_bytes %lu
-uptime %lu
-polling_time_ms %lu
-)";
-
-void NibeMqttGwWebServer::handleGetMetrics() {
-    size_t len = strlen(METRICS_DATA) + 256;
-    char metrics[len];
-    snprintf(metrics, len, METRICS_DATA, init_status, mqttClient.status(), ESP.getFreeHeap(), ESP.getMinFreeHeap(),
-             millis() / 1000, pollingTime);
-    httpServer.send(200, "text/plain", metrics);
-}
+void NibeMqttGwWebServer::handleGetMetrics() { httpServer.send(200, "text/plain", metrics.getAllMetricsAsString().c_str()); }
 
 static const char *NOT_FOUND_MSG = R"(File Not Found
 

@@ -7,30 +7,28 @@
 
 #include "config.h"
 #include "energy_meter.h"
+#include "metrics.h"
 #include "nibegw_mqtt.h"
 
 class NibeMqttGwWebServer {
    public:
-    NibeMqttGwWebServer(int port, NibeMqttGwConfigManager& configManager, const MqttClient& mqttClient, NibeMqttGw& nibeMqttGw,
+    NibeMqttGwWebServer(int port, Metrics& metrics, NibeMqttGwConfigManager& configManager, NibeMqttGw& nibeMqttGw,
                         EnergyMeter& energyMeter);
 
     void begin();
     void handleClient();
 
-    void setMetricInitStatus(unsigned long init_status) { this->init_status = init_status; }
-    void setMetricPollingTime(unsigned long pollingTime) { this->pollingTime = pollingTime; }
-
    private:
     WebServer httpServer;
 
+    Metrics& metrics;
     NibeMqttGwConfigManager& configManager;
-    const MqttClient& mqttClient;
     NibeMqttGw& nibeMqttGw;
     EnergyMeter& energyMeter;
 
-    // metrics
-    esp_err_t init_status;
-    unsigned long pollingTime;
+    // metrics needed for UI
+    Metric* metricInitStatus;
+    Metric* metricMqttStatus;
 
     // TODO: auth configuration
     String _username = emptyString;

@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "metrics.h"
+
 #define MAX_SUBSCRIPTIONS 10
 
 #define ESP_MQTT_ERROR 0x100
@@ -45,13 +47,13 @@ typedef void (MqttSubscriptionCallback::*MqttCallbackFunction)(std::string, std:
 
 class MqttClient {
    public:
-    MqttClient();
+    MqttClient(Metrics& metrics);
     const MqttConfig& getConfig() { return *config; }
     const std::string& getAvailabilityTopic() { return availabilityTopic; }
     const std::string& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
 
     esp_err_t begin(const MqttConfig& config);
-    esp_err_t status() const { return _status; };
+    esp_err_t status() const { return metricMqttStatus.getValue(); }
 
     esp_err_t registerLifecycleCallback(MqttClientLifecycleCallback* callback);
 
@@ -62,8 +64,8 @@ class MqttClient {
     int subscribe(const std::string& topic, MqttSubscriptionCallback* callback, int qos = 0);
 
    private:
+    Metric& metricMqttStatus;
     const MqttConfig* config;
-    esp_err_t _status;
     std::string availabilityTopic;
     std::string deviceDiscoveryInfo;
     esp_mqtt_client_handle_t client;

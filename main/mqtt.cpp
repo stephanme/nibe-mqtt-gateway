@@ -1,7 +1,7 @@
 #include "mqtt.h"
 
-#include <esp_log.h>
 #include <esp_app_desc.h>
+#include <esp_log.h>
 
 static const char* TAG = "mqtt";
 
@@ -11,7 +11,9 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 "device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"%s","configuration_url":"http://%s.fritz.box"}
 )";
 
-MqttClient::MqttClient() { _status = ESP_MQTT_DISCONNECTED; }
+MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(R"(status{category="mqtt"})", 1)) {
+    metricMqttStatus.setValue(ESP_MQTT_DISCONNECTED);
+}
 
 esp_err_t MqttClient::begin(const MqttConfig& config) {
     // check required config
@@ -42,11 +44,12 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
     availabilityTopic = config.rootTopic;
     availabilityTopic += "/availability";
 
-    const esp_app_desc_t *app_desc = esp_app_get_description();
-    size_t len =
-        strlen(DEVICE_DISCOVERY_INFO) + availabilityTopic.length() + config.clientId.length() + strlen(app_desc->version) + config.hostname.length() + 1;
+    const esp_app_desc_t* app_desc = esp_app_get_description();
+    size_t len = strlen(DEVICE_DISCOVERY_INFO) + availabilityTopic.length() + config.clientId.length() +
+                 strlen(app_desc->version) + config.hostname.length() + 1;
     char str[len];
-    snprintf(str, len, DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.clientId.c_str(), app_desc->version ,config.hostname.c_str());
+    snprintf(str, len, DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.clientId.c_str(), app_desc->version,
+             config.hostname.c_str());
     deviceDiscoveryInfo = str;
 
     ESP_LOGI(TAG, "MQTT Broker URL: %s", config.brokerUri.c_str());
@@ -76,7 +79,7 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
         ESP_LOGE(TAG, "esp_mqtt_client_start failed: 0x%x", err);
         return err;
     }
-    ESP_LOGI(TAG, "MQTT client started");
+    ESP_LOGI(TAG, "MQTT client started, status=%ld", metricMqttStatus.getValue());
 
     return ESP_OK;
 }
@@ -91,7 +94,7 @@ esp_err_t MqttClient::registerLifecycleCallback(MqttClientLifecycleCallback* cal
     lifecycleCallbackCount++;
 
     // initial callback
-    if (_status == ESP_OK) {
+    if (metricMqttStatus.getValue() == ESP_OK) {
         callback->onConnected();
     } else {
         callback->onDisconnected();
@@ -197,12 +200,12 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            mqttClient->_status = ESP_OK;
+            mqttClient->metricMqttStatus.setValue(ESP_OK);
             mqttClient->onConnectedEvent(event);
             break;
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-            mqttClient->_status = ESP_MQTT_DISCONNECTED;
+            mqttClient->metricMqttStatus.setValue(ESP_MQTT_DISCONNECTED);
             mqttClient->onDisconnectedEvent(event);
             break;
         case MQTT_EVENT_SUBSCRIBED:
@@ -226,7 +229,7 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
                 log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
                 ESP_LOGE(TAG, "Last errno std::string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
             }
-            mqttClient->_status = ESP_MQTT_ERROR;
+            mqttClient->metricMqttStatus.setValue(ESP_MQTT_ERROR);
             break;
         default:
             ESP_LOGI(TAG, "Other event id:%d", event->event_id);

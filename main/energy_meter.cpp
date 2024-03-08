@@ -8,7 +8,7 @@
 static const char* TAG = "energy_meter";
 
 esp_err_t EnergyMeter::begin() {
-    ESP_LOGI(TAG, "EnergyMeter::begin");
+    ESP_LOGI(TAG, "begin");
 
     // read persisted energyInWh value
     int err;
@@ -17,13 +17,14 @@ esp_err_t EnergyMeter::begin() {
         ESP_LOGE(TAG, "nvs_open failed: %d", err);
         return err;
     }
-    err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, &energyInWh);
+    err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, &lastStoredEnergyInWh);
     if (err == ESP_ERR_NVS_NOT_FOUND) {
         ESP_LOGI(TAG, "nvs_get_u32: key %s not found", NIBEGW_NVS_KEY_ENERGY_IN_WH);
     } else if (err != ESP_OK) {
         ESP_LOGE(TAG, "nvs_get_u32(%s)  failed: %d", NIBEGW_NVS_KEY_ENERGY_IN_WH, err);
         return err;
     }
+    metricEnergyInWh.setValue(lastStoredEnergyInWh);
 
     err = xTaskCreatePinnedToCore(&task, "energyMeterTask", 6 * 1024, this, ENERGY_METER_TASK_PRIORITY, &taskHandle, 1);
     if (err != pdPASS) {
@@ -100,8 +101,8 @@ void EnergyMeter::task(void* pvParameters) {
     while (1) {
         xTaskNotifyWait(0, ULONG_MAX, 0, portMAX_DELAY);
 
-        meter->energyInWh++;
-        ESP_LOGI(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, meter->energyInWh);
+        auto energyInWh = meter->metricEnergyInWh.incrementValue(1);
+        ESP_LOGI(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
 
         // wait 110ms (S0 impulse is 90ms according to spec)
         vTaskDelay(110 / portTICK_PERIOD_MS);
@@ -111,13 +112,13 @@ void EnergyMeter::task(void* pvParameters) {
 }
 
 esp_err_t EnergyMeter::publishState() {
-    auto e = energyInWh;
-    ESP_LOGI(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, e);
+    auto energyInWh = metricEnergyInWh.getValue();
+    ESP_LOGI(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
 
     // store in nvs if changed
-    if (e != lastStoredEnergyInWh) {
-        lastStoredEnergyInWh = e;
-        int err = nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, e);
+    if (energyInWh != lastStoredEnergyInWh) {
+        lastStoredEnergyInWh = energyInWh;
+        int err = nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_ENERGY_IN_WH, energyInWh);
         if (err == ESP_OK) {
             err = nvs_commit(nvsHandle);
         }
@@ -126,18 +127,8 @@ esp_err_t EnergyMeter::publishState() {
         }
     }
 
-    // TODO: move to util class, tests
-    auto s = std::to_string(e / 1000);
-    auto remainder = e % 1000;
-    if (remainder < 10) {
-        s += ".00";
-    } else if (remainder < 100) {
-        s += ".0";
-    } else {
-        s += ".";
-    }
-    s += std::to_string(remainder);
-
+    // mqtt: report in kWh
+    auto s = Metrics::formatNumber(energyInWh, 1000);
     mqttClient->publish(mqttTopic, s);
     return ESP_OK;
 }
