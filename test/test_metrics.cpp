@@ -63,8 +63,8 @@ TEST_CASE("getValueAsString", "[metrics]") {
 TEST_CASE("getAllMetricsAsString", "[metrics]") {
     Metrics m;
     m.begin();
-    Metric& metric1 = m.addMetric("metric1", 1);
-    Metric& metric2 = m.addMetric("metric2", 10);
+    m.addMetric("metric1", 1);
+    m.addMetric("metric2", 10);
 
     TEST_ASSERT_EQUAL_STRING(R"(# nibe-mqtt-gateway metrics
 metric1 0

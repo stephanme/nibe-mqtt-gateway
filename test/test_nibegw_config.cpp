@@ -59,3 +59,46 @@ TEST_CASE("decodeCoilData", "[nibegw_config]") {
     c.dataType = CoilDataType::Unknown;
     TEST_ASSERT_EQUAL_STRING("", c.decodeCoilData(data1234).c_str());
 }
+
+TEST_CASE("decodeCoilDataRaw", "[nibegw_config]") {
+    Coil c = {0, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    NibeReadResponseData data1234 = {.coilAddress = 0, .value = {1, 2, 3, 4}};
+    NibeReadResponseData dataFF = {.coilAddress = 0, .value = {0xff, 0xff, 0xff, 0xff}};
+    TEST_ASSERT_EQUAL_UINT8(1, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_UINT8(255, c.decodeCoilDataRaw(dataFF));
+
+    c.dataType = CoilDataType::Int8;
+    TEST_ASSERT_EQUAL_INT8(1, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_INT8(-1, c.decodeCoilDataRaw(dataFF));
+
+    c.dataType = CoilDataType::UInt16;
+    TEST_ASSERT_EQUAL_UINT16(258, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_UINT16(65535, c.decodeCoilDataRaw(dataFF));
+
+    c.dataType = CoilDataType::Int16;
+    TEST_ASSERT_EQUAL_INT16(258, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_INT16(-1, c.decodeCoilDataRaw(dataFF));
+
+    c.dataType = CoilDataType::UInt32;
+    TEST_ASSERT_EQUAL_UINT32(16909060, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_UINT32(4294967295, c.decodeCoilDataRaw(dataFF));
+
+    c.dataType = CoilDataType::Int32;
+    TEST_ASSERT_EQUAL_INT32(16909060, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_INT32(-1, c.decodeCoilDataRaw(dataFF));
+
+    // not yet implemented types
+    c.dataType = CoilDataType::Unknown;
+    TEST_ASSERT_EQUAL(0, c.decodeCoilDataRaw(data1234));
+}
+
+TEST_CASE("promMetricName", "[nibegw_config]") {
+    Coil c = {1, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    TEST_ASSERT_EQUAL_STRING("coil_1", c.promMetricName().c_str());
+    c.title = "Test123";
+    TEST_ASSERT_EQUAL_STRING("Test123", c.promMetricName().c_str());
+    c.title = "Test 123";
+    TEST_ASSERT_EQUAL_STRING("Test_123", c.promMetricName().c_str());
+    c.title = "1Test";
+    TEST_ASSERT_EQUAL_STRING("_1Test", c.promMetricName().c_str());
+}

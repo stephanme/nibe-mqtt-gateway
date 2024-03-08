@@ -13,7 +13,7 @@
 
 class NibeMqttGw : public NibeGwCallback {
    public:
-    NibeMqttGw();
+    NibeMqttGw(Metrics& metrics);
 
     esp_err_t begin(const NibeMqttConfig& config, MqttClient& mqttClient);
 
@@ -28,11 +28,13 @@ class NibeMqttGw : public NibeGwCallback {
     int onWriteTokenReceived(uint8_t* data);
 
    private:
+    Metrics& metrics;
     const NibeMqttConfig* config;
     MqttClient* mqttClient;
 
     std::string nibeRootTopic;
     std::unordered_set<uint16_t> announcedCoils;
+    std::unordered_map<uint16_t, Metric*> coilMetrics;
 
     RingbufHandle_t readCoilsRingBuffer;
 

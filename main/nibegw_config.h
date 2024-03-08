@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "metrics.h"
 #include "nibegw.h"
 
 // configuration
@@ -71,8 +72,8 @@ class Coil {
     CoilMode mode;
 
     Coil() = default;
-    Coil(uint16_t id, const std::string& title, CoilUnit unit, CoilDataType dataType, int factor,
-         int minValue, int maxValue, int defaultValue, CoilMode mode)
+    Coil(uint16_t id, const std::string& title, CoilUnit unit, CoilDataType dataType, int factor, int minValue, int maxValue,
+         int defaultValue, CoilMode mode)
         : id(id),
           title(title),
           unit(unit),
@@ -83,10 +84,12 @@ class Coil {
           defaultValue(defaultValue),
           mode(mode) {}
 
+    int32_t decodeCoilDataRaw(const NibeReadResponseData& data) const;
     std::string decodeCoilData(const NibeReadResponseData& data) const;
-    std::string formatNumber(auto value) const;
+    std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor); }
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
+    std::string promMetricName() const;
 
     bool operator==(const Coil& other) const = default;
 };
@@ -95,30 +98,5 @@ struct NibeMqttConfig {
     std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
     std::vector<uint16_t> coilsToPoll;
 };
-
-// avoid FP arithmetic
-std::string Coil::formatNumber(auto value) const {
-    if (factor == 1) {
-        return std::to_string(value);
-    } else if (factor == 10) {
-        auto s = std::to_string(value / 10);
-        s += ".";
-        s += std::to_string((value >= 0 ? value : -value) % 10);
-        return s;
-    } else if (factor == 100) {
-        auto s = std::to_string(value / 100);
-        if (value % 100 < 10) {
-            s += ".0";
-        } else {
-            s += ".";
-        }
-        s += std::to_string((value >= 0 ? value : -value) % 100);
-        return s;
-    } else {
-        char s[30];
-        snprintf(s, sizeof(s), "%f", (float)value / factor);
-        return s;
-    }
-}
 
 #endif

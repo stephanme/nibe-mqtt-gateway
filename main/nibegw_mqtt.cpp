@@ -6,7 +6,7 @@
 
 static const char* TAG = "nibegw_mqtt";
 
-NibeMqttGw::NibeMqttGw() { mqttClient = nullptr; }
+NibeMqttGw::NibeMqttGw(Metrics& metrics) : metrics(metrics) { mqttClient = nullptr; }
 
 esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient) {
     this->config = &config;
@@ -60,6 +60,17 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
         if (announcedCoils.find(coilAddress) == announcedCoils.end()) {
             announceCoil(coil);
         }
+
+        // send coil as metrics
+        auto iter2 = coilMetrics.find(coilAddress);
+        if (iter2 == coilMetrics.end()) {
+            // TODO: configurable name and factor for metrics, name is not prom conform
+            Metric& metric = metrics.addMetric(coil.promMetricName().c_str(), coil.factor);
+            iter2 = coilMetrics.insert({coilAddress, &metric}).first;
+        }
+        Metric* metric = iter2->second;
+        int32_t valueInt = coil.decodeCoilDataRaw(msg->readResponse);
+        metric->setValue(valueInt);
     } else {
         ESP_LOGI(TAG, "Unknown message cmd=%x", msg->cmd);
     }

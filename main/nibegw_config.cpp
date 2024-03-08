@@ -7,6 +7,34 @@
 
 static const char* TAG = "nibegw_config";
 
+int32_t Coil::decodeCoilDataRaw(const NibeReadResponseData& data) const {
+    int32_t value = 0;
+    switch (dataType) {
+        case CoilDataType::UInt8:
+            value = data.value[0];
+            break;
+        case CoilDataType::Int8:
+            value = (int8_t)data.value[0];
+            break;
+        case CoilDataType::UInt16:
+            value = std::byteswap(*(uint16_t*)data.value);
+            break;
+        case CoilDataType::Int16:
+            value = std::byteswap(*(int16_t*)data.value);
+            break;
+        case CoilDataType::UInt32:
+            value = std::byteswap(*(uint32_t*)data.value);
+            break;
+        case CoilDataType::Int32:
+            value = std::byteswap(*(int32_t*)data.value);
+            break;
+        default:
+            ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
+            break;
+    }
+    return value;
+}
+
 std::string Coil::decodeCoilData(const NibeReadResponseData& data) const {
     std::string value;
     switch (dataType) {
@@ -102,7 +130,7 @@ const char* Coil::unitAsString() const {
         case CoilUnit::NoUnit:
             return "";
         case CoilUnit::GradCelcius:
-            return "°C"; // UTF-8
+            return "°C";  // UTF-8
         case CoilUnit::Percent:
             return "%";
         case CoilUnit::LiterPerMinute:
@@ -142,4 +170,23 @@ const char* Coil::unitAsString() const {
         default:
             return "Unknown";
     }
+}
+
+// https://prometheus.io/docs/concepts/data_model/
+std::string Coil::promMetricName() const {
+    if (title.empty()) {
+        return "coil_" + std::to_string(id);
+    }
+
+    std::string name;
+    if (!std::isalpha(title[0]) && title[0] != '_') {
+        name = "_";
+    }
+    name += title;
+    for (char& c : name) {
+        if (!std::isalnum(c)) {
+            c = '_';
+        }
+    }
+    return name;
 }

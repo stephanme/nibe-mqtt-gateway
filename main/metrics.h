@@ -57,11 +57,11 @@ class Metrics {
         } else if (factor == 10) {
             auto s = std::to_string(value / 10);
             s += ".";
-            s += std::to_string((value >= 0 ? value : -value) % 10);
+            s += std::to_string(abs(value) % 10);
             return s;
         } else if (factor == 100) {
             auto s = std::to_string(value / 100);
-            auto remainder = std::abs(value % 100);
+            auto remainder = abs(value % 100);
             if (remainder < 10) {
                 s += ".0";
             } else {
@@ -71,7 +71,7 @@ class Metrics {
             return s;
         } else if (factor == 1000) {
             auto s = std::to_string(value / 1000);
-            auto remainder = std::abs(value % 1000);
+            auto remainder = abs(value % 1000);
             if (remainder < 10) {
                 s += ".00";
             } else if (remainder < 100) {
@@ -86,6 +86,11 @@ class Metrics {
             snprintf(s, sizeof(s), "%f", (float)value / factor);
             return s;
         }
+    }
+    // std::abs is not defined for unsigned types but needed by formatNumber()
+    template <typename T>
+    static T abs(T value) {
+        return value >= 0 ? value : -value;
     }
 
    private:

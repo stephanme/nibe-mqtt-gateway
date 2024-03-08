@@ -45,7 +45,7 @@ MqttRelay relays[] = {
 
 EnergyMeter energyMeter(metrics);
 
-NibeMqttGw nibeMqttGw;
+NibeMqttGw nibeMqttGw(metrics);
 // NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
 SimulatedNibeGw nibegw;
 
