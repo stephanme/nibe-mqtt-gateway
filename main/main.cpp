@@ -4,10 +4,11 @@
 #include <esp_log.h>
 #include <esp_netif_sntp.h>
 #include <freertos/task.h>
+#include <nvs.h>
 
-#include "config.h"
 #include "KMPProDinoESP32.h"
 #include "Relay.h"
+#include "config.h"
 #include "configmgr.h"
 #include "energy_meter.h"
 #include "metrics.h"
@@ -19,19 +20,27 @@
 #define RS485_TX_PIN 16
 #define RS485_DIRECTION_PIN 2
 
+#define NIBEGW_NVS_KEY_BOOT_COUNT "bootCount"
+
 static const char* TAG = "main";
 
-#define ESP_INIT_NETWORK 0x100
-#define ESP_INIT_CONFIG 0x101
-#define ESP_INIT_LOGGING 0x102
-#define ESP_INIT_MQTT 0x103
-#define ESP_INIT_RELAY 0x104
-#define ESP_INIT_TASK 0x105
-#define ESP_INIT_ENERGY_METER 0x106
+enum class InitStatus {
+    Uninitialized = -1,
+    OK = 0,
+    SafeBoot = 1,
 
-static esp_err_t init_status = ESP_OK;
-
-void pollingTask(void* pvParameters);
+    ErrNvs = 0x100,
+    ErrNetwork,
+    ErrConfigMgr,
+    ErrLogging,
+    ErrMqtt,
+    ErrRelay,
+    ErrPollingTask,
+    ErrEnergyMeter,
+    ErrEnergyMeterMqtt,
+    ErrNibeMqttGw,
+    ErrNibeGw,
+};
 
 Metrics metrics;
 NibeMqttGwConfigManager configManager;
@@ -58,8 +67,14 @@ Metric& metricMinimumFreeBytes = metrics.addMetric(R"(nibegw_minimum_free_bytes)
 Metric& metricUptime = metrics.addMetric(R"(nibegw_uptime_seconds_total)", 1);
 Metric& metricPollingTime = metrics.addMetric(R"(nibegw_task_runtime_seconds{task="pollingTask"})", 1000);
 
+nvs_handle_t nvsHandle;
+uint32_t bootCounter = 0;
+
+void setupSafeBoot();
+void setupNormalBoot();
+void pollingTask(void* pvParameters);
+
 void setup() {
-    esp_err_t err;
     delay(1000);
 
     Serial.begin(115200);
@@ -74,17 +89,60 @@ void setup() {
     esp_log_level_set("gpio", ESP_LOG_WARN);
 
     metrics.begin();
+    metricInitStatus.setValue((int32_t)InitStatus::Uninitialized);
+
+    // detect crash loop and enter safe boot mode
+    bool safeBoot = true;
+    esp_err_t err = nvs_open(NIBEGW_NVS_NAMESPACE, NVS_READWRITE, &nvsHandle);
+    if (err == ESP_OK) {
+        err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, &bootCounter);
+        if (err == ESP_OK && bootCounter < 3) {
+            safeBoot = false;
+            nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, ++bootCounter);
+            nvs_commit(nvsHandle);
+        }
+    } else {
+        ESP_LOGE(TAG, "nvs_open failed: %d", err);
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNvs);
+    }
+
+    if (safeBoot) {
+        setupSafeBoot();
+    } else {
+        setupNormalBoot();
+    }
+
+    ESP_LOGI(TAG, "Nibe MQTT Gateway is running. Status: %lx, took %lu ms", metricInitStatus.getValue(), millis());
+    KMPProDinoESP32.offStatusLed();
+}
+
+void setupSafeBoot() {
+    ESP_LOGW(TAG, "Starting in safe boot mode");
+    metricInitStatus.setValue((int32_t)InitStatus::SafeBoot);
+
+    httpServer.begin();
+
+    // wait for network
+    while (!ETH.hasIP()) {
+        KMPProDinoESP32.processStatusLed(blue, 1000);
+        delay(500);
+    }
+}
+
+void setupNormalBoot() {
+    metricInitStatus.setValue((int32_t)InitStatus::OK);
+    esp_err_t err;
     // early init of logging
     if (configManager.begin() != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize config manager");
-        init_status = ESP_INIT_CONFIG;
+        metricInitStatus.setValue((int32_t)InitStatus::ErrConfigMgr);
     }
     const NibeMqttGwConfig& config = configManager.getConfig();
     if (config.logging.mqttLoggingEnabled) {
         err = MqttLogging::begin(config.logging, mqttClient);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Could not initialize MQTT logging");
-            init_status = ESP_INIT_LOGGING;
+            metricInitStatus.setValue((int32_t)InitStatus::ErrLogging);
         }
     }
 
@@ -96,7 +154,7 @@ void setup() {
     err = energyMeter.begin();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize energy meter");
-        init_status = ESP_INIT_ENERGY_METER;
+        metricInitStatus.setValue((int32_t)InitStatus::ErrEnergyMeter);
     }
 
     httpServer.begin();
@@ -111,18 +169,26 @@ void setup() {
     err = mqttClient.begin(config.mqtt);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize MQTT client");
-        init_status = ESP_INIT_MQTT;
+        metricInitStatus.setValue((int32_t)InitStatus::ErrMqtt);
     }
 
     // nibegw
-    nibeMqttGw.begin(config.nibe, mqttClient);
-    nibegw.begin(nibeMqttGw);
+    err = nibeMqttGw.begin(config.nibe, mqttClient);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize Nibe MQTT Gateway");
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeMqttGw);
+    }
+    err = nibegw.begin(nibeMqttGw);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize Nibe Gateway (RS485)");
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
+    }
 
     // energy meter, init mqtt
     err = energyMeter.beginMqtt(mqttClient);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize energy meter (mqtt)");
-        init_status = ESP_INIT_ENERGY_METER;
+        metricInitStatus.setValue((int32_t)InitStatus::ErrEnergyMeterMqtt);
     }
 
     // relays
@@ -130,7 +196,7 @@ void setup() {
         err = relays[i].begin(&mqttClient);
         if (err != 0) {
             ESP_LOGE(TAG, "Could not initialize relay %d", i);
-            init_status = ESP_INIT_RELAY;
+            metricInitStatus.setValue((int32_t)InitStatus::ErrRelay);
         }
     }
 
@@ -139,12 +205,22 @@ void setup() {
     err = xTaskCreatePinnedToCore(&pollingTask, "pollingTask", 4 * 1024, NULL, 10, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start polling task");
-        init_status = ESP_INIT_TASK;
+        metricInitStatus.setValue((int32_t)InitStatus::ErrPollingTask);
     }
+}
 
-    KMPProDinoESP32.offStatusLed();
-    ESP_LOGI(TAG, "Nibe MQTT Gateway is started. Status: %x, took %lu ms", init_status, millis());
-    metricInitStatus.setValue(init_status);
+void resetBootCounter() {
+    esp_err_t err = nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, 0);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvsHandle);
+    }
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_set_u32/nvs_commit(%s) failed: %d", NIBEGW_NVS_KEY_BOOT_COUNT, err);
+    } else {
+        ESP_LOGI(TAG, "Boot counter reset");
+    }
+    // reset even if nvs write failed to avoid endless write attempts to nvs
+    bootCounter = 0;
 }
 
 void pollingTask(void* pvParameters) {
@@ -164,6 +240,11 @@ void pollingTask(void* pvParameters) {
         metricMinimumFreeBytes.setValue(ESP.getMinFreeHeap());
         metricUptime.setValue(millis() / 1000);
 
+        // reset boot counter after 3 minute, assuming that nibegw is running stable
+        if (bootCounter > 0 && metricUptime.getValue() > 180) {
+            resetBootCounter();
+        }
+
         // measure runtime and calculate delay
         unsigned long runtime = millis() - start_time;
         metricPollingTime.setValue(runtime);
@@ -177,10 +258,10 @@ void pollingTask(void* pvParameters) {
 }
 
 void loop() {
-    if (init_status == ESP_OK && mqttClient.status() == ESP_OK) {
+    if ((InitStatus)metricInitStatus.getValue() == InitStatus::OK && mqttClient.status() == MqttStatus::OK) {
         KMPProDinoESP32.processStatusLed(green, 1000);
     } else {
-        KMPProDinoESP32.processStatusLed(orange, 1000);
+        KMPProDinoESP32.processStatusLed(red, 1000);
     }
     httpServer.handleClient();
     delay(2);

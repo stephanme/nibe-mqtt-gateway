@@ -20,6 +20,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] metrics via Prometheus endpoint
 - [x] nibe coils and other measurements as Prometheus metrics
 - [x] logging via MQTT topic (as alternative to serial interface)
+- [x] automatic safe-boot mode when ending up in crash loop
 
 ## Prerequisites
 
@@ -88,8 +89,8 @@ Energy Meter configuration (also via UI):
 The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
 - blue - initializing, waiting for IP address (blue blinking)
 - green blinking - running ok, connected with MQTT broker
-- orange blinking - error, got IP address but e.g. no connected with MQTT broker, check http://nibegw or logs
-- red blinking - OTA firmware upload in progress
+- red blinking - error, got IP address but e.g. no connected with MQTT broker, check http://nibegw or logs
+- orange blinking - OTA firmware upload in progress
 
 Web UI:
 - http://nibegw - main page with some status info and several config options
@@ -101,6 +102,14 @@ Show logging over MQTT:
 ```
 mosquitto_sub --url 'mqtt://<user>:<password>@<broker>/nibegw/log'
 ```
+
+After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
+- only OTA upload is supported
+- no mqtt, nibegw, energy meter, etc. 
+- the heat pump will go into an alarm state because of missing acknowledge responses
+- init status is shown as 0x0001 (= InitStatus::SafeBoot)
+- metrics other than `nibegw_status_info` are missing   
+- logs are only available via serial interface
 
 ## Development
 

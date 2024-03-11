@@ -4,6 +4,7 @@
 #include <esp_log.h>
 
 #include "KMPProDinoESP32.h"
+#include "config.h"
 
 static const char* TAG = "energy_meter";
 

@@ -10,8 +10,12 @@
 
 #define MAX_SUBSCRIPTIONS 10
 
-#define ESP_MQTT_ERROR 0x100
-#define ESP_MQTT_DISCONNECTED 0x101
+enum class MqttStatus {
+    OK = 0,
+
+    Error = 0x100,
+    Disconnected,
+};
 
 struct MqttConfig {
     std::string brokerUri;
@@ -53,7 +57,7 @@ class MqttClient {
     const std::string& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
 
     esp_err_t begin(const MqttConfig& config);
-    esp_err_t status() const { return metricMqttStatus.getValue(); }
+    MqttStatus status() const { return (MqttStatus)metricMqttStatus.getValue(); }
 
     esp_err_t registerLifecycleCallback(MqttClientLifecycleCallback* callback);
 

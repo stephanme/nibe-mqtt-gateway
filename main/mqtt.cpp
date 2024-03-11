@@ -14,7 +14,7 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 )";
 
 MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(METRIC_NAME_MQTT_STATUS, 1)) {
-    metricMqttStatus.setValue(ESP_MQTT_DISCONNECTED);
+    metricMqttStatus.setValue((int32_t)MqttStatus::Disconnected);
 }
 
 esp_err_t MqttClient::begin(const MqttConfig& config) {
@@ -202,12 +202,12 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            mqttClient->metricMqttStatus.setValue(ESP_OK);
+            mqttClient->metricMqttStatus.setValue((int32_t)MqttStatus::OK);
             mqttClient->onConnectedEvent(event);
             break;
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-            mqttClient->metricMqttStatus.setValue(ESP_MQTT_DISCONNECTED);
+            mqttClient->metricMqttStatus.setValue((int32_t)MqttStatus::Disconnected);
             mqttClient->onDisconnectedEvent(event);
             break;
         case MQTT_EVENT_SUBSCRIBED:
@@ -231,7 +231,7 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
                 log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
                 ESP_LOGE(TAG, "Last errno std::string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
             }
-            mqttClient->metricMqttStatus.setValue(ESP_MQTT_ERROR);
+            mqttClient->metricMqttStatus.setValue((int32_t)MqttStatus::Error);
             break;
         default:
             ESP_LOGI(TAG, "Other event id:%d", event->event_id);

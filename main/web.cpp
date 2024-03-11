@@ -6,13 +6,16 @@
 #include <Update.h>
 #include <esp_app_desc.h>
 
-#include "config.h"
 #include "KMPProDinoESP32.h"
+#include "config.h"
 
 #define ROOT_REDIRECT_HTML R"(<META http-equiv="refresh" content="5;URL=/">)"
 #define NIBE_MODBUS_UPLOAD_FILE "/nibe_modbus_upload.csv"
 
 static const char *TAG = "web";
+
+// from main.cpp
+void resetBootCounter();
 
 NibeMqttGwWebServer::NibeMqttGwWebServer(int port, Metrics &metrics, NibeMqttGwConfigManager &configManager,
                                          NibeMqttGw &nibeMqttGw, EnergyMeter &energyMeter)
@@ -251,6 +254,7 @@ void NibeMqttGwWebServer::handlePostUpdate() {
     if (Update.hasError()) {
         httpServer.send(200, "text/html", String("Update error: ") + _updaterError);
     } else {
+        resetBootCounter();  // OTA update should fix a crash loop
         send200AndReboot(OTA_SUCCESS);
     }
 }
@@ -283,14 +287,14 @@ void NibeMqttGwWebServer::handlePostUpload() {
         }
     } else if (_authenticated && upload.status == UPLOAD_FILE_WRITE && !_updaterError.length()) {
         // could add blinking LED here
-        KMPProDinoESP32.processStatusLed(red, 1000);
+        KMPProDinoESP32.processStatusLed(orange, 1000);
 
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
             setUpdaterError();
         }
     } else if (_authenticated && upload.status == UPLOAD_FILE_END && !_updaterError.length()) {
         ESP_LOGI(OTA_TAG, "Upload finished: %u bytes", upload.totalSize);
-        KMPProDinoESP32.setStatusLed(red);
+        KMPProDinoESP32.setStatusLed(orange);
         if (Update.end(true)) {  // true to set the size to the current progress
             ESP_LOGI(OTA_TAG, "Update Success - Rebooting...");
         } else {

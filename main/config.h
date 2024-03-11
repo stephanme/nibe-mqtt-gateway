@@ -7,4 +7,6 @@
 #define METRIC_NAME_INIT_STATUS R"(nibegw_status_info{category="init"})"
 #define METRIC_NAME_MQTT_STATUS R"(nibegw_status_info{category="mqtt"})"
 
+#define NIBEGW_NVS_NAMESPACE "nibegw"
+
 #endif

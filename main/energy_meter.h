@@ -9,7 +9,6 @@
 
 #define ENERGY_METER_TASK_PRIORITY 11
 
-#define NIBEGW_NVS_NAMESPACE "nibegw"
 #define NIBEGW_NVS_KEY_ENERGY_IN_WH "energyInWh"
 
 // Uses OptoIn1 to read S0 interface of an energy meter (e.g. DRT-428D).
