@@ -61,11 +61,11 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
             announceCoil(coil);
         }
 
-        // send coil as metrics
+        // send coil as metrics, create metric if not exists
         auto iter2 = coilMetrics.find(coilAddress);
         if (iter2 == coilMetrics.end()) {
-            // TODO: configurable name and factor for metrics, name is not prom conform
-            Metric& metric = metrics.addMetric(coil.promMetricName().c_str(), coil.factor);
+            const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
+            Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor);
             iter2 = coilMetrics.insert({coilAddress, &metric}).first;
         }
         Metric* metric = iter2->second;

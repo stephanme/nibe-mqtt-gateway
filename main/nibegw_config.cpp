@@ -172,21 +172,55 @@ const char* Coil::unitAsString() const {
     }
 }
 
+// prom metric config might be configured explicitly or derived from coil config
+NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) const {
+    NibeCoilMetricConfig metricCfg;
+    auto metricCfgIter = config.metrics.find(id);
+    if (metricCfgIter == config.metrics.end()) {
+        metricCfg.name = promMetricName();
+        metricCfg.factor = factor;
+    } else {
+        metricCfg.name = metricCfgIter->second.name;
+        metricCfg.factor = metricCfgIter->second.factor;
+        if (metricCfg.name.empty()) {
+            metricCfg.name = promMetricName();
+        }
+        if (metricCfg.factor == 0) {
+            metricCfg.factor = factor;
+        }
+    }
+    appendPromAttributes(metricCfg.name);
+    return metricCfg;
+}
+
 // https://prometheus.io/docs/concepts/data_model/
 std::string Coil::promMetricName() const {
-    if (title.empty()) {
-        return "coil_" + std::to_string(id);
-    }
-
-    std::string name;
-    if (!std::isalpha(title[0]) && title[0] != '_') {
-        name = "_";
-    }
-    name += title;
-    for (char& c : name) {
-        if (!std::isalnum(c)) {
-            c = '_';
+    std::string name = "nibe";
+    if (!title.empty()) {
+        name += "_";
+        for (char c : title) {
+            if (!std::isalnum(c)) {
+                c = '_';
+            }
+            name += c;
         }
     }
     return name;
+}
+
+// append coil attributes to promMetricName
+void Coil::appendPromAttributes(std::string& promMetricName) const {
+    size_t attrPos = promMetricName.find("{");
+    if (attrPos == std::string::npos) {
+        // no attributes yet
+        promMetricName += R"({coil=")";
+        promMetricName += std::to_string(id);
+        promMetricName += R"("})";
+    } else {
+        // append to existing attributes
+        std::string coilAttr = R"(coil=")";
+        coilAttr += std::to_string(id);
+        coilAttr += R"(",)";
+        promMetricName.insert(attrPos + 1, coilAttr);
+    }
 }

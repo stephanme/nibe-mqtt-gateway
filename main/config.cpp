@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <esp_log.h>
 
+#include <cstring>
 #include <istream>
 #include <streambuf>
 
@@ -127,6 +128,12 @@ const std::string NibeMqttGwConfigManager::getConfigAsJson() {
     for (auto coil : config.nibe.coilsToPoll) {
         coilsToPoss.add(coil);
     }
+    JsonObject metrics = doc["nibe"]["metrics"].to<JsonObject>();
+    for (auto [id, metric] : config.nibe.metrics) {
+        JsonObject m = metrics[std::to_string(id)].to<JsonObject>();
+        m["name"] = metric.name;
+        if (metric.factor != 0) m["factor"] = metric.factor;
+    }
 
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
     doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
@@ -187,6 +194,19 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
 
     for (auto coil : doc["nibe"]["coilsToPoll"].as<JsonArray>()) {
         config.nibe.coilsToPoll.push_back(coil.as<uint16_t>());
+    }
+
+    for (auto metric : doc["nibe"]["metrics"].as<JsonObject>()) {
+        uint16_t id = atoi(metric.key().c_str());
+        if (id > 0) {
+            config.nibe.metrics[id] = {
+                .name = metric.value()["name"] | "",
+                .factor = metric.value()["factor"].as<int>() | 0,
+            };
+        } else {
+            // log and skip
+            ESP_LOGE(TAG, "nibe.metrics: invalid coil address %s", metric.key().c_str());
+        }
     }
 
     config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;

@@ -94,11 +94,44 @@ TEST_CASE("decodeCoilDataRaw", "[nibegw_config]") {
 
 TEST_CASE("promMetricName", "[nibegw_config]") {
     Coil c = {1, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
-    TEST_ASSERT_EQUAL_STRING("coil_1", c.promMetricName().c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(nibe)", c.promMetricName().c_str());
     c.title = "Test123";
-    TEST_ASSERT_EQUAL_STRING("Test123", c.promMetricName().c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(nibe_Test123)", c.promMetricName().c_str());
     c.title = "Test 123";
-    TEST_ASSERT_EQUAL_STRING("Test_123", c.promMetricName().c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(nibe_Test_123)", c.promMetricName().c_str());
     c.title = "1Test";
-    TEST_ASSERT_EQUAL_STRING("_1Test", c.promMetricName().c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(nibe_1Test)", c.promMetricName().c_str());
+}
+
+TEST_CASE("appendPromAttributes", "[nibegw_config]") {
+    Coil c = {1, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    std::string s = "test";
+    c.appendPromAttributes(s);
+    TEST_ASSERT_EQUAL_STRING(R"(test{coil="1"})", s.c_str());
+
+    s = R"(test{attr="value"})";
+    c.appendPromAttributes(s);
+    TEST_ASSERT_EQUAL_STRING(R"(test{coil="1",attr="value"})", s.c_str());
+}
+
+TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
+    Coil c = {1, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    NibeMqttConfig config;
+    config.metrics[1] = {"test123", 10};
+    config.metrics[2] = {"", 10};
+    config.metrics[3] = {R"(test123{node="nibegw"})", 0};
+
+    NibeCoilMetricConfig metricCfg = c.toPromMetricConfig(config);
+    TEST_ASSERT_EQUAL_STRING(R"(test123{coil="1"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL(10, metricCfg.factor);
+
+    c.id = 2;
+    metricCfg = c.toPromMetricConfig(config);
+    TEST_ASSERT_EQUAL_STRING(R"(nibe{coil="2"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL(10, metricCfg.factor);
+
+    c.id = 3;
+    metricCfg = c.toPromMetricConfig(config);
+    TEST_ASSERT_EQUAL_STRING(R"(test123{coil="3",node="nibegw"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL(1, metricCfg.factor);
 }

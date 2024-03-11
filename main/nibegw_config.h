@@ -55,6 +55,9 @@ enum class CoilUnit {
 
 };
 
+struct NibeCoilMetricConfig;
+struct NibeMqttConfig;
+
 // represents coil configuration from ModbusManager
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 //
@@ -89,14 +92,23 @@ class Coil {
     std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor); }
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
+
+    NibeCoilMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
     std::string promMetricName() const;
+    void appendPromAttributes(std::string& promMetricName) const;
 
     bool operator==(const Coil& other) const = default;
+};
+
+struct NibeCoilMetricConfig {
+    std::string name;
+    int factor;
 };
 
 struct NibeMqttConfig {
     std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
     std::vector<uint16_t> coilsToPoll;
+    std::unordered_map<uint16_t, NibeCoilMetricConfig> metrics;
 };
 
 #endif

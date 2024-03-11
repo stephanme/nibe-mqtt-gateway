@@ -18,7 +18,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files
 - [x] metrics via Prometheus endpoint
-- [ ] nibe coils and other measurements as Prometheus metrics
+- [x] nibe coils and other measurements as Prometheus metrics
 - [x] logging via MQTT topic (as alternative to serial interface)
 
 ## Prerequisites
@@ -58,7 +58,7 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 
 ### Configuration
 
-The configuration consists of two parts:
+The configuration consists:
 - general configuration json `config.json` like MQTT broker url and credentials, heatpump coils to be polled, logging etc.
 - a Nibe ModbusManager file that defines all available coils, `nibe-modbus.csv`
 - the Energy Meter value can be set to adjust it with the real meter reading
@@ -68,7 +68,7 @@ When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory
 General configuration:
 - http://nibegw/config shows the current configuration as json, save e.g. as `config.json` and use as template
 - adapt `config.json` file (MQTT broker URL and credentials etc.)
-- upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config/nibe`
+- upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config`
 
 TODO: document configuration json format
 
@@ -80,6 +80,8 @@ Nibe Modbus configuration:
 
 Energy Meter configuration (also via UI):
 - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
+- value should not be decreased to not break counter metric
+- no reboot
 
 ### Trouble Shooting
 
