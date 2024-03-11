@@ -1,12 +1,16 @@
 #include "nibegw_mqtt.h"
 
 #include <esp_log.h>
+#include <esp_timer.h>
 
 #include <bit>
 
 static const char* TAG = "nibegw_mqtt";
 
-NibeMqttGw::NibeMqttGw(Metrics& metrics) : metrics(metrics) { mqttClient = nullptr; }
+NibeMqttGw::NibeMqttGw(Metrics& metrics)
+    : metrics(metrics), metricPublishStateTime(metrics.addMetric(R"(nibegw_task_runtime_seconds{task="publishCoils"})", 1000)) {
+    mqttClient = nullptr;
+}
 
 esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient) {
     this->config = &config;
@@ -27,6 +31,7 @@ void NibeMqttGw::publishState() {
     ESP_LOGI(TAG, "publishState, requesting %d coils", config->coilsToPoll.size());
 
     // TODO: clear ring buffer? - nibegw should be fast enough to keep up with the queue
+    lastPublishStateStartTime = esp_timer_get_time() / 1000;
     for (auto coil : config->coilsToPoll) {
         requestCoil(coil);
     }
@@ -140,6 +145,13 @@ int NibeMqttGw::onReadTokenReceived(uint8_t* data) {
     size_t item_size;
     uint16_t* coilAddressPtr = (uint16_t*)xRingbufferReceive(readCoilsRingBuffer, &item_size, 0);
     if (coilAddressPtr == nullptr) {
+        // no more coils to read
+        // calculate time to publish state
+        uint32_t startTime = lastPublishStateStartTime.exchange(0);
+        if (startTime > 0) {
+            uint32_t now = esp_timer_get_time() / 1000;
+            metricPublishStateTime.setValue(now - startTime);
+        }
         return 0;
     }
     uint16_t coilAddress = *coilAddressPtr;

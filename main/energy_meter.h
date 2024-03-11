@@ -19,7 +19,7 @@
 // This avoids any SPI communication with MCP23S08C but there can be only one S0 device attached.
 class EnergyMeter {
    public:
-    EnergyMeter(Metrics& metrics) : metricEnergyInWh(metrics.addMetric("nibe_energy_meter_wh", 1)) {}
+    EnergyMeter(Metrics& metrics) : metricEnergyInWh(metrics.addMetric("nibe_energy_meter_wh_total", 1)) {}
 
     esp_err_t begin();
     esp_err_t beginMqtt(MqttClient& mqttClient);

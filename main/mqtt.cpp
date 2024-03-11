@@ -3,6 +3,8 @@
 #include <esp_app_desc.h>
 #include <esp_log.h>
 
+#include "config.h"
+
 static const char* TAG = "mqtt";
 
 // TODO: hostname and mac address
@@ -11,7 +13,7 @@ static const char* DEVICE_DISCOVERY_INFO = R"(
 "device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"%s","configuration_url":"http://%s.fritz.box"}
 )";
 
-MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(R"(status{category="mqtt"})", 1)) {
+MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(METRIC_NAME_MQTT_STATUS, 1)) {
     metricMqttStatus.setValue(ESP_MQTT_DISCONNECTED);
 }
 

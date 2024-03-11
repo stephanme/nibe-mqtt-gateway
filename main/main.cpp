@@ -5,9 +5,10 @@
 #include <esp_netif_sntp.h>
 #include <freertos/task.h>
 
+#include "config.h"
 #include "KMPProDinoESP32.h"
 #include "Relay.h"
-#include "config.h"
+#include "configmgr.h"
 #include "energy_meter.h"
 #include "metrics.h"
 #include "mqtt.h"
@@ -51,11 +52,11 @@ SimulatedNibeGw nibegw;
 
 NibeMqttGwWebServer httpServer(80, metrics, configManager, nibeMqttGw, energyMeter);
 
-Metric& metricInitStatus = metrics.addMetric(R"(status{category="init"})", 1);
-Metric& metricTotalFreeBytes = metrics.addMetric(R"(esp32_total_free_bytes)", 1);
-Metric& metricMinimumFreeBytes = metrics.addMetric(R"(esp32_minimum_free_bytes)", 1);
-Metric& metricUptime = metrics.addMetric(R"(uptime)", 1);
-Metric& metricPollingTime = metrics.addMetric(R"(polling_time_ms)", 1);
+Metric& metricInitStatus = metrics.addMetric(METRIC_NAME_INIT_STATUS, 1);
+Metric& metricTotalFreeBytes = metrics.addMetric(R"(nibegw_total_free_bytes)", 1);
+Metric& metricMinimumFreeBytes = metrics.addMetric(R"(nibegw_minimum_free_bytes)", 1);
+Metric& metricUptime = metrics.addMetric(R"(nibegw_uptime_seconds_total)", 1);
+Metric& metricPollingTime = metrics.addMetric(R"(nibegw_task_runtime_seconds{task="pollingTask"})", 1000);
 
 void setup() {
     esp_err_t err;

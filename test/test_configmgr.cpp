@@ -5,7 +5,7 @@
 #include <regex>
 #include <sstream>
 
-#include "config.h"
+#include "configmgr.h"
 
 TEST_CASE("default config", "[config]") {
     NibeMqttGwConfigManager configManager;

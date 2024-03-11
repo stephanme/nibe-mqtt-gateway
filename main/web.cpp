@@ -6,6 +6,7 @@
 #include <Update.h>
 #include <esp_app_desc.h>
 
+#include "config.h"
 #include "KMPProDinoESP32.h"
 
 #define ROOT_REDIRECT_HTML R"(<META http-equiv="refresh" content="5;URL=/">)"
@@ -19,8 +20,10 @@ NibeMqttGwWebServer::NibeMqttGwWebServer(int port, Metrics &metrics, NibeMqttGwC
 
 void NibeMqttGwWebServer::begin() {
     // init order ensures that metrics exist
-    metricInitStatus = metrics.findMetric(R"(status{category="init"})");
-    metricMqttStatus = metrics.findMetric(R"(status{category="mqtt"})");
+    metricInitStatus = metrics.findMetric(METRIC_NAME_INIT_STATUS);
+    assert(metricInitStatus != nullptr);
+    metricMqttStatus = metrics.findMetric(METRIC_NAME_MQTT_STATUS);
+    assert(metricMqttStatus != nullptr);
 
     httpServer.begin();
 
@@ -93,8 +96,10 @@ void NibeMqttGwWebServer::handleGetRoot() {
     size_t len = strlen(ROOT_HTML) + strlen(app_desc->version) + hostname.length() +
                  configManager.getConfig().mqtt.brokerUri.length() + 10;
     char rootHtml[len];
+    uint16_t initStatus = (uint16_t)metricInitStatus->getValue();
+    uint16_t mqttStatus = (uint16_t)metricMqttStatus->getValue();
     snprintf(rootHtml, len, ROOT_HTML, app_desc->version, hostname.c_str(), configManager.getConfig().mqtt.brokerUri.c_str(),
-             metricInitStatus->getValue(), metricMqttStatus->getValue());
+             initStatus, mqttStatus);
     httpServer.send(200, "text/html", rootHtml);
 }
 

@@ -5,7 +5,7 @@
 #include <LittleFS.h>
 #include <WebServer.h>
 
-#include "config.h"
+#include "configmgr.h"
 #include "energy_meter.h"
 #include "metrics.h"
 #include "nibegw_mqtt.h"

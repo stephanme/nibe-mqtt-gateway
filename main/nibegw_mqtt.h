@@ -38,6 +38,9 @@ class NibeMqttGw : public NibeGwCallback {
 
     RingbufHandle_t readCoilsRingBuffer;
 
+    Metric& metricPublishStateTime;
+    std::atomic<uint32_t> lastPublishStateStartTime;
+
     void announceCoil(const Coil& coil);
 };
 
