@@ -73,7 +73,7 @@ class NibeGw final : AbstractNibeGw {
     void sendData(const uint8_t* const data, uint8_t len);
     void sendAck();
     void sendNak();
-    bool shouldAckNakSend(uint8_t address);
+    bool shouldAckNakSend(uint16_t address);
 
     void connect();
     void disconnect();

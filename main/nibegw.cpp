@@ -24,8 +24,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <bit>
-
 static const char* TAG = "nibegw";
 
 static char hex[] = "0123456789ABCDEF";
@@ -73,7 +71,7 @@ void SimulatedNibeGw::loop() {
         uint8_t responseMsg[MAX_DATA_LEN];
         NibeResponseMessage* response = (NibeResponseMessage*)responseMsg;
         response->start = NIBE_RESPONSE_START;
-        response->address = std::byteswap((uint16_t)NIBE_ADDRESS_MODBUS);
+        response->address = NIBE_ADDRESS_MODBUS40;
         response->cmd = NIBE_CMD_MODBUS_READ_RESP;
         response->len = sizeof(NibeReadResponseData);
         response->readResponse.coilAddress = request->coilAddress;  // is already swapped

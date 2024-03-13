@@ -67,10 +67,6 @@ enum eState {
 // message buffer for RS-485 communication. Max message length is 80 uint8_ts + 6 uint8_ts header
 #define MAX_DATA_LEN 128
 
-#define SMS40 0x16
-#define RMU40 0x19
-#define MODBUS40 0x20
-
 // nibe data formats
 // ESP32 (Tensilica Xtensa LX6) is little endian
 // nibe seems to use big endian
@@ -81,9 +77,10 @@ enum NibeStart {
 };
 
 enum NibeAddress {
-    NIBE_ADDRESS_SMS40 = SMS40,
-    NIBE_ADDRESS_RMU40 = RMU40,
-    NIBE_ADDRESS_MODBUS = MODBUS40,
+    NIBE_ADDRESS_SMS40 = 0x1600,
+    NIBE_ADDRESS_RMU40 = 0x1900,
+    NIBE_ADDRESS_MODBUS40 = 0x2000,
+    NIBE_ADDRESS_HEATPUMP_1 = 0xC941,
 };
 
 enum NibeCmd {
@@ -92,12 +89,15 @@ enum NibeCmd {
     NIBE_CMD_MODBUS_READ_RESP = 0x6A,
     NIBE_CMD_MODBUS_WRITE_REQ = 0x6B,
     NIBE_CMD_MODBUS_WRITE_RESP = 0x6C,
+    NIBE_CMD_PRODUCT_INFO_MSG = 0x6D,
     NIBE_CMD_MODBUS_ADDRESS_MSG = 0x6E,
+    NIBE_CMD_ACCESSORY_VERSION_REQ = 0xEE,
 };
 
 struct __attribute__((packed)) NibeReadRequestMessage {
     uint8_t start;  // const 0xc0
     uint8_t cmd;    // NibeCmd
+    uint8_t len;    // = 2
     uint16_t coilAddress;
     uint8_t chksum;  // xor of start..coilAddress
 };
@@ -105,6 +105,7 @@ struct __attribute__((packed)) NibeReadRequestMessage {
 struct __attribute__((packed)) NibeWriteRequestMessage {
     uint8_t start;  // const 0xc0
     uint8_t cmd;    // NibeCmd
+    uint8_t len;    // = 6
     uint16_t coilAddress;
     uint8_t value[4];
     uint8_t chksum;  // xor of start..value[]

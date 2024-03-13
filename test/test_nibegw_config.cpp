@@ -40,19 +40,19 @@ TEST_CASE("decodeCoilData", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_STRING("-1", c.decodeCoilData(dataFF).c_str());
 
     c.dataType = CoilDataType::UInt16;
-    TEST_ASSERT_EQUAL_STRING("258", c.decodeCoilData(data1234).c_str());
+    TEST_ASSERT_EQUAL_STRING("513", c.decodeCoilData(data1234).c_str());
     TEST_ASSERT_EQUAL_STRING("65535", c.decodeCoilData(dataFF).c_str());
 
     c.dataType = CoilDataType::Int16;
-    TEST_ASSERT_EQUAL_STRING("258", c.decodeCoilData(data1234).c_str());
+    TEST_ASSERT_EQUAL_STRING("513", c.decodeCoilData(data1234).c_str());
     TEST_ASSERT_EQUAL_STRING("-1", c.decodeCoilData(dataFF).c_str());
 
     c.dataType = CoilDataType::UInt32;
-    TEST_ASSERT_EQUAL_STRING("16909060", c.decodeCoilData(data1234).c_str());
+    TEST_ASSERT_EQUAL_STRING("67305985", c.decodeCoilData(data1234).c_str());
     TEST_ASSERT_EQUAL_STRING("4294967295", c.decodeCoilData(dataFF).c_str());
 
     c.dataType = CoilDataType::Int32;
-    TEST_ASSERT_EQUAL_STRING("16909060", c.decodeCoilData(data1234).c_str());
+    TEST_ASSERT_EQUAL_STRING("67305985", c.decodeCoilData(data1234).c_str());
     TEST_ASSERT_EQUAL_STRING("-1", c.decodeCoilData(dataFF).c_str());
 
     // not yet implemented types
@@ -72,19 +72,19 @@ TEST_CASE("decodeCoilDataRaw", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_INT8(-1, c.decodeCoilDataRaw(dataFF));
 
     c.dataType = CoilDataType::UInt16;
-    TEST_ASSERT_EQUAL_UINT16(258, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_UINT16(513, c.decodeCoilDataRaw(data1234));
     TEST_ASSERT_EQUAL_UINT16(65535, c.decodeCoilDataRaw(dataFF));
 
     c.dataType = CoilDataType::Int16;
-    TEST_ASSERT_EQUAL_INT16(258, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_INT16(513, c.decodeCoilDataRaw(data1234));
     TEST_ASSERT_EQUAL_INT16(-1, c.decodeCoilDataRaw(dataFF));
 
     c.dataType = CoilDataType::UInt32;
-    TEST_ASSERT_EQUAL_UINT32(16909060, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_UINT32(67305985, c.decodeCoilDataRaw(data1234));
     TEST_ASSERT_EQUAL_UINT32(4294967295, c.decodeCoilDataRaw(dataFF));
 
     c.dataType = CoilDataType::Int32;
-    TEST_ASSERT_EQUAL_INT32(16909060, c.decodeCoilDataRaw(data1234));
+    TEST_ASSERT_EQUAL_INT32(67305985, c.decodeCoilDataRaw(data1234));
     TEST_ASSERT_EQUAL_INT32(-1, c.decodeCoilDataRaw(dataFF));
 
     // not yet implemented types

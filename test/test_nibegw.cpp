@@ -1,7 +1,5 @@
 #include <unity.h>
 
-#include <bit>
-
 #include "nibegw.h"
 
 TEST_CASE("calcCheckSum", "[nibegw]") {
@@ -14,24 +12,41 @@ TEST_CASE("calcCheckSum", "[nibegw]") {
 }
 
 TEST_CASE("NibeReadRequestMessage", "[nibegw]") {
-    uint8_t data[] = {0xc0, 0x69, 0x11, 0x22, 0xFF};
+    uint8_t data[] = {0xc0, 0x69, 0x02, 0x44, 0x9c, 0x73};
     NibeReadRequestMessage* request = (NibeReadRequestMessage*)data;
     TEST_ASSERT_EQUAL_HEX8(NIBE_REQUEST_START, request->start);
     TEST_ASSERT_EQUAL_HEX8(NIBE_CMD_MODBUS_READ_REQ, request->cmd);
-    TEST_ASSERT_EQUAL_HEX16(0x1122, std::byteswap(request->coilAddress));
-    TEST_ASSERT_EQUAL_HEX8(0xFF, request->chksum);
+    TEST_ASSERT_EQUAL_HEX8(2, request->len);
+    TEST_ASSERT_EQUAL_HEX16(40004, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX8(0x73, request->chksum);
+
+    uint8_t data2[] = {0xc0, 0x69, 0x02, 0xa0, 0xa9, 0xa2};
+    request = (NibeReadRequestMessage*)data2;
+    TEST_ASSERT_EQUAL_HEX8(NIBE_REQUEST_START, request->start);
+    TEST_ASSERT_EQUAL_HEX8(NIBE_CMD_MODBUS_READ_REQ, request->cmd);
+    TEST_ASSERT_EQUAL_HEX8(2, request->len);
+    TEST_ASSERT_EQUAL_HEX16(43424, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX8(0xa2, request->chksum);
 }
 
 TEST_CASE("NibeResponseMessage", "[nibegw]") {
-    uint8_t data[] = {0x5c, 0x00, 0x20, 0x6a, 0x04, 0x11, 0x22, 0x01, 0x02, 0xFF};
+    uint8_t data[] = {0x5C, 0x00, 0x20, 0x6A, 0x06, 0x44, 0x9C, 0x6E, 0x00, 0x00, 0x80, 0x7A};
     NibeResponseMessage* response = (NibeResponseMessage*)data;
     TEST_ASSERT_EQUAL_HEX8(NIBE_RESPONSE_START, response->start);
-    TEST_ASSERT_EQUAL_HEX16(NIBE_ADDRESS_MODBUS, std::byteswap(response->address));
+    TEST_ASSERT_EQUAL_HEX16(NIBE_ADDRESS_MODBUS40, response->address);
     TEST_ASSERT_EQUAL_HEX8(NIBE_CMD_MODBUS_READ_RESP, response->cmd);
-    TEST_ASSERT_EQUAL(4, response->len);
-    TEST_ASSERT_EQUAL_HEX16(0x1122, std::byteswap(response->readResponse.coilAddress));
-    TEST_ASSERT_EQUAL_HEX8(0x01, response->readResponse.value[0]);
-    TEST_ASSERT_EQUAL_HEX8(0x02, response->readResponse.value[1]);
+    TEST_ASSERT_EQUAL(6, response->len);
+    TEST_ASSERT_EQUAL_HEX16(40004, response->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL_HEX8(0x6e, response->readResponse.value[0]);
+
+    uint8_t data2[] = {0x5c, 0x00, 0x20, 0x6a, 0x06, 0xa0, 0xa9, 0xf5, 0x12, 0x00, 0x00, 0xa2};
+    response = (NibeResponseMessage*)data2;
+    TEST_ASSERT_EQUAL_HEX8(NIBE_RESPONSE_START, response->start);
+    TEST_ASSERT_EQUAL_HEX16(NIBE_ADDRESS_MODBUS40, response->address);
+    TEST_ASSERT_EQUAL_HEX8(NIBE_CMD_MODBUS_READ_RESP, response->cmd);
+    TEST_ASSERT_EQUAL(6, response->len);
+    TEST_ASSERT_EQUAL_HEX16(43424, response->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL_HEX8(0xf5, response->readResponse.value[0]);
 }
 
 TEST_CASE("dataToString", "[nibegw]") {

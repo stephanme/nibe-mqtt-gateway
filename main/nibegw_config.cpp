@@ -2,7 +2,6 @@
 
 #include <esp_log.h>
 
-#include <bit>
 #include <cstring>
 
 static const char* TAG = "nibegw_config";
@@ -17,16 +16,16 @@ int32_t Coil::decodeCoilDataRaw(const NibeReadResponseData& data) const {
             value = (int8_t)data.value[0];
             break;
         case CoilDataType::UInt16:
-            value = std::byteswap(*(uint16_t*)data.value);
+            value = *(uint16_t*)data.value;
             break;
         case CoilDataType::Int16:
-            value = std::byteswap(*(int16_t*)data.value);
+            value = *(int16_t*)data.value;
             break;
         case CoilDataType::UInt32:
-            value = std::byteswap(*(uint32_t*)data.value);
+            value = *(uint32_t*)data.value;
             break;
         case CoilDataType::Int32:
-            value = std::byteswap(*(int32_t*)data.value);
+            value = *(int32_t*)data.value;
             break;
         default:
             ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
@@ -45,16 +44,16 @@ std::string Coil::decodeCoilData(const NibeReadResponseData& data) const {
             value = formatNumber((int8_t)data.value[0]);
             break;
         case CoilDataType::UInt16:
-            value = formatNumber(std::byteswap(*(uint16_t*)data.value));
+            value = formatNumber(*(uint16_t*)data.value);
             break;
         case CoilDataType::Int16:
-            value = formatNumber(std::byteswap(*(int16_t*)data.value));
+            value = formatNumber(*(int16_t*)data.value);
             break;
         case CoilDataType::UInt32:
-            value = formatNumber(std::byteswap(*(uint32_t*)data.value));
+            value = formatNumber(*(uint32_t*)data.value);
             break;
         case CoilDataType::Int32:
-            value = formatNumber(std::byteswap(*(int32_t*)data.value));
+            value = formatNumber(*(int32_t*)data.value);
             break;
         default:
             ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);

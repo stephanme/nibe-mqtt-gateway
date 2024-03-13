@@ -22,7 +22,6 @@
 
 #include <esp_log.h>
 #include <freertos/task.h>
-#include <bit>
 
 static const char* TAG = "nibegw";
 
@@ -148,7 +147,7 @@ void NibeGw::loop() {
             break;
 
         case STATE_CRC_FAILURE:
-            if (shouldAckNakSend(buffer[2])) sendNak();
+            if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendNak();
             ESP_LOGV(TAG, "CRC failure");
             state = STATE_WAIT_START;
             break;
@@ -156,8 +155,7 @@ void NibeGw::loop() {
         case STATE_OK_MESSAGE_RECEIVED:
             if (buffer[0] == 0x5C && buffer[1] == 0x00 && buffer[2] == 0x20 && buffer[4] == 0x00 &&
                 (buffer[3] == 0x69 || buffer[3] == 0x6B)) {
-                
-                int msglen;
+                                int msglen;
                 if (buffer[3] == 0x6B) {
                     ESP_LOGV(TAG, "WRITE_TOKEN received");
                     msglen = callback->onWriteTokenReceived(buffer);
@@ -168,13 +166,17 @@ void NibeGw::loop() {
                 if (msglen > 0) {
                     sendData(buffer, (byte)msglen);
                 } else {
-                    if (shouldAckNakSend(buffer[2])) sendAck();
+                    if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendAck();
                     ESP_LOGV(TAG, "No message to send");
                 }
             } else {
-                if (shouldAckNakSend(buffer[2])) sendAck();
+                if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendAck();
                 ESP_LOGV(TAG, "Message received");
-                callback->onMessageReceived(buffer, index);
+                // TODO: decode as NibeResponseMessage
+                // handle only MODBUS40 messages
+                if (buffer[2] == 0x20) {
+                    callback->onMessageReceived(buffer, index);
+                }
             }
             state = STATE_WAIT_START;
             break;
@@ -251,13 +253,13 @@ void NibeGw::sendNak() {
     ESP_LOGV(TAG, "Send NAK");
 }
 
-boolean NibeGw::shouldAckNakSend(byte address) {
+boolean NibeGw::shouldAckNakSend(uint16_t address) {
     if (sendAcknowledge) {
-        if (address == MODBUS40 && ackModbus40)
+        if (address == NIBE_ADDRESS_MODBUS40 && ackModbus40)
             return true;
-        else if (address == RMU40 && ackRmu40)
+        else if (address == NIBE_ADDRESS_RMU40 && ackRmu40)
             return true;
-        else if (address == SMS40 && ackSms40)
+        else if (address == NIBE_ADDRESS_SMS40 && ackSms40)
             return true;
     }
 
