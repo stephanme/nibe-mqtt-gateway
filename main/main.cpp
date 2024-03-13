@@ -14,6 +14,7 @@
 #include "metrics.h"
 #include "mqtt.h"
 #include "nibegw_mqtt.h"
+#include "nibegw_rs485.h"
 #include "web.h"
 
 #define RS485_RX_PIN 4
@@ -56,8 +57,8 @@ MqttRelay relays[] = {
 EnergyMeter energyMeter(metrics);
 
 NibeMqttGw nibeMqttGw(metrics);
-// NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
-SimulatedNibeGw nibegw;
+NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
+// SimulatedNibeGw nibegw;
 
 NibeMqttGwWebServer httpServer(80, metrics, configManager, nibeMqttGw, energyMeter);
 

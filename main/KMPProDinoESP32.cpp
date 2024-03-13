@@ -79,6 +79,11 @@ const int OPTOIN_PINS[OPTOIN_COUNT] = {IN1PIN, IN2PIN, IN3PIN, IN4PIN};
 // W5500 pins.
 #define W5500ResetPin 12  // I12
 #define W5500CSPin 33     // IO33
+// Prodino doesn't use IRQ but polling
+// But esp-idf 5.1 branch + https://github.com/espressif/esp-idf/pull/12692 + arduino-esp 3.0.0-alpha3 needs one configured
+// which is not used by other hardware.
+// TODO: remove when real W5500 polling support is available (esp-idf 5.1.3+)
+#define W5500IRQPin 15
 
 // RS485 pins. Serial1.
 #define RS485Pin 2     // IO12
@@ -256,7 +261,7 @@ void KMPProDinoESP32Class::beginEthernet(bool startEthernet) {
     esp_netif_sntp_init(&config);
 
     // ProdDino W5500 is not connected to IRQ -> must configure polling mode
-    if (!ETH.begin(ETH_PHY_W5500, -1, W5500CSPin, 4, W5500ResetPin, SPI, ETH_PHY_SPI_FREQ_MHZ)) {
+    if (!ETH.begin(ETH_PHY_W5500, -1, W5500CSPin, W5500IRQPin, W5500ResetPin, SPI, ETH_PHY_SPI_FREQ_MHZ)) {
         ESP_LOGE(TAG, "Failed to initialize Ethernet controller");
     }
 }
