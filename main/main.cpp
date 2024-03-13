@@ -67,9 +67,9 @@ Metric& metricTotalFreeBytes = metrics.addMetric(R"(nibegw_total_free_bytes)", 1
 Metric& metricMinimumFreeBytes = metrics.addMetric(R"(nibegw_minimum_free_bytes)", 1);
 Metric& metricUptime = metrics.addMetric(R"(nibegw_uptime_seconds_total)", 1);
 Metric& metricPollingTime = metrics.addMetric(R"(nibegw_task_runtime_seconds{task="pollingTask"})", 1000);
+Metric& metricBootCount = metrics.addMetric(METRIC_NAME_BOOT_COUNT, 1);
 
-nvs_handle_t nvsHandle;
-uint32_t bootCounter = 0;
+static nvs_handle_t nvsHandle;
 
 void setupSafeBoot();
 void setupNormalBoot();
@@ -96,12 +96,15 @@ void setup() {
     bool safeBoot = true;
     esp_err_t err = nvs_open(NIBEGW_NVS_NAMESPACE, NVS_READWRITE, &nvsHandle);
     if (err == ESP_OK) {
-        err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, &bootCounter);
-        if (err == ESP_OK && bootCounter < 3) {
+        uint32_t bootCount;
+        err = nvs_get_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, &bootCount);
+        ESP_LOGI(TAG, "boot counter from NVS: %lu", bootCount);
+        if (err == ESP_OK && bootCount < 3) {
             safeBoot = false;
-            nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, ++bootCounter);
+            nvs_set_u32(nvsHandle, NIBEGW_NVS_KEY_BOOT_COUNT, ++bootCount);
             nvs_commit(nvsHandle);
         }
+        metricBootCount.setValue(bootCount);
     } else {
         ESP_LOGE(TAG, "nvs_open failed: %d", err);
         metricInitStatus.setValue((int32_t)InitStatus::ErrNvs);
@@ -221,7 +224,7 @@ void resetBootCounter() {
         ESP_LOGI(TAG, "Boot counter reset");
     }
     // reset even if nvs write failed to avoid endless write attempts to nvs
-    bootCounter = 0;
+    metricBootCount.setValue(0);
 }
 
 void pollingTask(void* pvParameters) {
@@ -242,7 +245,7 @@ void pollingTask(void* pvParameters) {
         metricUptime.setValue(millis() / 1000);
 
         // reset boot counter after 3 minute, assuming that nibegw is running stable
-        if (bootCounter > 0 && metricUptime.getValue() > 180) {
+        if (metricBootCount.getValue() > 0 && metricUptime.getValue() > 180) {
             resetBootCounter();
         }
 

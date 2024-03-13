@@ -174,7 +174,11 @@ void NibeMqttGwWebServer::handlePostEnergyMeter() {
     }
 }
 
-void NibeMqttGwWebServer::handlePostReboot() { send200AndReboot(ROOT_REDIRECT_HTML "Rebooting..."); }
+void NibeMqttGwWebServer::handlePostReboot() {
+    // enforces a normal boot -> allows to debug boot issues via serial logs
+    resetBootCounter();
+    send200AndReboot(ROOT_REDIRECT_HTML "Rebooting...");
+}
 
 void NibeMqttGwWebServer::handlePostCoil() {
     String coil = httpServer.arg("coil");
