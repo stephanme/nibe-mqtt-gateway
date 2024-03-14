@@ -46,6 +46,7 @@ class NibeMqttGwWebServer {
     void handlePostNibeConfigUpload();
     void setNibeConfigUpdateError(const char* err);
     void handlePostEnergyMeter();
+    void handlePostLogLevel();
     void handlePostReboot();
     void handlePostCoil();
 

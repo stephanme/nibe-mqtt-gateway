@@ -37,6 +37,7 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/config/nibe", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeConfig, this),
                   std::bind(&NibeMqttGwWebServer::handlePostNibeConfigUpload, this));
     httpServer.on("/config/energymeter", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostEnergyMeter, this));
+    httpServer.on("/config/log", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostLogLevel, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
     httpServer.on("/coil", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostCoil, this));
@@ -87,6 +88,14 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 <form action="./config/energymeter" method="post">
   <label for="energy">Energy meter [Wh]: </label>
   <input type="text" id="energy" name="plain" value="">
+  <button>Set</button>
+</form>
+<br/>
+<form action="./config/log" method="post">
+  <label for="tag">Log Tag: </label>
+  <input type="text" id="tag" name="tag" value="">
+  <label for="level">Log Level: </label>
+  <input type="text" id="level" name="level" value="">
   <button>Set</button>
 </form>
 </body>
@@ -171,6 +180,19 @@ void NibeMqttGwWebServer::handlePostEnergyMeter() {
         httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Energy value set");
     } else {
         httpServer.send(400, "text/plain", "Invalid energy value");
+    }
+}
+
+void NibeMqttGwWebServer::handlePostLogLevel() {
+    String tag = httpServer.arg("tag");
+    String level = httpServer.arg("level");
+    if (!tag.isEmpty()) {
+        esp_log_level_t logLevel = configManager.toLogLevel(level.c_str());
+        ESP_LOGI(TAG, "Set log level for tag '%s' to %s (%d)", tag.c_str(), level.c_str(), logLevel);
+        esp_log_level_set(tag.c_str(), logLevel);
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Log level set");
+    } else {
+        httpServer.send(400, "text/plain", "Invalid log level");
     }
 }
 

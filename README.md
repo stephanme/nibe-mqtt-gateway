@@ -71,7 +71,39 @@ General configuration:
 - adapt `config.json` file (MQTT broker URL and credentials etc.)
 - upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config`
 
-TODO: document configuration json format
+`config.json` format:
+```
+{
+    "mqtt": {
+        "brokerUri": "mqtt://broker",
+        "user": "user",
+        "password": "***",
+        "rootTopic": "nibegw",
+        "discoveryPrefix": "homeassistant"
+    },
+    "nibe": {
+        "coilsToPoll": [40004, 40013, 40014, 40940],  # list of coil ids to poll every 30s
+        "metrics": {  # configure prometheus metrics
+            "<coid id>": { "name":"<metric name including attributes>", "factor": <optional scaling factor> },   # format
+            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv> },  # default if not specified
+            "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},  # coil attribute is added automatically
+            "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
+            "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},
+            "40940": { "name":"nibe_degree_minutes"}
+        }
+    },
+    "logging": {
+        "mqttLoggingEnabled": true,    # wether to log to mqtt
+        "stdoutLoggingEnabled": true,  # wether to log to serial in addition to mqtt
+        "logTopic": "nibegw/log",
+        "logLevels": {
+            "*" : "info",              # default log level
+            "mqtt": "info",
+            "nibegw_mqtt": "debug"
+        }
+    }
+}
+```
 
 Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
@@ -102,6 +134,12 @@ Show logging over MQTT:
 ```
 mosquitto_sub --url 'mqtt://<user>:<password>@<broker>/nibegw/log'
 ```
+
+Log levels can be configured via `config.json` (see above):
+- standard ESP logging config applies, especially `CONFIG_LOG_MAXIMUM_LEVEL`
+- default log level is `info`, unless changed in `sdkconfig`
+- nibe-mqtt-gateway sources are complied with `LOG_LOCAL_LEVEL=ESP_LOG_DEBUG` to allow debug logging
+- log levels can be temporarily changed via UI
 
 After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
 - only OTA upload is supported
