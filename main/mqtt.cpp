@@ -120,9 +120,9 @@ int MqttClient::publish(const std::string& topic, const char* payload, int lengt
     if (CONFIG_LOG_MAXIMUM_LEVEL >= ESP_LOG_INFO) {
         if (topic != config->logTopic) {
             if (length == 0) {
-                ESP_LOGI(TAG, "publish msg_id=%d, topic=%s, payload=%s", msg_id, topic.c_str(), payload);
+                ESP_LOGD(TAG, "publish msg_id=%d, topic=%s, payload=%s", msg_id, topic.c_str(), payload);
             } else {
-                ESP_LOGI(TAG, "publish msg_id=%d, topic=%s, payload=%.*s", msg_id, topic.c_str(), length, payload);
+                ESP_LOGD(TAG, "publish msg_id=%d, topic=%s, payload=%.*s", msg_id, topic.c_str(), length, payload);
             }
         }
     }
@@ -169,7 +169,7 @@ void MqttClient::onConnectedEvent(esp_mqtt_event_handle_t event) {
     // re-subscribe
     for (size_t i = 0; i < subscriptionCount; i++) {
         int msg_id = esp_mqtt_client_subscribe_single(client, subscriptions[i].topic.c_str(), subscriptions[i].qos);
-        ESP_LOGI(TAG, "re-subscribe msg_id=%d, topic=%s", msg_id, subscriptions[i].topic.c_str());
+        ESP_LOGD(TAG, "re-subscribe msg_id=%d, topic=%s", msg_id, subscriptions[i].topic.c_str());
     }
 }
 
@@ -211,16 +211,16 @@ void MqttClient::mqtt_event_handler(void* handler_args, esp_event_base_t base, i
             mqttClient->onDisconnectedEvent(event);
             break;
         case MQTT_EVENT_SUBSCRIBED:
-            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            ESP_LOGD(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_UNSUBSCRIBED:
-            ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            ESP_LOGD(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_PUBLISHED:
-            ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            ESP_LOGD(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_DATA:
-            ESP_LOGI(TAG, "MQTT_EVENT_DATA TOPIC=%.*s, DATA=%.*s", event->topic_len, event->topic, event->data_len, event->data);
+            ESP_LOGD(TAG, "MQTT_EVENT_DATA TOPIC=%.*s, DATA=%.*s", event->topic_len, event->topic, event->data_len, event->data);
             mqttClient->onDataEvent(event);
             break;
         case MQTT_EVENT_ERROR:

@@ -44,7 +44,11 @@ static const char* configJson = R"({
     "logging": {
         "mqttLoggingEnabled": true,
         "stdoutLoggingEnabled": true,
-        "logTopic": "nibegw/logs"
+        "logTopic": "nibegw/logs",
+        "logLevels": {
+            "*": "info",
+            "mqtt": "debug"
+        }
     }
 })";
 
@@ -63,6 +67,9 @@ TEST_CASE("saveConfig", "[config]") {
 
     TEST_ASSERT_EQUAL_STRING("nibegw", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/logs", config.mqtt.logTopic.c_str());
+    TEST_ASSERT_EQUAL(2, config.logging.logLevels.size());
+    TEST_ASSERT_EQUAL_STRING("info", config.logging.logLevels.at("*").c_str());
+    TEST_ASSERT_EQUAL_STRING("debug", config.logging.logLevels.at("mqtt").c_str());
 
     TEST_ASSERT_EQUAL(2, config.nibe.coilsToPoll.size());
     TEST_ASSERT_EQUAL(1, config.nibe.coilsToPoll[0]);
@@ -90,6 +97,8 @@ TEST_CASE("getConfigAsJson", "[config]") {
     // printf("json: %s\n", json.c_str());
     TEST_ASSERT_TRUE(json.contains("mqtt://mosquitto.fritz.box"));
     TEST_ASSERT_TRUE(json.contains("nibegw/logs"));
+    TEST_ASSERT_TRUE(json.contains(R"("*": "info")"));
+    TEST_ASSERT_TRUE(json.contains(R"("mqtt": "debug")"));
     TEST_ASSERT_TRUE(json.contains("coilsToPoll"));
     TEST_ASSERT_TRUE(json.contains("1,"));
     TEST_ASSERT_TRUE(json.contains("metrics"));
@@ -121,8 +130,8 @@ TEST_CASE("parseNibeModbusCSV", "[config]") {
 
     TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(nibeModbusConfig, &coils));
     TEST_ASSERT_EQUAL(1, coils.size());
-    TEST_ASSERT(coils[40004] == Coil(40004, "BT1 Outdoor Temperature", 
-                                     CoilUnit::GradCelcius, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
+    TEST_ASSERT(coils[40004] ==
+                Coil(40004, "BT1 Outdoor Temperature", CoilUnit::GradCelcius, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
 }
 
 TEST_CASE("parseNibeModbusCSV, validate only", "[config]") {
@@ -134,33 +143,23 @@ TEST_CASE("parseNibeModbusCSVLine", "[config]") {
 
     TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine("", coil));
     TEST_ASSERT_EQUAL(2, NibeMqttGwConfigManager::parseNibeModbusCSVLine("bad csv", coil));
-    TEST_ASSERT_EQUAL(
-        1, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"(;"info";40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";XXX;"%";s16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"(;"info";40004;"%";s16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";XXX;"%";s16;10;0;0;0;R;)", coil));
     // quoting error in info -> id is missing
-    TEST_ASSERT_EQUAL(
-        3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info;40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        4, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"XX";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        5, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";X16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        6, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        7, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;X0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        8, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;X0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        9, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;0;X0;R;)", coil));
-    TEST_ASSERT_EQUAL(
-        10, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;X;)", coil));
+    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info;40004;"%";s16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(4, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"XX";s16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(5, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";X16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(6, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(7, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;X0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(8, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;X0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(9, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;0;X0;R;)", coil));
+    TEST_ASSERT_EQUAL(10, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;X;)", coil));
 
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;R;)", coil
-                                                                              ));
+    TEST_ASSERT_EQUAL(ESP_OK,
+                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;R;)", coil));
     TEST_ASSERT(coil == Coil(40004, "title", CoilUnit::Percent, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;%;u32;1;100;200;1;R/W;)",
-                                                                              coil));
+    TEST_ASSERT_EQUAL(ESP_OK,
+                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;%;u32;1;100;200;1;R/W;)", coil));
     TEST_ASSERT(coil == Coil(40004, "title", CoilUnit::Percent, CoilDataType::UInt32, 1, 100, 200, 1, CoilMode::ReadWrite));
 }
 

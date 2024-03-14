@@ -1,6 +1,8 @@
 #ifndef _configmgr_h_
 #define _configmgr_h_
 
+#include <esp_log.h>
+
 #include "mqtt.h"
 #include "mqtt_logging.h"
 #include "nibegw_config.h"
@@ -23,6 +25,9 @@ class NibeMqttGwConfigManager {
 
     const std::string getNibeModbusConfig();
     esp_err_t saveNibeModbusConfig(const char* uploadFileName);
+
+    static void setLogLevels(const std::unordered_map<std::string, std::string>& logLevels);
+    static esp_log_level_t toLogLevel(const std::string& level);
 
    private:
     std::string hostname;

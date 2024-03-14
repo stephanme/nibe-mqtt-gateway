@@ -44,7 +44,7 @@ void NibeMqttGw::requestCoil(uint16_t coilAddress) {
 void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len) {
     switch (msg->cmd) {
         case NibeCmd::ModbusReadResp: {
-            ESP_LOGI(TAG, "onMessageReceived ModbusReadResp: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
+            ESP_LOGD(TAG, "onMessageReceived ModbusReadResp: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
             uint16_t coilAddress = msg->readResponse.coilAddress;
             auto iter = config->coils.find(coilAddress);
             if (iter == config->coils.end()) {
@@ -81,7 +81,7 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
         case NibeCmd::ProductInfoMsg:
         case NibeCmd::AccessoryVersionReq:
             // known but ignored commands
-            // ESP_LOGI(TAG, "onMessageReceived: %s", AbstractNibeGw::dataToString(data, len).c_str());
+            ESP_LOGV(TAG, "onMessageReceived: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
             break;
 
         default:
@@ -172,13 +172,13 @@ int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
     readRequest->coilAddress = coilAddress;
     readRequest->chksum = AbstractNibeGw::calcCheckSum((uint8_t*)readRequest, sizeof(NibeReadRequestMessage) - 1);
 
-    ESP_LOGI(TAG, "onReadTokenReceived, read coil %d: %s", (int)coilAddress,
+    ESP_LOGD(TAG, "onReadTokenReceived, read coil %d: %s", (int)coilAddress,
              AbstractNibeGw::dataToString((uint8_t*)readRequest, sizeof(NibeReadRequestMessage)).c_str());
     return sizeof(NibeReadRequestMessage);
 }
 
 int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* data) {
     // TODO: send data to nibe
-    // ESP_LOGI(TAG, "onWriteTokenReceived");
+    ESP_LOGD(TAG, "onWriteTokenReceived");
     return 0;
 }

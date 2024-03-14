@@ -103,7 +103,7 @@ void EnergyMeter::task(void* pvParameters) {
         xTaskNotifyWait(0, ULONG_MAX, 0, portMAX_DELAY);
 
         auto energyInWh = meter->metricEnergyInWh.incrementValue(1);
-        ESP_LOGD(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
+        ESP_LOGV(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
 
         // wait 110ms (S0 impulse is 90ms according to spec)
         vTaskDelay(110 / portTICK_PERIOD_MS);
@@ -114,7 +114,7 @@ void EnergyMeter::task(void* pvParameters) {
 
 esp_err_t EnergyMeter::publishState() {
     auto energyInWh = metricEnergyInWh.getValue();
-    ESP_LOGI(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
+    ESP_LOGD(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
 
     // store in nvs if changed
     if (energyInWh != lastStoredEnergyInWh) {

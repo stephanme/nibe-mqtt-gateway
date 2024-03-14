@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 #include <freertos/ringbuf.h>
+#include <unordered_map>
 
 #include "mqtt.h"
 
@@ -21,6 +22,7 @@ struct LogConfig {
     bool mqttLoggingEnabled;
     bool stdoutLoggingEnabled;
     std::string logTopic;
+    std::unordered_map<std::string, std::string> logLevels;
 };
 
 // singleton, as there can be only one esp_log_set_vprintf

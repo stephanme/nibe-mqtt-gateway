@@ -1,7 +1,6 @@
 #include "configmgr.h"
 
 #include <ArduinoJson.h>
-#include <esp_log.h>
 
 #include <cstring>
 #include <istream>
@@ -50,12 +49,14 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
             {
                 .coils = {},
                 .coilsToPoll = {},
+                .metrics = {},
             },
         .logging =
             {
                 .mqttLoggingEnabled = false,
                 .stdoutLoggingEnabled = true,
                 .logTopic = "nibegw/log",
+                .logLevels = {},
             },
     };
 }
@@ -93,6 +94,8 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         }
         // use valid config
         config = tmpConfig;
+        // configure log levels
+        setLogLevels(config.logging.logLevels);
     } else {
         ESP_LOGW(TAG, "Config file %s not found", CONFIG_FILE);
     }
@@ -138,6 +141,10 @@ const std::string NibeMqttGwConfigManager::getConfigAsJson() {
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
     doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
     doc["logging"]["logTopic"] = config.logging.logTopic;
+    JsonObject logLevels = doc["logging"]["logLevels"].to<JsonObject>();
+    for (auto [tag, level] : config.logging.logLevels) {
+        logLevels[tag] = level;
+    }
 
     std::string json;
     serializeJsonPretty(doc, json);
@@ -212,6 +219,9 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
     config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;
     config.logging.stdoutLoggingEnabled = doc["logging"]["stdoutLoggingEnabled"] | true;
     config.logging.logTopic = doc["logging"]["logTopic"] | "nibegw/log";
+    for (auto metric : doc["logging"]["logLevels"].as<JsonObject>()) {
+        config.logging.logLevels[metric.key().c_str()] = metric.value().as<std::string>();
+    }
 
     config.mqtt.logTopic = config.logging.logTopic;
 
@@ -474,4 +484,31 @@ CoilMode NibeMqttGwConfigManager::nibeModbusMode(const std::string& mode) {
     if (mode == "W") return CoilMode::Write;
     if (mode == "R/W") return CoilMode::ReadWrite;
     return CoilMode::Unknown;
+}
+
+void NibeMqttGwConfigManager::setLogLevels(const std::unordered_map<std::string, std::string>& logLevels) {
+    auto defLogLevel = logLevels.find("*");
+    if (defLogLevel != logLevels.end()) {
+        esp_log_level_set("*", toLogLevel(defLogLevel->second));
+    }
+    for (auto [tag, level] : logLevels) {
+        if (tag != "*") {
+            esp_log_level_set(tag.c_str(), toLogLevel(level));
+        }
+    }
+}
+
+esp_log_level_t NibeMqttGwConfigManager::toLogLevel(const std::string& level) {
+    if (level == "verbose") {
+        return ESP_LOG_VERBOSE;
+    } else if (level == "debug") {
+        return ESP_LOG_DEBUG;
+    } else if (level == "info") {
+        return ESP_LOG_INFO;
+    } else if (level == "warn") {
+        return ESP_LOG_WARN;
+    } else if (level == "error") {
+        return ESP_LOG_ERROR;
+    }
+    return ESP_LOG_NONE;
 }
