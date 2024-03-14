@@ -178,14 +178,19 @@ NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) cons
     if (metricCfgIter == config.metrics.end()) {
         metricCfg.name = promMetricName();
         metricCfg.factor = factor;
+        metricCfg.scale = 1;
     } else {
         metricCfg.name = metricCfgIter->second.name;
         metricCfg.factor = metricCfgIter->second.factor;
+        metricCfg.scale = metricCfgIter->second.scale;
         if (metricCfg.name.empty()) {
             metricCfg.name = promMetricName();
         }
         if (metricCfg.factor == 0) {
             metricCfg.factor = factor;
+        }
+        if (metricCfg.scale == 0) {
+            metricCfg.scale = 1;
         }
     }
     appendPromAttributes(metricCfg.name);

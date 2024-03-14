@@ -136,6 +136,7 @@ const std::string NibeMqttGwConfigManager::getConfigAsJson() {
         JsonObject m = metrics[std::to_string(id)].to<JsonObject>();
         m["name"] = metric.name;
         if (metric.factor != 0) m["factor"] = metric.factor;
+        if (metric.scale != 0) m["scale"] = metric.scale;
     }
 
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
@@ -209,6 +210,7 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
             config.nibe.metrics[id] = {
                 .name = metric.value()["name"] | "",
                 .factor = metric.value()["factor"].as<int>() | 0,
+                .scale = metric.value()["scale"].as<int>() | 0,
             };
         } else {
             // log and skip

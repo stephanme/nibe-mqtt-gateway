@@ -9,11 +9,12 @@ esp_err_t Metrics::begin() {
     return ESP_OK;
 }
 
-Metric& Metrics::addMetric(const char* name, int factor) {
+Metric& Metrics::addMetric(const char* name, int factor, int scale) {
     // Metric objects are statically pre-allocted
     Metric& m = metrics[numMetrics];
     m.name = name;
     m.factor = factor;
+    m.scale = scale;
     m.value = 0l;
     if (numMetrics < MAX_METRICS) {
         numMetrics++;
@@ -52,6 +53,6 @@ std::string Metric::getValueAsString() {
     s.reserve(name.size() + 20);
     s += name;
     s += " ";
-    s += Metrics::formatNumber(value.load(), factor);
+    s += Metrics::formatNumber(value.load(), factor, scale);
     return s;
 }

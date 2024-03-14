@@ -83,13 +83,14 @@ General configuration:
     },
     "nibe": {
         "coilsToPoll": [40004, 40013, 40014, 40940],  # list of coil ids to poll every 30s
-        "metrics": {  # configure prometheus metrics
-            "<coid id>": { "name":"<metric name including attributes>", "factor": <optional scaling factor> },   # format
-            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv> },  # default if not specified
+        "metrics": {  # configure prometheus metrics, metric = value * scale / factor
+            "<coid id>": { "name":"<metric name including attributes>", "factor": <optional factor>, "scale": <opt. scaling> },   # format
+            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv>, "scale": 1 },  # default if not specified
             "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},  # coil attribute is added automatically
             "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
             "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},
-            "40940": { "name":"nibe_degree_minutes"}
+            "40940": { "name":"nibe_degree_minutes"},
+            "44308": { "name":"nibe_heat_meter_wh{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100}  # 0.1 kWh -> Wh
         }
     },
     "logging": {

@@ -89,7 +89,7 @@ class Coil {
 
     int32_t decodeCoilDataRaw(const NibeReadResponseData& data) const;
     std::string decodeCoilData(const NibeReadResponseData& data) const;
-    std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor); }
+    std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor, 1); }
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
 
@@ -103,6 +103,7 @@ class Coil {
 struct NibeCoilMetricConfig {
     std::string name;
     int factor;
+    int scale;
 };
 
 struct NibeMqttConfig {

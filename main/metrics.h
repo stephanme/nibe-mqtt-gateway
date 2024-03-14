@@ -12,12 +12,12 @@
 // Features/Limitations:
 // - only static attributes included in name string
 // - raw metric is int32_t, no floating point
-// - metrics formatted as float using a scaling factor
+// - metrics formatted as float using a scaling factors
 // - thread safe: atomic read/increment/set of value, name and factor are immutable
 class Metric {
    public:
     Metric() {}
-    Metric(const char* name, int factor) : name(name), factor(factor) {}
+    Metric(const char* name, int factor = 1, int scale = 1) : name(name), factor(factor), scale(scale) {}
 
     const std::string& getName() const { return name; }
     int getFactor() const { return factor; }
@@ -30,7 +30,9 @@ class Metric {
 
    private:
     std::string name;
-    int factor;
+    // value is formatted as value * scale / factor
+    int factor;  // same semantic as in nibe modbus csv
+    int scale;
     std::atomic<int32_t> value = 0;
 
     friend class Metrics;
@@ -45,13 +47,14 @@ class Metrics {
 
     esp_err_t begin();
 
-    Metric& addMetric(const char* name, int factor);
+    Metric& addMetric(const char* name, int factor = 1, int scale = 1);
     Metric* findMetric(const char* name);
 
     std::string getAllMetricsAsString();
 
     // avoid FP arithmetic
-    static std::string formatNumber(auto value, int factor) {
+    static std::string formatNumber(auto value, int factor, int scale) {
+        value *= scale;
         if (factor == 1) {
             return std::to_string(value);
         } else if (factor == 10) {

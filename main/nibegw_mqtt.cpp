@@ -68,7 +68,7 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
             auto iter2 = coilMetrics.find(coilAddress);
             if (iter2 == coilMetrics.end()) {
                 const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
-                Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor);
+                Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
                 iter2 = coilMetrics.insert({coilAddress, &metric}).first;
             }
             Metric* metric = iter2->second;

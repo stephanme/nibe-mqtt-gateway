@@ -38,7 +38,8 @@ static const char* configJson = R"({
         "coilsToPoll": [1,2],
         "metrics": {
             "1": {"name": "prom_name_1{coil=\"1\"}", "factor": 10},
-            "2": {"name": "prom_name_2{coil=\"2\"}"}
+            "2": {"name": "prom_name_2{coil=\"2\"}"},
+            "3": {"name": "prom_name_3{coil=\"3\"}", "scale": 10}
         }
     },
     "logging": {
@@ -75,13 +76,19 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL(1, config.nibe.coilsToPoll[0]);
     TEST_ASSERT_EQUAL(2, config.nibe.coilsToPoll[1]);
 
-    TEST_ASSERT_EQUAL(2, config.nibe.metrics.size());
+    TEST_ASSERT_EQUAL(3, config.nibe.metrics.size());
     const NibeCoilMetricConfig& metric1 = config.nibe.metrics.at(1);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_1{coil="1"})", metric1.name.c_str());
     TEST_ASSERT_EQUAL(10, metric1.factor);
+    TEST_ASSERT_EQUAL(0, metric1.scale);
     const NibeCoilMetricConfig& metric2 = config.nibe.metrics.at(2);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_2{coil="2"})", metric2.name.c_str());
     TEST_ASSERT_EQUAL(0, metric2.factor);
+    TEST_ASSERT_EQUAL(0, metric2.scale);
+    const NibeCoilMetricConfig& metric3 = config.nibe.metrics.at(3);
+    TEST_ASSERT_EQUAL_STRING(R"(prom_name_3{coil="3"})", metric3.name.c_str());
+    TEST_ASSERT_EQUAL(0, metric3.factor);
+    TEST_ASSERT_EQUAL(10, metric3.scale);
 
     TEST_ASSERT_TRUE(config.logging.mqttLoggingEnabled);
     TEST_ASSERT_TRUE(config.logging.stdoutLoggingEnabled);
@@ -94,7 +101,7 @@ TEST_CASE("getConfigAsJson", "[config]") {
 
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(configJson));
     std::string json = configManager.getConfigAsJson();
-    // printf("json: %s\n", json.c_str());
+    printf("json: %s\n", json.c_str());
     TEST_ASSERT_TRUE(json.contains("mqtt://mosquitto.fritz.box"));
     TEST_ASSERT_TRUE(json.contains("nibegw/logs"));
     TEST_ASSERT_TRUE(json.contains(R"("*": "info")"));
@@ -106,6 +113,9 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_TRUE(json.contains(R"("factor": 10)"));
     TEST_ASSERT_TRUE(json.contains("prom_name_2"));
     TEST_ASSERT_FALSE(json.contains(R"("factor": 0)"));
+    TEST_ASSERT_TRUE(json.contains("prom_name_3"));
+    TEST_ASSERT_FALSE(json.contains(R"("factor": 0)"));
+    TEST_ASSERT_TRUE(json.contains(R"("scale": 10)"));
 
     // test that returned json can be saved again
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));

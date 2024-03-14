@@ -129,7 +129,7 @@ esp_err_t EnergyMeter::publishState() {
     }
 
     // mqtt: report in kWh
-    auto s = Metrics::formatNumber(energyInWh, 1000);
+    auto s = Metrics::formatNumber(energyInWh, 1000, 1);
     mqttClient->publish(mqttTopic, s);
     return ESP_OK;
 }
