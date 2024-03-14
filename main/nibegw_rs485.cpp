@@ -161,6 +161,7 @@ void NibeGw::loop() {
                     int msglen = callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer);
                     sendResponseMessage(msglen);
                 } else {
+                    if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
                     ESP_LOGV(TAG, "Message received");
                     callback->onMessageReceived(bufferAsMsg, index);
                 }
@@ -176,6 +177,7 @@ void NibeGw::loop() {
 void NibeGw::sendResponseMessage(int len) {
     if (len > 0) {
         sendData(buffer, (byte)len);
+        ESP_LOGV(TAG, "Send message to heat pump: %s", AbstractNibeGw::dataToString(buffer, len).c_str());
     } else {
         if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
         ESP_LOGV(TAG, "No message to send");
