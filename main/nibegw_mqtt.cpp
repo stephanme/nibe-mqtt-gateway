@@ -41,12 +41,10 @@ void NibeMqttGw::requestCoil(uint16_t coilAddress) {
     }
 }
 
-void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
-    NibeResponseMessage* msg = (NibeResponseMessage*)data;
-
+void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len) {
     switch (msg->cmd) {
-        case NIBE_CMD_MODBUS_READ_RESP: {
-            ESP_LOGI(TAG, "onMessageReceived NIBE_CMD_MODBUS_READ_RESP: %s", AbstractNibeGw::dataToString(data, len).c_str());
+        case NibeCmd::ModbusReadResp: {
+            ESP_LOGI(TAG, "onMessageReceived ModbusReadResp: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
             uint16_t coilAddress = msg->readResponse.coilAddress;
             auto iter = config->coils.find(coilAddress);
             if (iter == config->coils.end()) {
@@ -79,15 +77,15 @@ void NibeMqttGw::onMessageReceived(const uint8_t* const data, int len) {
             break;
         }
 
-        case NIBE_CMD_MODBUS_DATA_MSG:
-        case NIBE_CMD_PRODUCT_INFO_MSG:
-        case NIBE_CMD_ACCESSORY_VERSION_REQ:
+        case NibeCmd::ModbusDataMsg:
+        case NibeCmd::ProductInfoMsg:
+        case NibeCmd::AccessoryVersionReq:
             // known but ignored commands
             // ESP_LOGI(TAG, "onMessageReceived: %s", AbstractNibeGw::dataToString(data, len).c_str());
             break;
 
         default:
-            ESP_LOGI(TAG, "onMessageReceived UNKNOWN cmd %d: %s", msg->cmd, AbstractNibeGw::dataToString(data, len).c_str());
+            ESP_LOGI(TAG, "onMessageReceived UNKNOWN cmd %d: %s", (int)msg->cmd, AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
             break;
     }
 }
@@ -152,7 +150,7 @@ void NibeMqttGw::announceCoil(const Coil& coil) {
     announcedCoils.insert(coil.id);
 }
 
-int NibeMqttGw::onReadTokenReceived(uint8_t* data) {
+int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
     size_t item_size;
     uint16_t* coilAddressPtr = (uint16_t*)xRingbufferReceive(readCoilsRingBuffer, &item_size, 0);
     if (coilAddressPtr == nullptr) {
@@ -168,19 +166,18 @@ int NibeMqttGw::onReadTokenReceived(uint8_t* data) {
     uint16_t coilAddress = *coilAddressPtr;
     vRingbufferReturnItem(readCoilsRingBuffer, (void*)coilAddressPtr);
 
-    NibeReadRequestMessage* readRequest = (NibeReadRequestMessage*)data;
-    readRequest->start = NIBE_REQUEST_START;
-    readRequest->cmd = NIBE_CMD_MODBUS_READ_REQ;
+    readRequest->start = NibeStart::Request;
+    readRequest->cmd = NibeCmd::ModbusReadReq;
     readRequest->len = 2;
     readRequest->coilAddress = coilAddress;
-    readRequest->chksum = AbstractNibeGw::calcCheckSum(data, sizeof(NibeReadRequestMessage) - 1);
+    readRequest->chksum = AbstractNibeGw::calcCheckSum((uint8_t*)readRequest, sizeof(NibeReadRequestMessage) - 1);
 
-    ESP_LOGI(TAG, "onReadTokenReceived, read coil %d: %s", coilAddress,
-             AbstractNibeGw::dataToString(data, sizeof(NibeReadRequestMessage)).c_str());
+    ESP_LOGI(TAG, "onReadTokenReceived, read coil %d: %s", (int)coilAddress,
+             AbstractNibeGw::dataToString((uint8_t*)readRequest, sizeof(NibeReadRequestMessage)).c_str());
     return sizeof(NibeReadRequestMessage);
 }
 
-int NibeMqttGw::onWriteTokenReceived(uint8_t* data) {
+int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* data) {
     // TODO: send data to nibe
     // ESP_LOGI(TAG, "onWriteTokenReceived");
     return 0;

@@ -6,7 +6,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 
 ## Features
 
-- [ ] connection to Nibe heatpump VVM310/S2125 via RS485
+- [x] connection to Nibe heatpump VVM310/S2125 via RS485
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
 - [x] configurable set of of published Nibe registers/coils
@@ -89,7 +89,7 @@ Energy Meter configuration (also via UI):
 The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
 - blue - initializing, waiting for IP address (blue blinking)
 - green blinking - running ok, connected with MQTT broker
-- red blinking - error, got IP address but e.g. no connected with MQTT broker, check http://nibegw or logs
+- red blinking - error, got IP address but e.g. not connected with MQTT broker, check http://nibegw or logs
 - orange blinking - OTA firmware upload in progress
 
 Web UI:

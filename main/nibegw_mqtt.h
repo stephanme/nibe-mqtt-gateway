@@ -23,9 +23,9 @@ class NibeMqttGw : public NibeGwCallback {
     void requestCoil(uint16_t coilAddress);
 
     // NibeGwCallback
-    void onMessageReceived(const uint8_t* const data, int len);
-    int onReadTokenReceived(uint8_t* data);
-    int onWriteTokenReceived(uint8_t* data);
+    void onMessageReceived(const NibeResponseMessage* const msg, int len);
+    int onReadTokenReceived(NibeReadRequestMessage* data);
+    int onWriteTokenReceived(NibeWriteRequestMessage* data);
 
    private:
     Metrics& metrics;

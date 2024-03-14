@@ -61,25 +61,23 @@ void SimulatedNibeGw::task(void* pvParameters) {
 
 void SimulatedNibeGw::loop() {
     // read token
-    uint8_t requestMsg[MAX_DATA_LEN];
-    int len = callback->onReadTokenReceived(requestMsg);
+    NibeReadRequestMessage request;
+    int len = callback->onReadTokenReceived(&request);
 
     if (len > 0) {
-        NibeReadRequestMessage* request = (NibeReadRequestMessage*)requestMsg;
-
         // simulate response
         uint8_t responseMsg[MAX_DATA_LEN];
         NibeResponseMessage* response = (NibeResponseMessage*)responseMsg;
-        response->start = NIBE_RESPONSE_START;
-        response->address = NIBE_ADDRESS_MODBUS40;
-        response->cmd = NIBE_CMD_MODBUS_READ_RESP;
+        response->start = NibeStart::Response;
+        response->deviceAddress = NibeDeviceAddress::MODBUS40;
+        response->cmd = NibeCmd::ModbusReadResp;
         response->len = sizeof(NibeReadResponseData);
-        response->readResponse.coilAddress = request->coilAddress;  // is already swapped
+        response->readResponse.coilAddress = request.coilAddress;  // is already swapped
         response->readResponse.value[0] = 0x01;
         response->readResponse.value[1] = 0x02;
         response->readResponse.value[2] = 0x03;
         response->readResponse.value[3] = 0x04;
         response->data[response->len] = calcCheckSum(responseMsg + 1, response->len + 4);  // address..data
-        callback->onMessageReceived(responseMsg, sizeof(NibeResponseMessage) + 1);
+        callback->onMessageReceived(response, sizeof(NibeResponseMessage) + 1);
     }
 }

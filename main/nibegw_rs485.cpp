@@ -12,7 +12,7 @@
  *
  * ----------------------------------------------------------------------------
  *
- * Author: pauli.anttila@gmail.com
+ * Original Author: pauli.anttila@gmail.com
  *
  */
 
@@ -91,11 +91,8 @@ void NibeGw::setSendAcknowledge(boolean val) { sendAcknowledge = val; }
 
 boolean NibeGw::messageStillOnProgress() {
     if (!connectionState) return false;
-
     if (RS485->available() > 0) return true;
-
     if (state == STATE_CRC_FAILURE || state == STATE_OK_MESSAGE_RECEIVED) return true;
-
     return false;
 }
 
@@ -107,7 +104,7 @@ void NibeGw::loop() {
             if (RS485->available() > 0) {
                 byte b = RS485->read();
 
-                if (b == 0x5C) {
+                if (b == (byte)NibeStart::Response) {
                     buffer[0] = b;
                     index = 1;
                     state = STATE_WAIT_DATA;
@@ -147,39 +144,41 @@ void NibeGw::loop() {
             break;
 
         case STATE_CRC_FAILURE:
-            if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendNak();
+            if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendNak();
             ESP_LOGV(TAG, "CRC failure");
             state = STATE_WAIT_START;
             break;
 
         case STATE_OK_MESSAGE_RECEIVED:
-            if (buffer[0] == 0x5C && buffer[1] == 0x00 && buffer[2] == 0x20 && buffer[4] == 0x00 &&
-                (buffer[3] == 0x69 || buffer[3] == 0x6B)) {
-                                int msglen;
-                if (buffer[3] == 0x6B) {
-                    ESP_LOGV(TAG, "WRITE_TOKEN received");
-                    msglen = callback->onWriteTokenReceived(buffer);
-                } else {
+            // NibeStart::Response is ensured
+            if (bufferAsMsg->deviceAddress == NibeDeviceAddress::MODBUS40) {
+                if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
                     ESP_LOGV(TAG, "READ_TOKEN received");
-                    msglen = callback->onReadTokenReceived(buffer);
-                }
-                if (msglen > 0) {
-                    sendData(buffer, (byte)msglen);
+                    int msglen = callback->onReadTokenReceived((NibeReadRequestMessage*) buffer);
+                    sendResponseMessage(msglen);
+                } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
+                    ESP_LOGV(TAG, "WRITE_TOKEN received");
+                    int msglen = callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer);
+                    sendResponseMessage(msglen);
                 } else {
-                    if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendAck();
-                    ESP_LOGV(TAG, "No message to send");
+                    ESP_LOGV(TAG, "Message received");
+                    callback->onMessageReceived(bufferAsMsg, index);
                 }
             } else {
-                if (shouldAckNakSend((buffer[2] << 8) + buffer[1])) sendAck();
-                ESP_LOGV(TAG, "Message received");
-                // TODO: decode as NibeResponseMessage
-                // handle only MODBUS40 messages
-                if (buffer[2] == 0x20) {
-                    callback->onMessageReceived(buffer, index);
-                }
-            }
+                // non-modbus messages
+                if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
+            } 
             state = STATE_WAIT_START;
             break;
+    }
+}
+
+void NibeGw::sendResponseMessage(int len) {
+    if (len > 0) {
+        sendData(buffer, (byte)len);
+    } else {
+        if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
+        ESP_LOGV(TAG, "No message to send");
     }
 }
 
@@ -194,18 +193,14 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len) {
     if (len <= 0) return 0;
 
     if (len >= 1) {
-        if (data[0] != 0x5C) return -1;
+        NibeResponseMessage* msg = (NibeResponseMessage*)data;
+        if (msg->start != NibeStart::Response) return -1;
 
         if (len >= 6) {
-            int datalen = data[4];
-
+            int datalen = msg->len;
             if (len < datalen + 6) return 0;
 
-            byte checksum = 0;
-
-            // calculate XOR checksum
-            for (int i = 1; i < (datalen + 5); i++) checksum ^= data[i];
-
+            byte checksum = calcCheckSum(data + 1, datalen + 4);
             byte msg_checksum = data[datalen + 5];
             ESP_LOGV(TAG, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
 
@@ -253,13 +248,13 @@ void NibeGw::sendNak() {
     ESP_LOGV(TAG, "Send NAK");
 }
 
-boolean NibeGw::shouldAckNakSend(uint16_t address) {
+boolean NibeGw::shouldAckNakSend(NibeDeviceAddress address) {
     if (sendAcknowledge) {
-        if (address == NIBE_ADDRESS_MODBUS40 && ackModbus40)
+        if (address == NibeDeviceAddress::MODBUS40 && ackModbus40)
             return true;
-        else if (address == NIBE_ADDRESS_RMU40 && ackRmu40)
+        else if (address == NibeDeviceAddress::RMU40 && ackRmu40)
             return true;
-        else if (address == NIBE_ADDRESS_SMS40 && ackSms40)
+        else if (address == NibeDeviceAddress::SMS40 && ackSms40)
             return true;
     }
 

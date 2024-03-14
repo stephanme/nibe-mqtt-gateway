@@ -58,6 +58,7 @@ class NibeGw final : AbstractNibeGw {
     bool connectionState;
     uint8_t directionPin;
     uint8_t buffer[MAX_DATA_LEN];
+    const NibeResponseMessage* bufferAsMsg = (NibeResponseMessage*)buffer;
     uint8_t index;
     HardwareSerial* RS485;
     int RS485RxPin;
@@ -69,11 +70,12 @@ class NibeGw final : AbstractNibeGw {
     bool sendAcknowledge;
     NibeGwCallback* callback;
 
-    int checkNibeMessage(const uint8_t* const data, uint8_t len);
+    static int checkNibeMessage(const uint8_t* const data, uint8_t len);
+    void sendResponseMessage(int len);
     void sendData(const uint8_t* const data, uint8_t len);
     void sendAck();
     void sendNak();
-    bool shouldAckNakSend(uint16_t address);
+    bool shouldAckNakSend(NibeDeviceAddress address);
 
     void connect();
     void disconnect();

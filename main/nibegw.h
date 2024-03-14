@@ -31,7 +31,7 @@
  * When checksum mismatch,
  *  NAK (0x15) should be sent to the heat pump.
  *
- * Author: pauli.anttila@gmail.com
+ * Original Author: pauli.anttila@gmail.com
  *
  */
 
@@ -67,44 +67,45 @@ enum eState {
 // message buffer for RS-485 communication. Max message length is 80 uint8_ts + 6 uint8_ts header
 #define MAX_DATA_LEN 128
 
-// nibe data formats
+// nibe protocol data structures work on little endian processors only, big endian would need byteswap which is not implemented
 // ESP32 (Tensilica Xtensa LX6) is little endian
-// nibe seems to use big endian
+// ARM Mac as well (used for testing with target linux)
 
-enum NibeStart {
-    NIBE_RESPONSE_START = 0x5c,
-    NIBE_REQUEST_START = 0xc0,
+enum class NibeStart : uint8_t {
+    Response = 0x5c,
+    Request = 0xc0,
 };
 
-enum NibeAddress {
-    NIBE_ADDRESS_SMS40 = 0x1600,
-    NIBE_ADDRESS_RMU40 = 0x1900,
-    NIBE_ADDRESS_MODBUS40 = 0x2000,
-    NIBE_ADDRESS_HEATPUMP_1 = 0xC941,
+// data format might be big endian, transformed to little endian by swapping the address constants
+enum class NibeDeviceAddress : uint16_t {
+    SMS40 = 0x1600,
+    RMU40 = 0x1900,
+    MODBUS40 = 0x2000,
+    Heatpump1 = 0xC941,
 };
 
-enum NibeCmd {
-    NIBE_CMD_MODBUS_DATA_MSG = 0x68,
-    NIBE_CMD_MODBUS_READ_REQ = 0x69,
-    NIBE_CMD_MODBUS_READ_RESP = 0x6A,
-    NIBE_CMD_MODBUS_WRITE_REQ = 0x6B,
-    NIBE_CMD_MODBUS_WRITE_RESP = 0x6C,
-    NIBE_CMD_PRODUCT_INFO_MSG = 0x6D,
-    NIBE_CMD_MODBUS_ADDRESS_MSG = 0x6E,
-    NIBE_CMD_ACCESSORY_VERSION_REQ = 0xEE,
+enum class NibeCmd : u_int8_t {
+    ModbusDataMsg = 0x68,
+    ModbusReadReq = 0x69,
+    ModbusReadResp = 0x6A,
+    ModbusWriteReq = 0x6B,
+    ModbusWriteResp = 0x6C,
+    ProductInfoMsg = 0x6D,
+    ModbusAddressMsg = 0x6E,
+    AccessoryVersionReq = 0xEE,
 };
 
 struct __attribute__((packed)) NibeReadRequestMessage {
-    uint8_t start;  // const 0xc0
-    uint8_t cmd;    // NibeCmd
+    NibeStart start;  // const 0xc0
+    NibeCmd cmd;    // NibeCmd
     uint8_t len;    // = 2
     uint16_t coilAddress;
     uint8_t chksum;  // xor of start..coilAddress
 };
 
 struct __attribute__((packed)) NibeWriteRequestMessage {
-    uint8_t start;  // const 0xc0
-    uint8_t cmd;    // NibeCmd
+    NibeStart start;  // const 0xc0
+    NibeCmd cmd;    // NibeCmd
     uint8_t len;    // = 6
     uint16_t coilAddress;
     uint8_t value[4];
@@ -117,22 +118,22 @@ struct __attribute__((packed)) NibeReadResponseData {
 };
 
 struct __attribute__((packed)) NibeResponseMessage {
-    uint8_t start;     // const 0x5c
-    uint16_t address;  // NibeAddress
-    uint8_t cmd;       // NibeCmd
+    NibeStart start;     // const 0x5c
+    NibeDeviceAddress deviceAddress;  // NibeDeviceAddress
+    NibeCmd cmd;       // NibeCmd
     uint8_t len;
     union {
         uint8_t data[1];                    // len uint8_ts
-        NibeReadResponseData readResponse;  // NibeCmd == NIBE_CMD_MODBUS_READ_RESP
+        NibeReadResponseData readResponse;  // NibeCmd == ModbusReadResp
     };
     // uint8 chksum; // xor of address..data
 };
 
 class NibeGwCallback {
    public:
-    virtual void onMessageReceived(const uint8_t* const data, int len) = 0;
-    virtual int onReadTokenReceived(uint8_t* data) = 0;
-    virtual int onWriteTokenReceived(uint8_t* data) = 0;
+    virtual void onMessageReceived(const NibeResponseMessage* const data, int len) = 0;
+    virtual int onReadTokenReceived(NibeReadRequestMessage* data) = 0;
+    virtual int onWriteTokenReceived(NibeWriteRequestMessage* data) = 0;
 };
 
 class AbstractNibeGw {
