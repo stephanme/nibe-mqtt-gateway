@@ -97,16 +97,16 @@ enum class NibeCmd : u_int8_t {
 
 struct __attribute__((packed)) NibeReadRequestMessage {
     NibeStart start;  // const 0xc0
-    NibeCmd cmd;    // NibeCmd
-    uint8_t len;    // = 2
+    NibeCmd cmd;      // NibeCmd
+    uint8_t len;      // = 2
     uint16_t coilAddress;
     uint8_t chksum;  // xor of start..coilAddress
 };
 
 struct __attribute__((packed)) NibeWriteRequestMessage {
     NibeStart start;  // const 0xc0
-    NibeCmd cmd;    // NibeCmd
-    uint8_t len;    // = 6
+    NibeCmd cmd;      // NibeCmd
+    uint8_t len;      // = 6
     uint16_t coilAddress;
     uint8_t value[4];
     uint8_t chksum;  // xor of start..value[]
@@ -114,16 +114,16 @@ struct __attribute__((packed)) NibeWriteRequestMessage {
 
 struct __attribute__((packed)) NibeReadResponseData {
     uint16_t coilAddress;
-    uint8_t value[4];  // unclear if always 4 uint8_ts or depends on coil address/type
+    uint8_t value[4];  // unclear if always 4 bytes or depends on coil address/type
 };
 
 struct __attribute__((packed)) NibeResponseMessage {
-    NibeStart start;     // const 0x5c
+    NibeStart start;                  // const 0x5c
     NibeDeviceAddress deviceAddress;  // NibeDeviceAddress
-    NibeCmd cmd;       // NibeCmd
+    NibeCmd cmd;                      // NibeCmd
     uint8_t len;
     union {
-        uint8_t data[1];                    // len uint8_ts
+        uint8_t data[1];                    // len bytes
         NibeReadResponseData readResponse;  // NibeCmd == ModbusReadResp
     };
     // uint8 chksum; // xor of address..data

@@ -26,11 +26,6 @@
 static const char* TAG = "nibegw";
 
 NibeGw::NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin) {
-    verbose = 0;
-    ackModbus40 = true;
-    ackSms40 = false;
-    ackRmu40 = false;
-    sendAcknowledge = true;
     state = STATE_WAIT_START;
     connectionState = false;
     RS485 = serial;
@@ -77,23 +72,6 @@ void NibeGw::disconnect() {
         RS485->end();
         connectionState = false;
     }
-}
-
-boolean NibeGw::connected() { return connectionState; }
-
-void NibeGw::setAckModbus40Address(boolean val) { ackModbus40 = val; }
-
-void NibeGw::setAckSms40Address(boolean val) { ackSms40 = val; }
-
-void NibeGw::setAckRmu40Address(boolean val) { ackRmu40 = val; }
-
-void NibeGw::setSendAcknowledge(boolean val) { sendAcknowledge = val; }
-
-boolean NibeGw::messageStillOnProgress() {
-    if (!connectionState) return false;
-    if (RS485->available() > 0) return true;
-    if (state == STATE_CRC_FAILURE || state == STATE_OK_MESSAGE_RECEIVED) return true;
-    return false;
 }
 
 void NibeGw::loop() {
@@ -154,7 +132,7 @@ void NibeGw::loop() {
             if (bufferAsMsg->deviceAddress == NibeDeviceAddress::MODBUS40) {
                 if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
                     ESP_LOGV(TAG, "READ_TOKEN received");
-                    int msglen = callback->onReadTokenReceived((NibeReadRequestMessage*) buffer);
+                    int msglen = callback->onReadTokenReceived((NibeReadRequestMessage*)buffer);
                     sendResponseMessage(msglen);
                 } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
                     ESP_LOGV(TAG, "WRITE_TOKEN received");
@@ -168,7 +146,7 @@ void NibeGw::loop() {
             } else {
                 // non-modbus messages
                 if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
-            } 
+            }
             state = STATE_WAIT_START;
             break;
     }
@@ -230,35 +208,24 @@ void NibeGw::sendData(const byte* const data, byte len) {
     ESP_LOGV(TAG, "Send message to heat pump: len=%d", len);
 }
 
-void NibeGw::sendAck() {
+void NibeGw::sendData(const byte data) {
     digitalWrite(directionPin, HIGH);
     delay(1);
-    RS485->write(0x06);
+    RS485->write(data);
     RS485->flush();
     delay(1);
     digitalWrite(directionPin, LOW);
+    ESP_LOGV(TAG, "Send %02x", data);
+}
+
+void NibeGw::sendAck() {
+    sendData(0x06);
     ESP_LOGV(TAG, "Send ACK");
 }
 
 void NibeGw::sendNak() {
-    digitalWrite(directionPin, HIGH);
-    delay(1);
-    RS485->write(0x15);
-    RS485->flush();
-    delay(1);
-    digitalWrite(directionPin, LOW);
+    sendData(0x15);
     ESP_LOGV(TAG, "Send NAK");
 }
 
-boolean NibeGw::shouldAckNakSend(NibeDeviceAddress address) {
-    if (sendAcknowledge) {
-        if (address == NibeDeviceAddress::MODBUS40 && ackModbus40)
-            return true;
-        else if (address == NibeDeviceAddress::RMU40 && ackRmu40)
-            return true;
-        else if (address == NibeDeviceAddress::SMS40 && ackSms40)
-            return true;
-    }
-
-    return false;
-}
+boolean NibeGw::shouldAckNakSend(NibeDeviceAddress address) { return address == NibeDeviceAddress::MODBUS40; }

@@ -39,19 +39,14 @@
 #define _nibegw_rs485_h_
 
 #include <Arduino.h>
-#include "nibegw.h"
 
+#include "nibegw.h"
 
 class NibeGw final : AbstractNibeGw {
    public:
     NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin);
 
     esp_err_t begin(NibeGwCallback& callback);
-
-    void setAckModbus40Address(bool val);
-    void setAckSms40Address(bool val);
-    void setAckRmu40Address(bool val);
-    void setSendAcknowledge(bool val);
 
    private:
     eState state;
@@ -63,24 +58,18 @@ class NibeGw final : AbstractNibeGw {
     HardwareSerial* RS485;
     int RS485RxPin;
     int RS485TxPin;
-    uint8_t verbose;
-    bool ackModbus40;
-    bool ackSms40;
-    bool ackRmu40;
-    bool sendAcknowledge;
     NibeGwCallback* callback;
 
     static int checkNibeMessage(const uint8_t* const data, uint8_t len);
     void sendResponseMessage(int len);
     void sendData(const uint8_t* const data, uint8_t len);
+    void sendData(const uint8_t data);
     void sendAck();
     void sendNak();
     bool shouldAckNakSend(NibeDeviceAddress address);
 
     void connect();
     void disconnect();
-    bool connected();
-    bool messageStillOnProgress();
 
     static void task(void* pvParameters);
     void loop();
