@@ -2,6 +2,7 @@
 
 #include <esp_log.h>
 #include <esp_timer.h>
+#include <cstring>
 
 static const char* TAG = "nibegw_mqtt";
 
@@ -118,24 +119,35 @@ void NibeMqttGw::announceCoil(const Coil& coil) {
                      coil.unitAsString());
             break;
         case CoilUnit::Hours:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"total",)", coil.unitAsString());
+            break;
         case CoilUnit::Minutes:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"measurement",)", coil.unitAsString());
             break;
         case CoilUnit::Watt:
         case CoilUnit::KiloWatt:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power","state_class":"measurement",)", coil.unitAsString());
             break;
         case CoilUnit::WattHour:
         case CoilUnit::KiloWattHour:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy","state_class":"total",)", coil.unitAsString());
             break;
         case CoilUnit::Hertz:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency","state_class":"measurement",)", coil.unitAsString());
             break;
         default:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","state_class":"measurement",)", coil.unitAsString());
             break;
     }
+
+    // special handling for certain coils
+    switch (coil.id) {
+        case 40940:
+        case 43005:  // degree minutes, no unit
+            std::strcpy(unit, R"("state_class":"measurement",)");
+            break;        
+    }
+
     // TODO: writable coils
 
     // !!! if crash (strlen in ROM) -> stack too small (nibegw.h: NIBE_GW_TASK_STACK_SIZE) or incorrect format string!!!
