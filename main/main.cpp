@@ -57,8 +57,8 @@ MqttRelay relays[] = {
 EnergyMeter energyMeter(metrics);
 
 NibeMqttGw nibeMqttGw(metrics);
-NibeGw nibegw(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
-// SimulatedNibeGw nibegw;
+NibeRS485 nibeRS485(&RS485Serial, RS485_DIRECTION_PIN, RS485_RX_PIN, RS485_TX_PIN);
+NibeGw nibegw(nibeRS485);
 
 NibeMqttGwWebServer httpServer(80, metrics, configManager, nibeMqttGw, energyMeter);
 
@@ -181,6 +181,11 @@ void setupNormalBoot() {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize Nibe MQTT Gateway");
         metricInitStatus.setValue((int32_t)InitStatus::ErrNibeMqttGw);
+    }
+    err = nibeRS485.begin();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize NibeRS485 interface");
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
     }
     err = nibegw.begin(nibeMqttGw);
     if (err != ESP_OK) {

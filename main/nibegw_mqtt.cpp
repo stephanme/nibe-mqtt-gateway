@@ -2,6 +2,7 @@
 
 #include <esp_log.h>
 #include <esp_timer.h>
+
 #include <cstring>
 
 static const char* TAG = "nibegw_mqtt";
@@ -45,7 +46,7 @@ void NibeMqttGw::requestCoil(uint16_t coilAddress) {
 void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len) {
     switch (msg->cmd) {
         case NibeCmd::ModbusReadResp: {
-            ESP_LOGD(TAG, "onMessageReceived ModbusReadResp: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
+            ESP_LOGD(TAG, "onMessageReceived ModbusReadResp: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
             uint16_t coilAddress = msg->readResponse.coilAddress;
             auto iter = config->coils.find(coilAddress);
             if (iter == config->coils.end()) {
@@ -82,11 +83,12 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
         case NibeCmd::ProductInfoMsg:
         case NibeCmd::AccessoryVersionReq:
             // known but ignored commands
-            ESP_LOGV(TAG, "onMessageReceived: %s", AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
+            ESP_LOGV(TAG, "onMessageReceived: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
             break;
 
         default:
-            ESP_LOGI(TAG, "onMessageReceived UNKNOWN cmd %d: %s", (int)msg->cmd, AbstractNibeGw::dataToString((uint8_t*)msg, len).c_str());
+            ESP_LOGI(TAG, "onMessageReceived UNKNOWN cmd %d: %s", (int)msg->cmd,
+                     NibeGw::dataToString((uint8_t*)msg, len).c_str());
             break;
     }
 }
@@ -119,21 +121,26 @@ void NibeMqttGw::announceCoil(const Coil& coil) {
                      coil.unitAsString());
             break;
         case CoilUnit::Hours:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"total",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"total",)",
+                     coil.unitAsString());
             break;
         case CoilUnit::Minutes:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"measurement",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"measurement",)",
+                     coil.unitAsString());
             break;
         case CoilUnit::Watt:
         case CoilUnit::KiloWatt:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power","state_class":"measurement",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power","state_class":"measurement",)",
+                     coil.unitAsString());
             break;
         case CoilUnit::WattHour:
         case CoilUnit::KiloWattHour:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy","state_class":"total",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy","state_class":"total",)",
+                     coil.unitAsString());
             break;
         case CoilUnit::Hertz:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency","state_class":"measurement",)", coil.unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency","state_class":"measurement",)",
+                     coil.unitAsString());
             break;
         default:
             snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","state_class":"measurement",)", coil.unitAsString());
@@ -145,7 +152,7 @@ void NibeMqttGw::announceCoil(const Coil& coil) {
         case 40940:
         case 43005:  // degree minutes, no unit
             std::strcpy(unit, R"("state_class":"measurement",)");
-            break;        
+            break;
     }
 
     // TODO: writable coils
@@ -182,10 +189,10 @@ int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
     readRequest->cmd = NibeCmd::ModbusReadReq;
     readRequest->len = 2;
     readRequest->coilAddress = coilAddress;
-    readRequest->chksum = AbstractNibeGw::calcCheckSum((uint8_t*)readRequest, sizeof(NibeReadRequestMessage) - 1);
+    readRequest->chksum = NibeGw::calcCheckSum((uint8_t*)readRequest, sizeof(NibeReadRequestMessage) - 1);
 
     ESP_LOGD(TAG, "onReadTokenReceived, read coil %d: %s", (int)coilAddress,
-             AbstractNibeGw::dataToString((uint8_t*)readRequest, sizeof(NibeReadRequestMessage)).c_str());
+             NibeGw::dataToString((uint8_t*)readRequest, sizeof(NibeReadRequestMessage)).c_str());
     return sizeof(NibeReadRequestMessage);
 }
 

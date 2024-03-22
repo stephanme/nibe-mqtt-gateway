@@ -1,32 +1,10 @@
-/**
- * Copyright (c) 2010-2024 Contributors to the openHAB project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- *
- * ----------------------------------------------------------------------------
- *
- * Original Author: pauli.anttila@gmail.com
- *
- */
-
-// see nibegw.h for changes
-
 #include "nibegw_rs485.h"
 
 #include <esp_log.h>
-#include <freertos/task.h>
 
 static const char* TAG = "nibegw";
 
-NibeGw::NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin) {
-    state = STATE_WAIT_START;
+NibeRS485::NibeRS485(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin) {
     connectionState = false;
     RS485 = serial;
     directionPin = RS485DirectionPin;
@@ -36,168 +14,37 @@ NibeGw::NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, in
     digitalWrite(directionPin, LOW);
 }
 
-esp_err_t NibeGw::begin(NibeGwCallback& callback) {
-    ESP_LOGI(TAG, "NibeGw::begin");
-    this->callback = &callback;
-    int err = xTaskCreatePinnedToCore(&task, "nibegwTask", NIBE_GW_TASK_STACK_SIZE, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
-    if (err != pdPASS) {
-        ESP_LOGE(TAG, "Could not start nibegw task");
-        return ESP_FAIL;
-    }
-
+esp_err_t NibeRS485::begin() {
+    ESP_LOGI(TAG, "NibeRS485::begin");
     connect();
     return ESP_OK;
 }
 
-void NibeGw::task(void* pvParameters) {
-    NibeGw* gw = (NibeGw*)pvParameters;
-    while (1) {
-        gw->loop();
-        delay(1);  // TODO: tuning, loop could read until no more data
-    }
-}
-
-void NibeGw::connect() {
+void NibeRS485::connect() {
     if (!connectionState) {
-        state = STATE_WAIT_START;
-
         RS485->begin(9600, SERIAL_8N1, RS485RxPin, RS485TxPin);
-
         connectionState = true;
     }
 }
 
-void NibeGw::disconnect() {
+void NibeRS485::disconnect() {
     if (connectionState) {
         RS485->end();
         connectionState = false;
     }
 }
 
-void NibeGw::loop() {
-    if (!connectionState) return;
+boolean NibeRS485::isDataAvailable() { return RS485->available() > 0; }
 
-    switch (state) {
-        case STATE_WAIT_START:
-            if (RS485->available() > 0) {
-                byte b = RS485->read();
-
-                if (b == (byte)NibeStart::Response) {
-                    buffer[0] = b;
-                    index = 1;
-                    state = STATE_WAIT_DATA;
-
-                    ESP_LOGV(TAG, "Frame start found");
-                }
-            }
-            break;
-
-        case STATE_WAIT_DATA:
-            if (RS485->available() > 0) {
-                byte b = RS485->read();
-
-                if (index >= MAX_DATA_LEN) {
-                    // too long message
-                    state = STATE_WAIT_START;
-                } else {
-                    buffer[index++] = b;
-                    int msglen = checkNibeMessage(buffer, index);
-
-                    switch (msglen) {
-                        case 0:
-                            break;  // Ok, but not ready
-                        case -1:
-                            state = STATE_WAIT_START;
-                            break;  // Invalid message
-                        case -2:
-                            state = STATE_CRC_FAILURE;
-                            break;  // Checksum error
-                        default:
-                            ESP_LOGV(TAG, "checkMsg=%d", msglen);
-                            state = STATE_OK_MESSAGE_RECEIVED;
-                            break;
-                    }
-                }
-            }
-            break;
-
-        case STATE_CRC_FAILURE:
-            if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendNak();
-            ESP_LOGV(TAG, "CRC failure");
-            state = STATE_WAIT_START;
-            break;
-
-        case STATE_OK_MESSAGE_RECEIVED:
-            // NibeStart::Response is ensured
-            if (bufferAsMsg->deviceAddress == NibeDeviceAddress::MODBUS40) {
-                if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
-                    ESP_LOGV(TAG, "READ_TOKEN received");
-                    int msglen = callback->onReadTokenReceived((NibeReadRequestMessage*)buffer);
-                    sendResponseMessage(msglen);
-                } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
-                    ESP_LOGV(TAG, "WRITE_TOKEN received");
-                    int msglen = callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer);
-                    sendResponseMessage(msglen);
-                } else {
-                    if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
-                    ESP_LOGV(TAG, "Message received");
-                    callback->onMessageReceived(bufferAsMsg, index);
-                }
-            } else {
-                // non-modbus messages
-                if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
-            }
-            state = STATE_WAIT_START;
-            break;
-    }
-}
-
-void NibeGw::sendResponseMessage(int len) {
-    if (len > 0) {
-        sendData(buffer, (byte)len);
-        ESP_LOGV(TAG, "Send message to heat pump: %s", AbstractNibeGw::dataToString(buffer, len).c_str());
+int NibeRS485::readData() {
+    if (RS485->available() > 0) {
+        return RS485->read();
     } else {
-        if (shouldAckNakSend(bufferAsMsg->deviceAddress)) sendAck();
-        ESP_LOGV(TAG, "No message to send");
+        return -1;
     }
 }
 
-/*
-   Return:
-    >0 if valid message received (return message len)
-     0 if ok, but message not ready
-    -1 if invalid message
-    -2 if checksum fails
-*/
-int NibeGw::checkNibeMessage(const byte* const data, byte len) {
-    if (len <= 0) return 0;
-
-    if (len >= 1) {
-        NibeResponseMessage* msg = (NibeResponseMessage*)data;
-        if (msg->start != NibeStart::Response) return -1;
-
-        if (len >= 6) {
-            int datalen = msg->len;
-            if (len < datalen + 6) return 0;
-
-            byte checksum = calcCheckSum(data + 1, datalen + 4);
-            byte msg_checksum = data[datalen + 5];
-            ESP_LOGV(TAG, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
-
-            if (checksum != msg_checksum) {
-                // if checksum is 0x5C (start character),
-                // heat pump seems to send 0xC5 checksum
-                if (checksum != 0x5C && msg_checksum != 0xC5) return -2;
-            }
-
-            return datalen + 6;
-        }
-    }
-
-    return 0;
-}
-
-void NibeGw::sendData(const byte* const data, byte len) {
+void NibeRS485::sendData(const uint8_t* const data, uint8_t len) {
     digitalWrite(directionPin, HIGH);
     delay(1);
     RS485->write(data, len);
@@ -205,27 +52,16 @@ void NibeGw::sendData(const byte* const data, byte len) {
     delay(1);
     digitalWrite(directionPin, LOW);
 
-    ESP_LOGV(TAG, "Send message to heat pump: len=%d", len);
+    ESP_LOGV(TAG, "Send %s", NibeGw::dataToString(data, len).c_str());
 }
 
-void NibeGw::sendData(const byte data) {
+void NibeRS485::sendData(const uint8_t data) {
     digitalWrite(directionPin, HIGH);
     delay(1);
     RS485->write(data);
     RS485->flush();
     delay(1);
     digitalWrite(directionPin, LOW);
+    
     ESP_LOGV(TAG, "Send %02x", data);
 }
-
-void NibeGw::sendAck() {
-    sendData(0x06);
-    ESP_LOGV(TAG, "Send ACK");
-}
-
-void NibeGw::sendNak() {
-    sendData(0x15);
-    ESP_LOGV(TAG, "Send NAK");
-}
-
-boolean NibeGw::shouldAckNakSend(NibeDeviceAddress address) { return address == NibeDeviceAddress::MODBUS40; }

@@ -42,37 +42,27 @@
 
 #include "nibegw.h"
 
-class NibeGw final : AbstractNibeGw {
+class NibeRS485 final : public NibeInterface {
    public:
-    NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin);
+    NibeRS485(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin);
 
-    esp_err_t begin(NibeGwCallback& callback);
+    esp_err_t begin();
+
+    // NibeInterface
+    virtual boolean isDataAvailable();
+    virtual int readData();
+    virtual void sendData(const uint8_t* const data, uint8_t len);
+    virtual void sendData(const uint8_t data);
 
    private:
-    eState state;
     bool connectionState;
     uint8_t directionPin;
-    uint8_t buffer[MAX_DATA_LEN];
-    const NibeResponseMessage* bufferAsMsg = (NibeResponseMessage*)buffer;
-    uint8_t index;
     HardwareSerial* RS485;
     int RS485RxPin;
     int RS485TxPin;
-    NibeGwCallback* callback;
-
-    static int checkNibeMessage(const uint8_t* const data, uint8_t len);
-    void sendResponseMessage(int len);
-    void sendData(const uint8_t* const data, uint8_t len);
-    void sendData(const uint8_t data);
-    void sendAck();
-    void sendNak();
-    bool shouldAckNakSend(NibeDeviceAddress address);
 
     void connect();
     void disconnect();
-
-    static void task(void* pvParameters);
-    void loop();
 };
 
 #endif

@@ -43,6 +43,7 @@
 // - typesafe callback via interface
 // - own task that handles the RS485 loop
 // - separated into nibegw and nibgw_rs485 to get rid of Arduino.h for testing on linux
+// - bigger refactoring to make NibeGW testable, separated NibeGW and NibeInterface
 
 #ifndef _nibegw_h_
 #define _nibegw_h_
@@ -136,9 +137,23 @@ class NibeGwCallback {
     virtual int onWriteTokenReceived(NibeWriteRequestMessage* data) = 0;
 };
 
-class AbstractNibeGw {
+class NibeInterface {
    public:
-    virtual esp_err_t begin(NibeGwCallback& callback) = 0;
+    // check if data can be read (non-blocking)
+    virtual bool isDataAvailable() = 0;
+    // read data from interface, returns -1 if no data is available
+    virtual int readData() = 0;
+
+    virtual void sendData(const uint8_t* const data, uint8_t len) = 0;
+    virtual void sendData(const uint8_t data) = 0;
+};
+
+class NibeGw {
+   public:
+    NibeGw(NibeInterface& nibeInterface);
+
+    esp_err_t begin(NibeGwCallback& callback);
+    // TODO: begin for testing w/o starting a task
 
     static uint8_t calcCheckSum(const uint8_t* const data, uint8_t len) {
         uint8_t chksum = 0;
@@ -150,18 +165,29 @@ class AbstractNibeGw {
 
     // for logging and debugging
     static std::string dataToString(const uint8_t* const data, int len);
-};
 
-// for testing
-class SimulatedNibeGw final : AbstractNibeGw {
-   public:
-    esp_err_t begin(NibeGwCallback& callback);
+    // for testing
+    esp_err_t beginTest(NibeGwCallback& callback);
+    void loop();
+    auto getState() { return state; }
 
    private:
+    NibeInterface& nibeInterface;
+
+    // protocol handling
     NibeGwCallback* callback;
+    eState state;
+    uint8_t buffer[MAX_DATA_LEN];
+    const NibeResponseMessage* bufferAsMsg = (NibeResponseMessage*)buffer;
+    uint8_t index;
+
+    static int checkNibeMessage(const uint8_t* const data, uint8_t len);
+    void sendResponseMessage(int len);
+    void sendAck();
+    void sendNak();
+    bool shouldAckNakSend(NibeDeviceAddress address);
 
     static void task(void* pvParameters);
-    void loop();
 };
 
 #endif

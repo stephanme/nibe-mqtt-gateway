@@ -10,6 +10,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
 - [x] configurable set of of published Nibe registers/coils
+- [ ] support Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager)
 - [ ] supports writing to Nibe registers
 - [x] energy meter connected via S0 interface to OptIn1, persisted in nvs
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT

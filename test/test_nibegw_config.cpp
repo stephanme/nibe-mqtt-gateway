@@ -117,21 +117,24 @@ TEST_CASE("appendPromAttributes", "[nibegw_config]") {
 TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
     Coil c = {1, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
     NibeMqttConfig config;
-    config.metrics[1] = {"test123", 10};
-    config.metrics[2] = {"", 10};
-    config.metrics[3] = {R"(test123{node="nibegw"})", 0};
+    config.metrics[1] = {"test123", 10, 1};
+    config.metrics[2] = {"", 10, 10};
+    config.metrics[3] = {R"(test123{node="nibegw"})", 0, 0};
 
     NibeCoilMetricConfig metricCfg = c.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(test123{coil="1"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
+    TEST_ASSERT_EQUAL(1, metricCfg.scale);
 
     c.id = 2;
     metricCfg = c.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(nibe{coil="2"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
+    TEST_ASSERT_EQUAL(10, metricCfg.scale);
 
     c.id = 3;
     metricCfg = c.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(test123{coil="3",node="nibegw"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(1, metricCfg.factor);
+    TEST_ASSERT_EQUAL(1, metricCfg.scale);
 }
