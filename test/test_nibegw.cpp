@@ -55,6 +55,7 @@ int NibeMockInterface::readData() {
     if (readBufferIndex > 0) {
         ret = readBuffer[--readBufferIndex];
     }
+    ESP_LOGV(TAG, "Read %02X", ret);
     return ret;
 }
 
@@ -67,7 +68,7 @@ void NibeMockInterface::sendData(const uint8_t* const data, uint8_t len) {
 void NibeMockInterface::sendData(const uint8_t data) {
     sendBuffer[0] = data;
     sendBufferIndex = 1;
-    ESP_LOGD(TAG, "Send %02x", data);
+    ESP_LOGD(TAG, "Send %02X", data);
 }
 
 class NibeMockCallback : public NibeGwCallback {
@@ -217,8 +218,6 @@ TEST_CASE("non-modbus address", "[nibegw]") {
     interface.setReadData(data, sizeof(data));
 
     while (interface.isDataAvailable()) gw.loop();
-    TEST_ASSERT_EQUAL(eState::STATE_OK_MESSAGE_RECEIVED, gw.getState());
-    gw.loop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(0, callback.onReadTokenReceivedCnt);
@@ -275,6 +274,25 @@ TEST_CASE("protocol handling w/o callback", "[nibegw]") {
 
     while (interface.isDataAvailable()) gw.loop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
+    // check ACK
+    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+}
+
+TEST_CASE("read on 'slow' interface", "[nibegw]") {
+    NibeMockInterface interface;
+    NibeMockCallback callback;
+    NibeGw gw(interface);
+    gw.setNibeGwCallback(callback);
+
+    uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
+    
+    for (int i = 0; i < sizeof(data); i++) {
+        interface.setReadData(data + i, 1);
+        while (interface.isDataAvailable()) gw.loop();
+    }
+    TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
+
+    TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
     // check ACK
     TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
 }

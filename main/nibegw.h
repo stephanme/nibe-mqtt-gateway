@@ -57,7 +57,13 @@
 // state machine states
 enum eState {
     STATE_WAIT_START,
+    STATE_WAIT_MODBUS40_1,
+    STATE_WAIT_MODBUS40_2,
+    STATE_WAIT_CMD,
+    STATE_WAIT_LEN,
     STATE_WAIT_DATA,
+    STATE_WAIT_CRC,
+
     STATE_OK_MESSAGE_RECEIVED,
     STATE_CRC_FAILURE,
 };
@@ -181,14 +187,13 @@ class NibeGw {
     NibeGwCallback* callback;
     eState state;
     uint8_t buffer[MAX_DATA_LEN];
-    const NibeResponseMessage* bufferAsMsg = (NibeResponseMessage*)buffer;
+    NibeResponseMessage* const bufferAsMsg = (NibeResponseMessage*)buffer;
     uint8_t index;
+    uint8_t checksum;
 
-    static int checkNibeMessage(const uint8_t* const data, uint8_t len);
     void sendResponseMessage(int len);
     void sendAck();
     void sendNak();
-    bool shouldAckNakSend(NibeDeviceAddress address);
 
     static void task(void* pvParameters);
 };
