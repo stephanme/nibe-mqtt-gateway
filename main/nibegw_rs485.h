@@ -63,6 +63,15 @@ class NibeRS485 final : public NibeInterface {
 
     void connect();
     void disconnect();
+
+    // buffer for logging received data (all, also for other devices than modbus 40)
+    // mqtt logging: LOG_ITEM_SIZE=256
+    // 1 byte = 3 chars
+    // static text = V (17:47:58.777) nibegw: Rec: = 29 chars + 1 \0
+    // (256 - 30) / 3 ~ 75 -> 64 bytes
+    // 9600 baud = 960 bytes/s -> max 15 logs/s 
+    uint8_t readLogBuffer[64];
+    int readLogIndex;
 };
 
 #endif

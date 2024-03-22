@@ -38,7 +38,17 @@ boolean NibeRS485::isDataAvailable() { return RS485->available() > 0; }
 
 int NibeRS485::readData() {
     if (RS485->available() > 0) {
-        return RS485->read();
+        int b = RS485->read();
+#if LOG_LOCAL_LEVEL==ESP_LOG_VERBOSE
+        if (b >= 0) {
+            readLogBuffer[readLogIndex++] = b;
+            if (readLogIndex >= sizeof(readLogBuffer)) {
+                ESP_LOGV(TAG, "Rec: %s", NibeGw::dataToString(readLogBuffer, readLogIndex).c_str());
+                readLogIndex = 0;
+            }
+        }
+#endif
+        return b;
     } else {
         return -1;
     }
