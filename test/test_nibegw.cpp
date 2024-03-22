@@ -13,7 +13,7 @@ class NibeMockInterface : public NibeInterface {
     }
 
     void setReadData(const uint8_t* const data, uint8_t len);
-    bool checkWriteData(const uint8_t* const data, uint8_t len);
+    void assertWriteData(const uint8_t* const data, uint8_t len);
 
     // NibeInterface
     virtual bool isDataAvailable();
@@ -40,12 +40,12 @@ void NibeMockInterface::setReadData(const uint8_t* const data, uint8_t len) {
     ESP_LOGD(TAG, "setReadData=%s", NibeGw::dataToString(data, len).c_str());
 }
 
-bool NibeMockInterface::checkWriteData(const uint8_t* const data, uint8_t len) {
-    if (sendBufferIndex != len) return false;
-    for (int i = 0; i < len; i++) {
-        if (sendBuffer[i] != data[i]) return false;
+void NibeMockInterface::assertWriteData(const uint8_t* const data, uint8_t len) {
+    if (len == 0) {
+        TEST_ASSERT_EQUAL(0, sendBufferIndex);
+    } else {
+        TEST_ASSERT_EQUAL_HEX8_ARRAY(data, sendBuffer, len);
     }
-    return true;
 }
 
 bool NibeMockInterface::isDataAvailable() { return readBufferIndex > 0; }
@@ -176,7 +176,7 @@ TEST_CASE("read token", "[nibegw]") {
     TEST_ASSERT_EQUAL(0, callback.onWriteTokenReceivedCnt);
     TEST_ASSERT_EQUAL(0, callback.onMessageReceivedCnt);
     // check ACK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
 }
 
 TEST_CASE("read response", "[nibegw]") {
@@ -201,7 +201,7 @@ TEST_CASE("read response", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(0x6e, callback.lastMessageReceived->readResponse.value[0]);
 
     // check ACK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
 }
 
 TEST_CASE("non-modbus address", "[nibegw]") {
@@ -220,7 +220,7 @@ TEST_CASE("non-modbus address", "[nibegw]") {
     TEST_ASSERT_EQUAL(0, callback.onWriteTokenReceivedCnt);
     TEST_ASSERT_EQUAL(0, callback.onMessageReceivedCnt);
     // no ACK/NAK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){}, 0));
+    interface.assertWriteData((uint8_t[]){}, 0);
 }
 
 TEST_CASE("wrong CRC", "[nibegw]") {
@@ -239,7 +239,7 @@ TEST_CASE("wrong CRC", "[nibegw]") {
     TEST_ASSERT_EQUAL(0, callback.onWriteTokenReceivedCnt);
     TEST_ASSERT_EQUAL(0, callback.onMessageReceivedCnt);
     // NAK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x15}, 1));
+    interface.assertWriteData((uint8_t[]){0x15}, 1);
 }
 
 TEST_CASE("find response start", "[nibegw]") {
@@ -256,7 +256,7 @@ TEST_CASE("find response start", "[nibegw]") {
 
     TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
     // check ACK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
 }
 
 TEST_CASE("protocol handling w/o callback", "[nibegw]") {
@@ -269,7 +269,7 @@ TEST_CASE("protocol handling w/o callback", "[nibegw]") {
     gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
     // check ACK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
 }
 
 TEST_CASE("read on 'slow' interface", "[nibegw]") {
@@ -292,5 +292,42 @@ TEST_CASE("read on 'slow' interface", "[nibegw]") {
 
     TEST_ASSERT_EQUAL(1, callback.onMessageReceivedCnt);
     // check ACK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
+}
+
+TEST_CASE("deduplicate 5C in response data", "[nibegw]") {
+    NibeMockInterface interface;
+    NibeMockCallback callback;
+    NibeGw gw(interface);
+    gw.setNibeGwCallback(callback);
+
+    // 5C 0020 6A 07 0102 5C5C E6 05 00 AD
+    uint8_t data[] = {0x5C, 0x00, 0x20, 0x6A, 0x07, 0x01, 0x02, 0x5C, 0x5C, 0xE6, 0x05, 0x00, 0xAD};
+    interface.setReadData(data, sizeof(data));
+
+    gw.stateMachineLoop();
+    TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
+    TEST_ASSERT_EQUAL(1, callback.onMessageReceivedCnt);
+
+    TEST_ASSERT_EQUAL(12, callback.lastMessageReceivedLen);   // even though 13 bytes are read
+    TEST_ASSERT_EQUAL(6, callback.lastMessageReceived->len);  // was 7 on wire
+    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.coilAddress);
+    uint8_t expected[] = {0x5c, 0xe6, 0x05, 0x00};
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, callback.lastMessageReceived->readResponse.value, 4);
+    // check ACK
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
+
+    // 5C 0020 6A 0A 0102 5C5C 5C5C 5C5C 5C5C AD
+    uint8_t data2[] = {0x5C, 0x00, 0x20, 0x6A, 0x0A, 0x01, 0x02, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x43};
+    interface.setReadData(data2, sizeof(data2));
+    gw.stateMachineLoop();
+    TEST_ASSERT_EQUAL(2, callback.onMessageReceivedCnt);
+    TEST_ASSERT_EQUAL(12, callback.lastMessageReceivedLen);   // even though 16 bytes are read
+    TEST_ASSERT_EQUAL(6, callback.lastMessageReceived->len);  // was 10 on wire
+    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.coilAddress);
+    uint8_t expected2[] = {0x5c, 0x5c, 0x5c, 0x5c};
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected2, callback.lastMessageReceived->readResponse.value, 4);
+
+    // check ACK
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
 }

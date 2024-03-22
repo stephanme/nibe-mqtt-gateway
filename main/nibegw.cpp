@@ -126,7 +126,28 @@ void NibeGw::stateMachineLoop() {
                     checksum ^= b;
                     if (index >= bufferAsMsg->len + 5) {
                         state = STATE_WAIT_CRC;
+                    } else if (b == (int)NibeStart::Response) {
+                        // check for duplicated start character 5C
+                        state = STATE_WAIT_DATA_5C;
                     }
+                }
+                break;
+            }
+
+            case STATE_WAIT_DATA_5C: {
+                if (b == (int)NibeStart::Response) {
+                    // duplicated start character in data, skip one
+                    bufferAsMsg->len--;
+                } else {
+                    // should not happen
+                    // TODO: handle too long msg
+                    buffer[index++] = b;
+                }
+                checksum ^= b;
+                if (index >= bufferAsMsg->len + 5) {
+                    state = STATE_WAIT_CRC;
+                } else {
+                    state = STATE_WAIT_DATA;
                 }
                 break;
             }

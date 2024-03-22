@@ -62,6 +62,7 @@ enum eState {
     STATE_WAIT_CMD,
     STATE_WAIT_LEN,
     STATE_WAIT_DATA,
+    STATE_WAIT_DATA_5C,
     STATE_WAIT_CRC,
 };
 
@@ -81,6 +82,7 @@ enum class NibeStart : uint8_t {
 };
 
 // data format might be big endian, transformed to little endian by swapping the address constants
+// MODBUS40 on wire: 00 20
 enum class NibeDeviceAddress : uint16_t {
     SMS40 = 0x1600,
     RMU40 = 0x1900,
