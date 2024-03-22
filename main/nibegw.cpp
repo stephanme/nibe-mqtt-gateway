@@ -50,62 +50,62 @@ esp_err_t NibeGw::begin() {
 void NibeGw::task(void* pvParameters) {
     NibeGw* gw = (NibeGw*)pvParameters;
     while (1) {
-        gw->loop();
-        vTaskDelay(1 / portTICK_PERIOD_MS);  // TODO: tuning, loop could read until no more data
+        gw->stateMachineLoop();
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
-void NibeGw::loop() {
-    ESP_LOGV(TAG, "state=%d", state);
-    switch (state) {
-        case STATE_WAIT_START: {
-            int b = nibeInterface.readData();
-            if (b == (int)NibeStart::Response) {
-                bufferAsMsg->start = NibeStart::Response;
-                state = STATE_WAIT_MODBUS40_1;
-                checksum = 0;
-
-                ESP_LOGV(TAG, "Frame start found");
-            }
-            break;
+// processes all data available from NibeInterface
+void NibeGw::stateMachineLoop() {
+    while (1) {
+        int b = nibeInterface.readData();
+        if (b < 0) {
+            // no more input -> return
+            ESP_LOGV(TAG, "state=%d, read=-1", state);
+            return;
         }
+        ESP_LOGV(TAG, "state=%d, read=%02X", state, b);
+        switch (state) {
+            case STATE_WAIT_START: {
+                if (b == (int)NibeStart::Response) {
+                    bufferAsMsg->start = NibeStart::Response;
+                    state = STATE_WAIT_MODBUS40_1;
+                    checksum = 0;
 
-        case STATE_WAIT_MODBUS40_1: {
-            int b = nibeInterface.readData();
-            if (b == ((int)NibeDeviceAddress::MODBUS40 & 0xff)) {
-                checksum ^= b;
-                state = STATE_WAIT_MODBUS40_2;
-            } else if (b >= 0) {
-                state = STATE_WAIT_START;
+                    ESP_LOGV(TAG, "Frame start found");
+                }
+                break;
             }
-            break;
-        }
 
-        case STATE_WAIT_MODBUS40_2: {
-            int b = nibeInterface.readData();
-            if (b == ((int)NibeDeviceAddress::MODBUS40 >> 8)) {
-                bufferAsMsg->deviceAddress = NibeDeviceAddress::MODBUS40;
-                checksum ^= b;
-                state = STATE_WAIT_CMD;
-            } else if (b >= 0) {
-                state = STATE_WAIT_START;
+            case STATE_WAIT_MODBUS40_1: {
+                if (b == ((int)NibeDeviceAddress::MODBUS40 & 0xff)) {
+                    checksum ^= b;
+                    state = STATE_WAIT_MODBUS40_2;
+                } else {
+                    state = STATE_WAIT_START;
+                }
+                break;
             }
-            break;
-        }
 
-        case STATE_WAIT_CMD: {
-            int b = nibeInterface.readData();
-            if (b >= 0) {
+            case STATE_WAIT_MODBUS40_2: {
+                if (b == ((int)NibeDeviceAddress::MODBUS40 >> 8)) {
+                    bufferAsMsg->deviceAddress = NibeDeviceAddress::MODBUS40;
+                    checksum ^= b;
+                    state = STATE_WAIT_CMD;
+                } else {
+                    state = STATE_WAIT_START;
+                }
+                break;
+            }
+
+            case STATE_WAIT_CMD: {
                 bufferAsMsg->cmd = (NibeCmd)b;
                 checksum ^= b;
                 state = STATE_WAIT_LEN;
+                break;
             }
-            break;
-        }
 
-        case STATE_WAIT_LEN: {
-            int b = nibeInterface.readData();
-            if (b >= 0) {
+            case STATE_WAIT_LEN: {
                 bufferAsMsg->len = b;
                 checksum ^= b;
                 index = 5;
@@ -114,13 +114,10 @@ void NibeGw::loop() {
                 } else {
                     state = STATE_WAIT_CRC;
                 }
+                break;
             }
-            break;
-        }
 
-        case STATE_WAIT_DATA: {
-            int b = nibeInterface.readData();
-            if (b >= 0) {
+            case STATE_WAIT_DATA: {
                 if (index >= MAX_DATA_LEN - 1) {
                     // too long message, keep 1 char for CRC
                     state = STATE_WAIT_START;
@@ -131,52 +128,42 @@ void NibeGw::loop() {
                         state = STATE_WAIT_CRC;
                     }
                 }
+                break;
             }
-            break;
-        }
 
-        case STATE_WAIT_CRC: {
-            int b = nibeInterface.readData();
-            if (b >= 0) {
+            case STATE_WAIT_CRC: {
                 buffer[index++] = b;
                 ESP_LOGV(TAG, "checksum=%02X, msg_checksum=%02X", checksum, b);
 
                 if (checksum == b || (checksum == 0x5C && b == 0xC5)) {
                     // if checksum is 0x5C (start character), heat pump seems to send 0xC5 checksum
-                    state = STATE_OK_MESSAGE_RECEIVED;
+                    processReceivedModbusMessage();
                 } else {
-                    state = STATE_CRC_FAILURE;
+                    sendNak();
+                    ESP_LOGV(TAG, "Checksum failure");
                 }
+                state = STATE_WAIT_START;
+                break;
             }
-            break;
         }
+    }
+}
 
-        case STATE_CRC_FAILURE:
-            sendNak();
-            ESP_LOGV(TAG, "STATE_CRC_FAILURE");
-            state = STATE_WAIT_START;
-            break;
-
-        case STATE_OK_MESSAGE_RECEIVED: {
-            ESP_LOGV(TAG, "STATE_OK_MESSAGE_RECEIVED");
-            // NibeStart::Response and NibeDeviceAddress::MODBUS40 are ensured by state machine
-            NibeGwCallback* callback = this->callback;
-            if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
-                ESP_LOGV(TAG, "READ_TOKEN received");
-                int msglen = callback != nullptr ? callback->onReadTokenReceived((NibeReadRequestMessage*)buffer) : 0;
-                sendResponseMessage(msglen);
-            } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
-                ESP_LOGV(TAG, "WRITE_TOKEN received");
-                int msglen = callback != nullptr ? callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer) : 0;
-                sendResponseMessage(msglen);
-            } else {
-                sendAck();
-                ESP_LOGV(TAG, "Message received");
-                if (callback != nullptr) callback->onMessageReceived(bufferAsMsg, index);
-            }
-            state = STATE_WAIT_START;
-            break;
-        }
+void NibeGw::processReceivedModbusMessage() {
+    // NibeStart::Response and NibeDeviceAddress::MODBUS40 are ensured by state machine
+    NibeGwCallback* callback = this->callback;
+    if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
+        ESP_LOGV(TAG, "READ_TOKEN received");
+        int msglen = callback != nullptr ? callback->onReadTokenReceived((NibeReadRequestMessage*)buffer) : 0;
+        sendResponseMessage(msglen);
+    } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
+        ESP_LOGV(TAG, "WRITE_TOKEN received");
+        int msglen = callback != nullptr ? callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer) : 0;
+        sendResponseMessage(msglen);
+    } else {
+        sendAck();
+        ESP_LOGV(TAG, "Message received, cmd=%02X", (uint8_t)bufferAsMsg->cmd);
+        if (callback != nullptr) callback->onMessageReceived(bufferAsMsg, index);
     }
 }
 

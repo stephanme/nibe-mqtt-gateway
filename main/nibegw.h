@@ -63,9 +63,6 @@ enum eState {
     STATE_WAIT_LEN,
     STATE_WAIT_DATA,
     STATE_WAIT_CRC,
-
-    STATE_OK_MESSAGE_RECEIVED,
-    STATE_CRC_FAILURE,
 };
 
 #define NIBE_GW_TASK_STACK_SIZE 10 * 1024
@@ -177,7 +174,7 @@ class NibeGw {
     static std::string dataToString(const uint8_t* const data, int len);
 
     // for testing
-    void loop();
+    void stateMachineLoop();
     auto getState() { return state; }
 
    private:
@@ -191,6 +188,7 @@ class NibeGw {
     uint8_t index;
     uint8_t checksum;
 
+    void processReceivedModbusMessage();
     void sendResponseMessage(int len);
     void sendAck();
     void sendNak();

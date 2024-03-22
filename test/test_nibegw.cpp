@@ -37,7 +37,7 @@ void NibeMockInterface::setReadData(const uint8_t* const data, uint8_t len) {
     for (int i = len - 1; i >= 0; i--) {
         readBuffer[readBufferIndex++] = data[i];
     }
-    ESP_LOGD(TAG, "Append %s", NibeGw::dataToString(data, len).c_str());
+    ESP_LOGD(TAG, "setReadData=%s", NibeGw::dataToString(data, len).c_str());
 }
 
 bool NibeMockInterface::checkWriteData(const uint8_t* const data, uint8_t len) {
@@ -55,7 +55,7 @@ int NibeMockInterface::readData() {
     if (readBufferIndex > 0) {
         ret = readBuffer[--readBufferIndex];
     }
-    ESP_LOGV(TAG, "Read %02X", ret);
+    // ESP_LOGV(TAG, "Read %02X", ret);
     return ret;
 }
 
@@ -169,9 +169,7 @@ TEST_CASE("read token", "[nibegw]") {
     // data[sizeof(data) - 1] = NibeGw::calcCheckSum(data + 1, sizeof(data) - 2);
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
-    TEST_ASSERT_EQUAL(eState::STATE_OK_MESSAGE_RECEIVED, gw.getState());
-    gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
@@ -190,9 +188,7 @@ TEST_CASE("read response", "[nibegw]") {
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x6A, 0x06, 0x44, 0x9C, 0x6E, 0x00, 0x00, 0x80, 0x7A};
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
-    TEST_ASSERT_EQUAL(eState::STATE_OK_MESSAGE_RECEIVED, gw.getState());
-    gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(0, callback.onReadTokenReceivedCnt);
@@ -217,7 +213,7 @@ TEST_CASE("non-modbus address", "[nibegw]") {
     uint8_t data[] = {0x5C, 0x41, 0xC9, 0x69, 0x00, 0xE1};
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(0, callback.onReadTokenReceivedCnt);
@@ -236,16 +232,14 @@ TEST_CASE("wrong CRC", "[nibegw]") {
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x69, 0x00, 0xFF};
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
-    TEST_ASSERT_EQUAL(eState::STATE_CRC_FAILURE, gw.getState());
-    gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(0, callback.onReadTokenReceivedCnt);
     TEST_ASSERT_EQUAL(0, callback.onWriteTokenReceivedCnt);
     TEST_ASSERT_EQUAL(0, callback.onMessageReceivedCnt);
     // NAK
-    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){ 0x15 }, 1));
+    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x15}, 1));
 }
 
 TEST_CASE("find response start", "[nibegw]") {
@@ -257,7 +251,7 @@ TEST_CASE("find response start", "[nibegw]") {
     uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
@@ -272,7 +266,7 @@ TEST_CASE("protocol handling w/o callback", "[nibegw]") {
     uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
     interface.setReadData(data, sizeof(data));
 
-    while (interface.isDataAvailable()) gw.loop();
+    gw.stateMachineLoop();
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
     // check ACK
     TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
@@ -284,15 +278,19 @@ TEST_CASE("read on 'slow' interface", "[nibegw]") {
     NibeGw gw(interface);
     gw.setNibeGwCallback(callback);
 
-    uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
-    
+    uint8_t data[] = {0x00, 0x5C, 0x00, 0x20, 0x6A, 0x04, 0x44, 0x9C, 0x6E, 0x80, 0x78, 0x00};
+    eState states[sizeof(data)];
     for (int i = 0; i < sizeof(data); i++) {
         interface.setReadData(data + i, 1);
-        while (interface.isDataAvailable()) gw.loop();
+        states[i] = gw.getState();
+        gw.stateMachineLoop();
     }
-    TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
+    eState expectedStates[] = {STATE_WAIT_START, STATE_WAIT_START, STATE_WAIT_MODBUS40_1, STATE_WAIT_MODBUS40_2,
+                               STATE_WAIT_CMD,   STATE_WAIT_LEN,   STATE_WAIT_DATA,       STATE_WAIT_DATA,
+                               STATE_WAIT_DATA,  STATE_WAIT_DATA,  STATE_WAIT_CRC,        STATE_WAIT_START};
+    TEST_ASSERT_EQUAL_INT_ARRAY(expectedStates, states, sizeof(data));
 
-    TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
+    TEST_ASSERT_EQUAL(1, callback.onMessageReceivedCnt);
     // check ACK
     TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
 }
