@@ -152,8 +152,12 @@ class NibeGw {
    public:
     NibeGw(NibeInterface& nibeInterface);
 
-    esp_err_t begin(NibeGwCallback& callback);
-    // TODO: begin for testing w/o starting a task
+    esp_err_t begin();
+    esp_err_t begin(NibeGwCallback& callback) {
+        setNibeGwCallback(callback);
+        return begin();
+    }
+    void setNibeGwCallback(NibeGwCallback& callback) { this->callback = &callback; }
 
     static uint8_t calcCheckSum(const uint8_t* const data, uint8_t len) {
         uint8_t chksum = 0;
@@ -167,7 +171,6 @@ class NibeGw {
     static std::string dataToString(const uint8_t* const data, int len);
 
     // for testing
-    esp_err_t beginTest(NibeGwCallback& callback);
     void loop();
     auto getState() { return state; }
 

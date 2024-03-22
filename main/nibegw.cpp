@@ -35,21 +35,14 @@ NibeGw::NibeGw(NibeInterface& nibeInterface) : nibeInterface(nibeInterface) {
     index = 0;
 }
 
-esp_err_t NibeGw::begin(NibeGwCallback& callback) {
+esp_err_t NibeGw::begin() {
     ESP_LOGI(TAG, "begin");
-    this->callback = &callback;
     int err = xTaskCreatePinnedToCore(&task, "nibegwTask", NIBE_GW_TASK_STACK_SIZE, this, NIBE_GW_TASK_PRIORITY, NULL, 1);
     if (err != pdPASS) {
         ESP_LOGE(TAG, "Could not start nibegw task");
         return ESP_FAIL;
     }
 
-    return ESP_OK;
-}
-
-esp_err_t NibeGw::beginTest(NibeGwCallback& callback) {
-    ESP_LOGI(TAG, "beginTest");
-    this->callback = &callback;
     return ESP_OK;
 }
 
@@ -115,18 +108,19 @@ void NibeGw::loop() {
             // NibeStart::Response is ensured
             // ignore non-modbus messages
             if (bufferAsMsg->deviceAddress == NibeDeviceAddress::MODBUS40) {
+                NibeGwCallback* callback = this->callback;
                 if (bufferAsMsg->cmd == NibeCmd::ModbusReadReq && bufferAsMsg->len == 0) {
                     ESP_LOGV(TAG, "READ_TOKEN received");
-                    int msglen = callback->onReadTokenReceived((NibeReadRequestMessage*)buffer);
+                    int msglen = callback != nullptr ? callback->onReadTokenReceived((NibeReadRequestMessage*)buffer) : 0;
                     sendResponseMessage(msglen);
                 } else if (bufferAsMsg->cmd == NibeCmd::ModbusWriteReq && bufferAsMsg->len == 0) {
                     ESP_LOGV(TAG, "WRITE_TOKEN received");
-                    int msglen = callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer);
+                    int msglen = callback != nullptr ? callback->onWriteTokenReceived((NibeWriteRequestMessage*)buffer) : 0;
                     sendResponseMessage(msglen);
                 } else {
                     sendAck();
                     ESP_LOGV(TAG, "Message received");
-                    callback->onMessageReceived(bufferAsMsg, index);
+                    if (callback != nullptr) callback->onMessageReceived(bufferAsMsg, index);
                 }
             }
             state = STATE_WAIT_START;
@@ -199,43 +193,3 @@ std::string NibeGw::dataToString(const uint8_t* const data, int len) {
     }
     return s;
 }
-
-
-// TODO: NibeSimulatedInterface - generate tokens and read responses 
-
-// void SimulatedNibeGw::simulation() {
-//     if (state == STATE_WAIT_START) {
-//         // simulate read token
-//         NibeResponseMessage* readToken = (NibeResponseMessage*)readBuffer;
-//         readToken->start = NibeStart::Response;
-//         readToken->deviceAddress = NibeDeviceAddress::MODBUS40;
-//         readToken->cmd = NibeCmd::ModbusReadReq;
-//         readToken->len = 0;
-//         readToken->data[0] = calcCheckSum(readBuffer + 1, 4);
-//         readBufferIndex = sizeof(NibeResponseMessage);
-//     } else {
-
-//     }
-//     // TODO: finish simulation, sync with sendData
-
-//     // read token
-//     NibeReadRequestMessage request;
-//     int len = callback->onReadTokenReceived(&request);
-
-//     if (len > 0) {
-//         // simulate response
-//         uint8_t responseMsg[MAX_DATA_LEN];
-//         NibeResponseMessage* response = (NibeResponseMessage*)responseMsg;
-//         response->start = NibeStart::Response;
-//         response->deviceAddress = NibeDeviceAddress::MODBUS40;
-//         response->cmd = NibeCmd::ModbusReadResp;
-//         response->len = sizeof(NibeReadResponseData);
-//         response->readResponse.coilAddress = request.coilAddress;  // is already swapped
-//         response->readResponse.value[0] = 0x01;
-//         response->readResponse.value[1] = 0x02;
-//         response->readResponse.value[2] = 0x03;
-//         response->readResponse.value[3] = 0x04;
-//         response->data[response->len] = calcCheckSum(responseMsg + 1, response->len + 4);  // address..data
-//         callback->onMessageReceived(response, sizeof(NibeResponseMessage) + 1);
-//     }
-// }

@@ -124,6 +124,16 @@ void setupSafeBoot() {
     ESP_LOGW(TAG, "Starting in safe boot mode");
     metricInitStatus.setValue((int32_t)InitStatus::SafeBoot);
 
+    // serve nibegw protocol to avoid Nibe alarm on safe boot
+    esp_err_t err = nibeRS485.begin();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize NibeRS485 interface");
+    }
+    err = nibegw.begin();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize Nibe Gateway (RS485)");
+    }
+
     httpServer.begin();
 
     // wait for network
@@ -161,9 +171,22 @@ void setupNormalBoot() {
         metricInitStatus.setValue((int32_t)InitStatus::ErrEnergyMeter);
     }
 
+    // nibegw, init early to avoid Nibe alarm on boot
+    // no nibeMqttGw callbacks yet
+    err = nibeRS485.begin();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize NibeRS485 interface");
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
+    }
+    err = nibegw.begin();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not initialize Nibe Gateway (RS485)");
+        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
+    }
+
     httpServer.begin();
 
-    // wait for network
+    // wait for network, takes 4-5 seconds
     while (!ETH.hasIP()) {
         KMPProDinoESP32.processStatusLed(blue, 1000);
         delay(500);
@@ -176,22 +199,13 @@ void setupNormalBoot() {
         metricInitStatus.setValue((int32_t)InitStatus::ErrMqtt);
     }
 
-    // nibegw
+    // nibeMqttGw
     err = nibeMqttGw.begin(config.nibe, mqttClient);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not initialize Nibe MQTT Gateway");
         metricInitStatus.setValue((int32_t)InitStatus::ErrNibeMqttGw);
     }
-    err = nibeRS485.begin();
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Could not initialize NibeRS485 interface");
-        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
-    }
-    err = nibegw.begin(nibeMqttGw);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Could not initialize Nibe Gateway (RS485)");
-        metricInitStatus.setValue((int32_t)InitStatus::ErrNibeGw);
-    }
+    nibegw.setNibeGwCallback(nibeMqttGw);
 
     // energy meter, init mqtt
     err = energyMeter.beginMqtt(mqttClient);

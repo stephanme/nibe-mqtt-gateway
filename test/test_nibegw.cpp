@@ -162,7 +162,7 @@ TEST_CASE("read token", "[nibegw]") {
     NibeMockInterface interface;
     NibeMockCallback callback;
     NibeGw gw(interface);
-    gw.beginTest(callback);
+    gw.setNibeGwCallback(callback);
 
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x69, 0x00, 0x49};
     // data[sizeof(data) - 1] = NibeGw::calcCheckSum(data + 1, sizeof(data) - 2);
@@ -184,7 +184,7 @@ TEST_CASE("read response", "[nibegw]") {
     NibeMockInterface interface;
     NibeMockCallback callback;
     NibeGw gw(interface);
-    gw.beginTest(callback);
+    gw.setNibeGwCallback(callback);
 
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x6A, 0x06, 0x44, 0x9C, 0x6E, 0x00, 0x00, 0x80, 0x7A};
     interface.setReadData(data, sizeof(data));
@@ -211,7 +211,7 @@ TEST_CASE("non-modbus address", "[nibegw]") {
     NibeMockInterface interface;
     NibeMockCallback callback;
     NibeGw gw(interface);
-    gw.beginTest(callback);
+    gw.setNibeGwCallback(callback);
 
     uint8_t data[] = {0x5C, 0x41, 0xC9, 0x69, 0x00, 0xE1};
     interface.setReadData(data, sizeof(data));
@@ -232,7 +232,7 @@ TEST_CASE("wrong CRC", "[nibegw]") {
     NibeMockInterface interface;
     NibeMockCallback callback;
     NibeGw gw(interface);
-    gw.beginTest(callback);
+    gw.setNibeGwCallback(callback);
 
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x69, 0x00, 0xFF};
     interface.setReadData(data, sizeof(data));
@@ -253,7 +253,7 @@ TEST_CASE("find response start", "[nibegw]") {
     NibeMockInterface interface;
     NibeMockCallback callback;
     NibeGw gw(interface);
-    gw.beginTest(callback);
+    gw.setNibeGwCallback(callback);
 
     uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
     interface.setReadData(data, sizeof(data));
@@ -262,6 +262,19 @@ TEST_CASE("find response start", "[nibegw]") {
     TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
 
     TEST_ASSERT_EQUAL(1, callback.onReadTokenReceivedCnt);
+    // check ACK
+    TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
+}
+
+TEST_CASE("protocol handling w/o callback", "[nibegw]") {
+    NibeMockInterface interface;
+    NibeGw gw(interface);
+
+    uint8_t data[] = {0x00, 0x01, 0x22, 0x5C, 0x00, 0x20, 0x69, 0x00, 0x49, 0x99, 0xaa};
+    interface.setReadData(data, sizeof(data));
+
+    while (interface.isDataAvailable()) gw.loop();
+    TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
     // check ACK
     TEST_ASSERT_TRUE(interface.checkWriteData((uint8_t[]){0x06}, 1));
 }

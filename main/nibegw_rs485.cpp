@@ -39,7 +39,7 @@ boolean NibeRS485::isDataAvailable() { return RS485->available() > 0; }
 int NibeRS485::readData() {
     if (RS485->available() > 0) {
         int b = RS485->read();
-#if LOG_LOCAL_LEVEL==ESP_LOG_VERBOSE
+#if LOG_LOCAL_LEVEL == ESP_LOG_VERBOSE
         if (b >= 0) {
             readLogBuffer[readLogIndex++] = b;
             if (readLogIndex >= sizeof(readLogBuffer)) {
@@ -72,6 +72,6 @@ void NibeRS485::sendData(const uint8_t data) {
     RS485->flush();
     delay(1);
     digitalWrite(directionPin, LOW);
-    
+
     ESP_LOGV(TAG, "Send %02x", data);
 }
