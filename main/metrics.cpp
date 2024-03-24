@@ -15,7 +15,6 @@ Metric& Metrics::addMetric(const char* name, int factor, int scale) {
     m.name = name;
     m.factor = factor;
     m.scale = scale;
-    m.value = 0l;
     if (numMetrics < MAX_METRICS) {
         numMetrics++;
     } else {
@@ -37,13 +36,16 @@ Metric* Metrics::findMetric(const char* name) {
     return nullptr;
 }
 
+// report only metrics that are initialized, i.e. metric.setValue() was called
 std::string Metrics::getAllMetricsAsString() {
     std::string s;
     s.reserve(estimatedSize);
     s = "# nibe-mqtt-gateway metrics\n";
     for (int i = 0; i < numMetrics; i++) {
-        s += metrics[i].getValueAsString();
-        s += "\n";
+        if (metrics[i].isInitialized()) {
+            s += metrics[i].getValueAsString();
+            s += "\n";
+        }
     }
     return s;
 }

@@ -42,11 +42,11 @@ TEST_CASE("add/findMetric", "[metrics]") {
     Metric& metric1 = m.addMetric("metric1", 1);
     TEST_ASSERT_EQUAL_STRING("metric1", metric1.getName().c_str());
     TEST_ASSERT_EQUAL(1, metric1.getFactor());
-    TEST_ASSERT_EQUAL(0, metric1.getValue());
+    TEST_ASSERT_EQUAL(METRIC_UNINITIALIZED, metric1.getValue());
     Metric& metric2 = m.addMetric("metric2", 10);
     TEST_ASSERT_EQUAL_STRING("metric2", metric2.getName().c_str());
     TEST_ASSERT_EQUAL(10, metric2.getFactor());
-    TEST_ASSERT_EQUAL(0, metric2.getValue());
+    TEST_ASSERT_EQUAL(METRIC_UNINITIALIZED, metric2.getValue());
 
     TEST_ASSERT_EQUAL_PTR(&metric1, m.findMetric("metric1"));
     TEST_ASSERT_EQUAL_PTR(&metric2, m.findMetric("metric2"));
@@ -61,6 +61,7 @@ TEST_CASE("getValueAsString", "[metrics]") {
     TEST_ASSERT_EQUAL_STRING("metric1 321", m1.getValueAsString().c_str());
 
     Metric m2(R"(metric2{label1="v1",label2="v2")", 10);
+    m2.setValue(0);
     m2.incrementValue(123);
     TEST_ASSERT_EQUAL_STRING(R"(metric2{label1="v1",label2="v2" 12.3)", m2.getValueAsString().c_str());
 
@@ -72,8 +73,16 @@ TEST_CASE("getValueAsString", "[metrics]") {
 TEST_CASE("getAllMetricsAsString", "[metrics]") {
     Metrics m;
     m.begin();
-    m.addMetric("metric1", 1);
-    m.addMetric("metric2", 10);
+    Metric& m1 = m.addMetric("metric1", 1);
+    Metric& m2 = m.addMetric("metric2", 10);
+
+    // metrics are not yet initialized
+    TEST_ASSERT_EQUAL_STRING(R"(# nibe-mqtt-gateway metrics
+)", m.getAllMetricsAsString().c_str());
+
+    // initialize metrics
+    m1.setValue(0);
+    m2.setValue(0);
 
     TEST_ASSERT_EQUAL_STRING(R"(# nibe-mqtt-gateway metrics
 metric1 0

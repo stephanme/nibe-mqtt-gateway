@@ -4,9 +4,14 @@
 #include <esp_err.h>
 
 #include <atomic>
+#include <climits>
 #include <string>
 
 #define MAX_METRICS 128
+
+// indicates a metric w/o a value
+// uninitialized metrics are not included in getAllMetricsAsString() to avoid e.g. broken counter metrics
+#define METRIC_UNINITIALIZED INT_MAX
 
 // Prometheus like metric
 // Features/Limitations:
@@ -25,6 +30,7 @@ class Metric {
     void setValue(int32_t value) { this->value = value; }
     int32_t incrementValue(int32_t increment) { return value += increment; }
     int32_t getValue() const { return value; }
+    bool isInitialized() const { return value != METRIC_UNINITIALIZED; }
 
     std::string getValueAsString();
 
@@ -33,7 +39,7 @@ class Metric {
     // value is formatted as value * scale / factor
     int factor;  // same semantic as in nibe modbus csv
     int scale;
-    std::atomic<int32_t> value = 0;
+    std::atomic<int32_t> value = METRIC_UNINITIALIZED;
 
     friend class Metrics;
 };
