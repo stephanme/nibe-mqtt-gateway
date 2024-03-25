@@ -35,12 +35,16 @@ class NibeMqttGw : public NibeGwCallback {
     std::string nibeRootTopic;
     std::unordered_set<uint16_t> announcedCoils;
     std::unordered_map<uint16_t, Metric*> coilMetrics;
+    int modbusDataMsgMqttPublish;
 
     RingbufHandle_t readCoilsRingBuffer;
 
     Metric& metricPublishStateTime;
     std::atomic<uint32_t> lastPublishStateStartTime;
 
+    const Coil* findCoil(uint16_t coilAddress);
+    void publishMetric(const Coil& coil, const uint8_t* const data);
+    void publishMqtt(const Coil& coil, const uint8_t* const data);
     void announceCoil(const Coil& coil);
 };
 

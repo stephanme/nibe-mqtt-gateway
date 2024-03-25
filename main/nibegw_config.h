@@ -87,8 +87,8 @@ class Coil {
           defaultValue(defaultValue),
           mode(mode) {}
 
-    int32_t decodeCoilDataRaw(const NibeReadResponseData& data) const;
-    std::string decodeCoilData(const NibeReadResponseData& data) const;
+    int32_t decodeCoilDataRaw(const uint8_t* const data) const;
+    std::string decodeCoilData(const uint8_t* const data) const;
     std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor, 1); }
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);

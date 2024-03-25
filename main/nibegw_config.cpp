@@ -6,26 +6,26 @@
 
 static const char* TAG = "nibegw_config";
 
-int32_t Coil::decodeCoilDataRaw(const NibeReadResponseData& data) const {
+int32_t Coil::decodeCoilDataRaw(const uint8_t* const data) const {
     int32_t value = 0;
     switch (dataType) {
         case CoilDataType::UInt8:
-            value = data.value[0];
+            value = data[0];
             break;
         case CoilDataType::Int8:
-            value = (int8_t)data.value[0];
+            value = (int8_t)data[0];
             break;
         case CoilDataType::UInt16:
-            value = *(uint16_t*)data.value;
+            value = *(uint16_t*)data;
             break;
         case CoilDataType::Int16:
-            value = *(int16_t*)data.value;
+            value = *(int16_t*)data;
             break;
         case CoilDataType::UInt32:
-            value = *(uint32_t*)data.value;
+            value = *(uint32_t*)data;
             break;
         case CoilDataType::Int32:
-            value = *(int32_t*)data.value;
+            value = *(int32_t*)data;
             break;
         default:
             ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
@@ -34,26 +34,26 @@ int32_t Coil::decodeCoilDataRaw(const NibeReadResponseData& data) const {
     return value;
 }
 
-std::string Coil::decodeCoilData(const NibeReadResponseData& data) const {
+std::string Coil::decodeCoilData(const uint8_t* const data) const {
     std::string value;
     switch (dataType) {
         case CoilDataType::UInt8:
-            value = formatNumber(data.value[0]);
+            value = formatNumber(data[0]);
             break;
         case CoilDataType::Int8:
-            value = formatNumber((int8_t)data.value[0]);
+            value = formatNumber((int8_t)data[0]);
             break;
         case CoilDataType::UInt16:
-            value = formatNumber(*(uint16_t*)data.value);
+            value = formatNumber(*(uint16_t*)data);
             break;
         case CoilDataType::Int16:
-            value = formatNumber(*(int16_t*)data.value);
+            value = formatNumber(*(int16_t*)data);
             break;
         case CoilDataType::UInt32:
-            value = formatNumber(*(uint32_t*)data.value);
+            value = formatNumber(*(uint32_t*)data);
             break;
         case CoilDataType::Int32:
-            value = formatNumber(*(int32_t*)data.value);
+            value = formatNumber(*(int32_t*)data);
             break;
         default:
             ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);

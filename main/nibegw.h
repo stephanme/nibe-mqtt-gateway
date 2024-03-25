@@ -123,6 +123,15 @@ struct __attribute__((packed)) NibeReadResponseData {
     uint8_t value[4];  // unclear if always 4 bytes or depends on coil address/type
 };
 
+struct __attribute__((packed)) NibeDataMessageCoil {
+    uint16_t coilAddress;
+    uint8_t value[2];
+};
+
+struct __attribute__((packed)) NibeDataMessage {
+    NibeDataMessageCoil coils[20];
+};
+
 struct __attribute__((packed)) NibeResponseMessage {
     NibeStart start;                  // const 0x5c
     NibeDeviceAddress deviceAddress;  // NibeDeviceAddress
@@ -131,6 +140,7 @@ struct __attribute__((packed)) NibeResponseMessage {
     union {
         uint8_t data[1];                    // len bytes
         NibeReadResponseData readResponse;  // NibeCmd == ModbusReadResp
+        NibeDataMessage dataMessage;        // NibeCmd == ModbusDataMsg
     };
     // uint8 chksum; // xor of address..data
 };

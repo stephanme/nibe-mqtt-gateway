@@ -46,40 +46,59 @@ void NibeMqttGw::requestCoil(uint16_t coilAddress) {
 void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len) {
     switch (msg->cmd) {
         case NibeCmd::ModbusReadResp: {
-            ESP_LOGD(TAG, "onMessageReceived ModbusReadResp: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
-            uint16_t coilAddress = msg->readResponse.coilAddress;
-            auto iter = config->coils.find(coilAddress);
-            if (iter == config->coils.end()) {
-                ESP_LOGW(TAG, "Received data for unknown coil %d", coilAddress);
+            ESP_LOGV(TAG, "onMessageReceived ModbusReadResp: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
+            const Coil* coil = findCoil(msg->readResponse.coilAddress);
+            if (coil == nullptr) {
+                ESP_LOGW(TAG, "Received NibeResponseMessage for unknown coil %d", msg->readResponse.coilAddress);
                 return;
             }
-            const Coil& coil = iter->second;
-            // TODO: should check data consistency (len vs data type)
-            // decode raw data
-            std::string value = coil.decodeCoilData(msg->readResponse);
-            // publish data to mqtt
-            // TODO: use more descriptive topic (title-coilAddress)?
-            mqttClient->publish(nibeRootTopic + std::to_string(coilAddress), value);
 
-            // announce coil on first appearance
-            if (announcedCoils.find(coilAddress) == announcedCoils.end()) {
-                announceCoil(coil);
-            }
-
-            // send coil as metrics, create metric if not exists
-            auto iter2 = coilMetrics.find(coilAddress);
-            if (iter2 == coilMetrics.end()) {
-                const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
-                Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
-                iter2 = coilMetrics.insert({coilAddress, &metric}).first;
-            }
-            Metric* metric = iter2->second;
-            int32_t valueInt = coil.decodeCoilDataRaw(msg->readResponse);
-            metric->setValue(valueInt);
+            publishMqtt(*coil, msg->readResponse.value);
+            publishMetric(*coil, msg->readResponse.value);
             break;
         }
 
-        case NibeCmd::ModbusDataMsg:
+        case NibeCmd::ModbusDataMsg: {
+            // ~ one ModMusDataMsg ever 2s, up to 20 coils
+            // Limitation: can only handle 16bit coils
+            ESP_LOGV(TAG, "onMessageReceived ModbusDataMsg: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
+
+            int publishedCoils = 0;
+            for (int i = 0; i < 20; i++) {
+                NibeDataMessageCoil coilData = msg->dataMessage.coils[i];
+                if (coilData.coilAddress == 0xFFFF) {
+                    // 0xffff indicates that not all 20 coils in ModbusDataMsg are used
+                    break;
+                }
+                const Coil* coil = findCoil(coilData.coilAddress);
+                if (coil == nullptr) {
+                    ESP_LOGW(TAG, "Received ModbusDataMsg for unknown coil %d", coilData.coilAddress);
+                    continue;
+                }
+                switch (coil->dataType) {
+                    case CoilDataType::UInt8:
+                    case CoilDataType::Int8:
+                    case CoilDataType::UInt16:
+                    case CoilDataType::Int16:
+                        break;
+                    default:
+                        ESP_LOGW(TAG, "Unsupported data type %d in ModbusDataMsg for coil %d", (int)coil->dataType, coil->id);
+                        continue;
+                }
+
+                if (modbusDataMsgMqttPublish % 5 == 0) {
+                    // publish only ever ~10s to mqtt
+                    // TODO: better spread coils over time (e.g. 4 coils every msg)?
+                    publishMqtt(*coil, coilData.value); 
+                }
+                publishMetric(*coil, coilData.value);
+                publishedCoils++;
+            }
+            modbusDataMsgMqttPublish++;
+            ESP_LOGD(TAG, "onMessageReceived ModbusDataMsg: published %d coils", publishedCoils);
+            break;
+        }
+
         case NibeCmd::ProductInfoMsg:
         case NibeCmd::AccessoryVersionReq:
             // known but ignored commands
@@ -91,6 +110,43 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
                      NibeGw::dataToString((uint8_t*)msg, len).c_str());
             break;
     }
+}
+
+const Coil* NibeMqttGw::findCoil(uint16_t coilAddress) {
+    auto iter = config->coils.find(coilAddress);
+    if (iter == config->coils.end()) {
+        ESP_LOGW(TAG, "Received data for unknown coil %d", coilAddress);
+        return nullptr;
+    }
+    return &iter->second;
+}
+
+// send coils as mqtt messages, announce new coils for HA auto-discovery
+void NibeMqttGw::publishMqtt(const Coil& coil, const uint8_t* const data) {
+    // TODO: should check data consistency (len vs data type)
+    // decode raw data
+    std::string value = coil.decodeCoilData(data);
+    // publish data to mqtt
+    // TODO: use more descriptive topic (title-coilAddress)?
+    mqttClient->publish(nibeRootTopic + std::to_string(coil.id), value);
+
+    // announce coil on first appearance
+    if (announcedCoils.find(coil.id) == announcedCoils.end()) {
+        announceCoil(coil);
+    }
+}
+
+// send coil as metrics, create metric if not exists
+void NibeMqttGw::publishMetric(const Coil& coil, const uint8_t* const data) {
+    auto iter2 = coilMetrics.find(coil.id);
+    if (iter2 == coilMetrics.end()) {
+        const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
+        Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
+        iter2 = coilMetrics.insert({coil.id, &metric}).first;
+    }
+    Metric* metric = iter2->second;
+    int32_t valueInt = coil.decodeCoilDataRaw(data);
+    metric->setValue(valueInt);
 }
 
 static const char* DISCOVERY_PAYLOAD = R"({
@@ -198,6 +254,6 @@ int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
 
 int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* data) {
     // TODO: send data to nibe
-    ESP_LOGD(TAG, "onWriteTokenReceived");
+    // ESP_LOGD(TAG, "onWriteTokenReceived");
     return 0;
 }

@@ -61,10 +61,11 @@ void NibeGw::stateMachineLoop() {
         int b = nibeInterface.readData();
         if (b < 0) {
             // no more input -> return
-            ESP_LOGV(TAG, "state=%d, read=-1", state);
+            // ESP_LOGV(TAG, "state=%d, read=-1", state);
             return;
         }
-        ESP_LOGV(TAG, "state=%d, read=%02X", state, b);
+        // enable only for tests or protocol debugging on linux target, overloads ESP32 when connected to heat pump
+        // ESP_LOGV(TAG, "state=%d, read=%02X", state, b);
         switch (state) {
             case STATE_WAIT_START: {
                 if (b == (int)NibeStart::Response) {

@@ -30,8 +30,8 @@ TEST_CASE("formatNumber", "[nibegw_config]") {
 
 TEST_CASE("decodeCoilData", "[nibegw_config]") {
     Coil c = {0, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
-    NibeReadResponseData data1234 = {.coilAddress = 0, .value = {1, 2, 3, 4}};
-    NibeReadResponseData dataFF = {.coilAddress = 0, .value = {0xff, 0xff, 0xff, 0xff}};
+    uint8_t data1234[] = {1, 2, 3, 4};
+    uint8_t dataFF[] = {0xff, 0xff, 0xff, 0xff};
     TEST_ASSERT_EQUAL_STRING("1", c.decodeCoilData(data1234).c_str());
     TEST_ASSERT_EQUAL_STRING("255", c.decodeCoilData(dataFF).c_str());
 
@@ -62,8 +62,8 @@ TEST_CASE("decodeCoilData", "[nibegw_config]") {
 
 TEST_CASE("decodeCoilDataRaw", "[nibegw_config]") {
     Coil c = {0, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
-    NibeReadResponseData data1234 = {.coilAddress = 0, .value = {1, 2, 3, 4}};
-    NibeReadResponseData dataFF = {.coilAddress = 0, .value = {0xff, 0xff, 0xff, 0xff}};
+    uint8_t data1234[] = {1, 2, 3, 4};
+    uint8_t dataFF[] = {0xff, 0xff, 0xff, 0xff};
     TEST_ASSERT_EQUAL_UINT8(1, c.decodeCoilDataRaw(data1234));
     TEST_ASSERT_EQUAL_UINT8(255, c.decodeCoilDataRaw(dataFF));
 

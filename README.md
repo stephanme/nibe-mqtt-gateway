@@ -10,7 +10,7 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
 - [x] configurable set of of published Nibe registers/coils
-- [ ] support Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager)
+- [x] support Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager, no 32 bit registers)
 - [ ] supports writing to Nibe registers
 - [x] energy meter connected via S0 interface to OptIn1, persisted in nvs
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
@@ -141,7 +141,8 @@ Log levels can be configured via `config.json` (see above):
 - standard ESP logging config applies, especially `CONFIG_LOG_MAXIMUM_LEVEL`
 - default log level is `info`, unless changed in `sdkconfig`
 - nibe-mqtt-gateway sources are complied with `LOG_LOCAL_LEVEL=ESP_LOG_DEBUG` to allow debug logging
-- log levels can be temporarily changed via UI
+- log levels can be temporarily changed via UI or `curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "tag=<tag>&level=<none|error|war|info|debug|verbose>"  http://nibegw/config/log`
+  - log level are set back to `config.json` settings after reset
 
 After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
 - only OTA upload is supported

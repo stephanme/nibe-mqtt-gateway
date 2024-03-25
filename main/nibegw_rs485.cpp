@@ -2,7 +2,7 @@
 
 #include <esp_log.h>
 
-static const char* TAG = "nibegw";
+static const char* TAG = "nibegw_rs485";
 
 NibeRS485::NibeRS485(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin) {
     connectionState = false;
