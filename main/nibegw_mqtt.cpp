@@ -63,7 +63,8 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
             // Limitation: can only handle 16bit coils
             ESP_LOGV(TAG, "onMessageReceived ModbusDataMsg: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
 
-            int publishedCoils = 0;
+            int receivedCoils = 0;
+            int publishIdx = modbusDataMsgMqttPublish % 20;
             for (int i = 0; i < 20; i++) {
                 NibeDataMessageCoil coilData = msg->dataMessage.coils[i];
                 if (coilData.coilAddress == 0xFFFF) {
@@ -86,16 +87,16 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
                         continue;
                 }
 
-                if (modbusDataMsgMqttPublish % 5 == 0) {
-                    // publish only ever ~10s to mqtt
-                    // TODO: better spread coils over time (e.g. 4 coils every msg)?
+                // publish 2 registers every ModbusDataMsg = every 2s
+                // -> ~1 coil/s or all 20 coils take ~20s which is around the same speed as polling
+                if (i == publishIdx || i == publishIdx + 1) {
                     publishMqtt(*coil, coilData.value); 
                 }
                 publishMetric(*coil, coilData.value);
-                publishedCoils++;
+                receivedCoils++;
             }
-            modbusDataMsgMqttPublish++;
-            ESP_LOGD(TAG, "onMessageReceived ModbusDataMsg: published %d coils", publishedCoils);
+            modbusDataMsgMqttPublish += 2; // 2 coils published per ModbusDataMsg
+            ESP_LOGD(TAG, "onMessageReceived ModbusDataMsg: received %d coils", receivedCoils);
             break;
         }
 
