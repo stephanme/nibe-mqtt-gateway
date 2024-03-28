@@ -128,7 +128,7 @@ HardwareSerial RS485Serial(1);
 // J2_6 GND
 HardwareSerial SerialModem(2);
 
-#define colorSaturation 32  // Max 255 but light is too sharp.
+#define colorSaturation 20  // Max 255 but light is too sharp.
 #define COLOR(r, g, b) (((uint32_t)r << 16) | ((uint32_t)g << 8) | b)
 
 uint32_t yellow = COLOR(colorSaturation, colorSaturation, 0);
