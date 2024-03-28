@@ -84,9 +84,10 @@ General configuration:
     },
     "nibe": {
         "coilsToPoll": [40004, 40013, 40014, 40940],  # list of coil ids to poll every 30s
-        "metrics": {  # configure prometheus metrics, metric = value * scale / factor
+        "metrics": {  # configure prometheus metrics for coils, metric = value * scale / factor
             "<coid id>": { "name":"<metric name including attributes>", "factor": <optional factor>, "scale": <opt. scaling> },   # format
-            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv>, "scale": 1 },  # default if not specified
+            "<coid id>": {}  # use defaults for name, scale and factor, see next line
+            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv>, "scale": 1 },  # defaults
             "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},  # coil attribute is added automatically
             "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
             "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},

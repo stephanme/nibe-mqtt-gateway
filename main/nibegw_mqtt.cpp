@@ -90,12 +90,12 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
                 // publish 2 registers every ModbusDataMsg = every 2s
                 // -> ~1 coil/s or all 20 coils take ~20s which is around the same speed as polling
                 if (i == publishIdx || i == publishIdx + 1) {
-                    publishMqtt(*coil, coilData.value); 
+                    publishMqtt(*coil, coilData.value);
                 }
                 publishMetric(*coil, coilData.value);
                 receivedCoils++;
             }
-            modbusDataMsgMqttPublish += 2; // 2 coils published per ModbusDataMsg
+            modbusDataMsgMqttPublish += 2;  // 2 coils published per ModbusDataMsg
             ESP_LOGD(TAG, "onMessageReceived ModbusDataMsg: received %d coils", receivedCoils);
             break;
         }
@@ -137,17 +137,24 @@ void NibeMqttGw::publishMqtt(const Coil& coil, const uint8_t* const data) {
     }
 }
 
-// send coil as metrics, create metric if not exists
+// send coil as metrics, create metric if not exists but only for coils that are configured as metrics
 void NibeMqttGw::publishMetric(const Coil& coil, const uint8_t* const data) {
     auto iter2 = coilMetrics.find(coil.id);
     if (iter2 == coilMetrics.end()) {
         const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
-        Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
-        iter2 = coilMetrics.insert({coil.id, &metric}).first;
+        if (metricCfg.isValid()) {
+            Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
+            iter2 = coilMetrics.insert({coil.id, &metric}).first;
+        } else {
+            // do not publish this coil as metric
+            iter2 = coilMetrics.insert({coil.id, nullptr}).first;
+        }
     }
     Metric* metric = iter2->second;
-    int32_t valueInt = coil.decodeCoilDataRaw(data);
-    metric->setValue(valueInt);
+    if (metric != nullptr) {
+        int32_t valueInt = coil.decodeCoilDataRaw(data);
+        metric->setValue(valueInt);
+    }
 }
 
 static const char* DISCOVERY_PAYLOAD = R"({

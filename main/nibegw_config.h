@@ -104,6 +104,8 @@ struct NibeCoilMetricConfig {
     std::string name;
     int factor;
     int scale;
+
+    bool isValid() const { return !name.empty() && factor != 0 && scale != 0; }
 };
 
 struct NibeMqttConfig {

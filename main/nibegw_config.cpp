@@ -171,15 +171,11 @@ const char* Coil::unitAsString() const {
     }
 }
 
-// prom metric config might be configured explicitly or derived from coil config
+// prom metric config must be configured explicitly (i.e. coil id) but there are defaults for all config values
 NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) const {
     NibeCoilMetricConfig metricCfg;
     auto metricCfgIter = config.metrics.find(id);
-    if (metricCfgIter == config.metrics.end()) {
-        metricCfg.name = promMetricName();
-        metricCfg.factor = factor;
-        metricCfg.scale = 1;
-    } else {
+    if (metricCfgIter != config.metrics.end()) {
         metricCfg.name = metricCfgIter->second.name;
         metricCfg.factor = metricCfgIter->second.factor;
         metricCfg.scale = metricCfgIter->second.scale;
@@ -192,8 +188,11 @@ NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) cons
         if (metricCfg.scale == 0) {
             metricCfg.scale = 1;
         }
+        appendPromAttributes(metricCfg.name);
+    } else {
+        metricCfg.factor = 0;
+        metricCfg.scale = 0;
     }
-    appendPromAttributes(metricCfg.name);
     return metricCfg;
 }
 

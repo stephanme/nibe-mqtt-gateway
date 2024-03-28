@@ -125,16 +125,27 @@ TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_STRING(R"(test123{coil="1"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
     TEST_ASSERT_EQUAL(1, metricCfg.scale);
+    TEST_ASSERT_TRUE(metricCfg.isValid());
 
     c.id = 2;
     metricCfg = c.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(nibe{coil="2"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
     TEST_ASSERT_EQUAL(10, metricCfg.scale);
+    TEST_ASSERT_TRUE(metricCfg.isValid());
 
     c.id = 3;
     metricCfg = c.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(test123{coil="3",node="nibegw"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(1, metricCfg.factor);
     TEST_ASSERT_EQUAL(1, metricCfg.scale);
+    TEST_ASSERT_TRUE(metricCfg.isValid());
+
+    // metric not in config -> do not create a valid metric
+    c.id = 4;
+    metricCfg = c.toPromMetricConfig(config);
+    TEST_ASSERT_EQUAL_STRING("", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL(0, metricCfg.factor);
+    TEST_ASSERT_EQUAL(0, metricCfg.scale);
+    TEST_ASSERT_FALSE(metricCfg.isValid());
 }
