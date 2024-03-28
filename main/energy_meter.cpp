@@ -105,8 +105,8 @@ void EnergyMeter::task(void* pvParameters) {
         auto energyInWh = meter->metricEnergyInWh.incrementValue(1);
         ESP_LOGV(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
 
-        // wait 110ms (S0 impulse is 90ms according to spec)
-        vTaskDelay(110 / portTICK_PERIOD_MS);
+        // wait 150ms (S0 impulse is 90ms according to spec, max freq is 3.3/s for 12kW -> 300ms is shortest time between pulses)
+        vTaskDelay(150 / portTICK_PERIOD_MS);
         // reset interrupt by reading GPIO register
         MCP23S08.GetPinState();
     }
