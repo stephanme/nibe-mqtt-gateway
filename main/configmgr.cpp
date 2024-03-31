@@ -29,7 +29,6 @@ struct externbuf : public std::streambuf {
 static const char* TAG = "config";
 
 #define CONFIG_FILE "/config.json"
-#define NIBE_MODBUS_FILE "/nibe_modbus.csv"
 
 NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
     // initialize with default values
@@ -242,30 +241,6 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
     config.mqtt.logTopic = config.logging.logTopic;
 
     return ESP_OK;
-}
-
-const std::string NibeMqttGwConfigManager::getNibeModbusConfig() {
-    // TODO: return nibe csv file from FS
-    std::string csv;
-
-#if CONFIG_IDF_TARGET_LINUX
-    ESP_LOGW(TAG, "Skip writing config on Linux target");
-    csv = "not supported on linux target";
-#else
-    File file = LittleFS.open(NIBE_MODBUS_FILE);
-    if (file) {
-        ESP_LOGI(TAG, "Reading nibe modbus config file %s", NIBE_MODBUS_FILE);
-
-        ArduinoStream as(file);
-        std::istream is(&as);
-        csv = std::string(std::istreambuf_iterator<char>(is), {});
-        file.close();
-    } else {
-        ESP_LOGW(TAG, "Nibe modbus config file %s not found", NIBE_MODBUS_FILE);
-    }
-#endif
-
-    return csv;
 }
 
 esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileName) {

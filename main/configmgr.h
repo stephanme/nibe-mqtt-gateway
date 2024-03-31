@@ -25,7 +25,6 @@ class NibeMqttGwConfigManager {
     const std::string getRuntimeConfigAsJson();
     esp_err_t saveConfig(const char* configJson);
 
-    const std::string getNibeModbusConfig();
     esp_err_t saveNibeModbusConfig(const char* uploadFileName);
 
     static void setLogLevels(const std::unordered_map<std::string, std::string>& logLevels);

@@ -115,7 +115,7 @@ void NibeMqttGwWebServer::handleGetRoot() {
     httpServer.send(200, "text/html", rootHtml);
 }
 
-void NibeMqttGwWebServer::handleGetConfig() { 
+void NibeMqttGwWebServer::handleGetConfig() {
     String runtimeCfg = httpServer.arg("runtime");
     if (runtimeCfg == "true") {
         httpServer.send(200, "application/json", configManager.getRuntimeConfigAsJson().c_str());
@@ -134,7 +134,12 @@ void NibeMqttGwWebServer::handlePostConfig() {
 }
 
 void NibeMqttGwWebServer::handleGetNibeConfig() {
-    httpServer.send(200, "text/plain", configManager.getNibeModbusConfig().c_str());
+    File file = LittleFS.open(NIBE_MODBUS_FILE);
+    if (file) {
+        httpServer.streamFile(file, "text/plain");
+    } else {
+        httpServer.send(404, "text/plain", "Nibe Modbus configuration not found");
+    }
 }
 
 void NibeMqttGwWebServer::handlePostNibeConfigUpload() {
