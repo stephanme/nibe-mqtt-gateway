@@ -27,6 +27,7 @@ class EnergyMeter {
     u_int32_t getEnergyInWh() { return metricEnergyInWh.getValue(); }
     // for adjusting this energy meter with the real meter
     void setEnergyInWh(u_int32_t energyInWh) { metricEnergyInWh.setValue(energyInWh); }
+    void adjustEnergyInWh(u_int32_t energyInWh);
 
    private:
     nvs_handle_t nvsHandle;
@@ -38,6 +39,7 @@ class EnergyMeter {
     u_int32_t pulseCounterISR = 0;
     u_int32_t lastStoredEnergyInWh = 0;
     Metric& metricEnergyInWh;
+    int skipNextPulses = 0;
 
     MqttClient* mqttClient;
     std::string mqttTopic;

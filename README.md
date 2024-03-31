@@ -115,8 +115,14 @@ Nibe Modbus configuration:
 - upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
 Energy Meter configuration (also via UI):
-- `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
-- value should not be decreased to not break counter metric
+- adjusting energy meter
+  - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
+  - to prevent misconfiguration: value can only be changed by +-10kWh
+  - increases are set immediately
+  - decreases are waited, i.e. energy counter stops counting for the diff to avoid breaking counter metric
+- set energy counter to an initial value, no checks, can break counter metrics
+  - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter?init=true`
+
 - no reboot
 
 ### Trouble Shooting

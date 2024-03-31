@@ -102,7 +102,16 @@ void EnergyMeter::task(void* pvParameters) {
     while (1) {
         xTaskNotifyWait(0, ULONG_MAX, 0, portMAX_DELAY);
 
-        auto energyInWh = meter->metricEnergyInWh.incrementValue(1);
+        u_int32_t energyInWh;
+        if (meter->skipNextPulses > 0) {
+            // adjust energyInWh by skipping pulses
+            // counter metric must not decrease
+            meter->skipNextPulses--;
+            energyInWh = meter->metricEnergyInWh.getValue();
+        } else {
+            // regular operation
+            energyInWh = meter->metricEnergyInWh.incrementValue(1);
+        }
         ESP_LOGV(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
 
         // wait 150ms (S0 impulse is 90ms according to spec, max freq is 3.3/s for 12kW -> 300ms is shortest time between pulses)
@@ -132,4 +141,21 @@ esp_err_t EnergyMeter::publishState() {
     auto s = Metrics::formatNumber(energyInWh, 1000, 1);
     mqttClient->publish(mqttTopic, s);
     return ESP_OK;
+}
+
+// smooth adjustment of energy counter
+// allow for max 10 kWh change, never count backwards
+void EnergyMeter::adjustEnergyInWh(u_int32_t energyInWh) {
+    u_int32_t currentEnergyInWh = metricEnergyInWh.getValue();
+    int diff = energyInWh - currentEnergyInWh;
+    if (std::abs(diff) > 10000) {
+        ESP_LOGW(TAG, "adjustEnergyInWh: diff=%d, too large (max 10kWh), skipping", diff);
+        return;
+    }
+    ESP_LOGI(TAG, "adjustEnergyInWh: change from %lu to %lu, diff=%d", currentEnergyInWh, energyInWh, diff);
+    if (diff >= 0) {
+        setEnergyInWh(energyInWh);
+    } else {
+        skipNextPulses = -diff;
+    }
 }

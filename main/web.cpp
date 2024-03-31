@@ -88,7 +88,7 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
 <form action="./config/energymeter" method="post">
   <label for="energy">Energy meter [Wh]: </label>
   <input type="text" id="energy" name="plain" value="">
-  <button>Set</button>
+  <button>Adjust</button>
 </form>
 <br/>
 <form action="./config/log" method="post">
@@ -174,10 +174,17 @@ void NibeMqttGwWebServer::handlePostNibeConfig() {
 
 void NibeMqttGwWebServer::handlePostEnergyMeter() {
     long wh = httpServer.arg("plain").toInt();
+    String init = httpServer.arg("init");
     if (wh > 0) {
-        ESP_LOGI(TAG, "Set energy meter to %ld Wh", wh);
-        energyMeter.setEnergyInWh(wh);
-        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Energy value set");
+        if (init == "true") {
+            ESP_LOGI(TAG, "Set energy meter to %ld Wh", wh);
+            energyMeter.setEnergyInWh(wh);
+            httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Energy value set.");
+        } else {
+            ESP_LOGI(TAG, "Adjust energy meter to %ld Wh", wh);
+            energyMeter.adjustEnergyInWh(wh);
+            httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Energy value adjusted.");
+        }
     } else {
         httpServer.send(400, "text/plain", "Invalid energy value");
     }
