@@ -27,6 +27,7 @@ TEST_CASE("default config", "[config]") {
 }
 
 static const char* configJson = R"({
+    // can contain comments
     "mqtt": {
         "brokerUri": "mqtt://mosquitto.fritz.box",
         "user": "user",
@@ -121,7 +122,26 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));
 }
 
-// ugly concatination because of ISO-8859-1 for °C
+TEST_CASE("saveConfig - config.json.template", "[config]") {
+    char cwd[1024];
+    getcwd(cwd, sizeof(cwd));
+    printf("cwd: %s\n", cwd);
+
+    std::ifstream is("config/config.json.template");
+    std::stringstream buffer;
+    buffer << is.rdbuf();
+    std::string json = buffer.str();
+    TEST_ASSERT(json.size() > 0);  // check file was found and not empty
+
+    NibeMqttGwConfigManager configManager;
+    configManager.begin();
+    TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));
+    
+    const NibeMqttGwConfig& config = configManager.getConfig();
+    TEST_ASSERT_EQUAL_STRING("mqtt://mosquitto.fritz.box", config.mqtt.brokerUri.c_str());
+}
+
+// ugly concatenation because of ISO-8859-1 for °C
 static const char* nibeModbusConfig = R"(ModbusManager 1.0.9
 20200624
 Product: VVM310, VVM500
@@ -221,7 +241,7 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv", "[config]") {
     getcwd(cwd, sizeof(cwd));
     printf("cwd: %s\n", cwd);
 
-    std::ifstream is("nibe-modbus-vvm310.csv");
+    std::ifstream is("config/nibe-modbus-vvm310.csv");
     std::stringstream buffer;
     buffer << is.rdbuf();
     std::string csv = buffer.str();

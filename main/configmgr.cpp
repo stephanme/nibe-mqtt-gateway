@@ -81,15 +81,11 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         ESP_LOGE(TAG, "Failed to mount file system");
         return ESP_FAIL;
     }
-    File file = LittleFS.open(CONFIG_FILE);
-    if (file) {
-        ESP_LOGI(TAG, "Reading config file %s", CONFIG_FILE);
 
-        // TODO: avoid String copies
-        String json = file.readString();
-        file.close();
+    std::string configJson = getConfigAsJson();
+    if (!configJson.empty()) {
         NibeMqttGwConfig tmpConfig;
-        if (parseJson(json.c_str(), tmpConfig) != ESP_OK) {
+        if (parseJson(configJson.c_str(), tmpConfig) != ESP_OK) {
             return ESP_FAIL;
         }
         // use valid config
@@ -100,7 +96,7 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         ESP_LOGW(TAG, "Config file %s not found", CONFIG_FILE);
     }
 
-    file = LittleFS.open(NIBE_MODBUS_FILE);
+    File file = LittleFS.open(NIBE_MODBUS_FILE);
     if (file) {
         ESP_LOGI(TAG, "Reading nibe modbus config file %s", NIBE_MODBUS_FILE);
         ArduinoStream as(file);
@@ -118,7 +114,25 @@ esp_err_t NibeMqttGwConfigManager::begin() {
     return ESP_OK;
 }
 
+// returns config file as uploaded (i.e. including comments)
 const std::string NibeMqttGwConfigManager::getConfigAsJson() {
+#if CONFIG_IDF_TARGET_LINUX
+    return getRuntimeConfigAsJson();
+#else
+    File file = LittleFS.open(CONFIG_FILE);
+    if (file) {
+        ESP_LOGI(TAG, "Reading config file %s", CONFIG_FILE);
+
+        // TODO: avoid String copies
+        String json = file.readString();
+        file.close();
+        return json.c_str();
+    }
+    return "";
+#endif
+}
+
+const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
     JsonDocument doc;
     doc["mqtt"]["brokerUri"] = config.mqtt.brokerUri;
     doc["mqtt"]["user"] = config.mqtt.user;
@@ -127,9 +141,9 @@ const std::string NibeMqttGwConfigManager::getConfigAsJson() {
     doc["mqtt"]["rootTopic"] = config.mqtt.rootTopic;
     doc["mqtt"]["discoveryPrefix"] = config.mqtt.discoveryPrefix;
 
-    JsonArray coilsToPoss = doc["nibe"]["coilsToPoll"].to<JsonArray>();
+    JsonArray coilsToPoll = doc["nibe"]["coilsToPoll"].to<JsonArray>();
     for (auto coil : config.nibe.coilsToPoll) {
-        coilsToPoss.add(coil);
+        coilsToPoll.add(coil);
     }
     JsonObject metrics = doc["nibe"]["metrics"].to<JsonObject>();
     for (auto [id, metric] : config.nibe.metrics) {

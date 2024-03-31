@@ -115,7 +115,14 @@ void NibeMqttGwWebServer::handleGetRoot() {
     httpServer.send(200, "text/html", rootHtml);
 }
 
-void NibeMqttGwWebServer::handleGetConfig() { httpServer.send(200, "application/json", configManager.getConfigAsJson().c_str()); }
+void NibeMqttGwWebServer::handleGetConfig() { 
+    String runtimeCfg = httpServer.arg("runtime");
+    if (runtimeCfg == "true") {
+        httpServer.send(200, "application/json", configManager.getRuntimeConfigAsJson().c_str());
+    } else {
+        httpServer.send(200, "application/json", configManager.getConfigAsJson().c_str());
+    }
+}
 
 void NibeMqttGwWebServer::handlePostConfig() {
     if (configManager.saveConfig(httpServer.arg("plain").c_str()) == ESP_OK) {

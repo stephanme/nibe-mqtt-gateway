@@ -1,0 +1,65 @@
+{
+    "mqtt": {
+        "brokerUri": "mqtt://mosquitto.fritz.box",
+        "user": "mqtt",
+        "password": "****",
+        "rootTopic": "nibegw",
+        "discoveryPrefix": "homeassistant"
+    },
+    "nibe": {
+        // list of coil ids to poll every 30s
+        // 1 coils takes ~1s
+        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44069, 44071, 44073, 40737],
+
+        // prometheus metrics for coils: metric = value * scale / factor
+        "metrics": {
+            /*
+            Format:
+            "<coid id>": { 
+                "name":"<metric name including attributes>",    // default: nibe_<metric title>{coil="<coil id>"}, coil attribute is always added
+                "factor": <factor>,                             // default: factor from nibe-modbus.csv
+                "scale": <scaling>                              // default: 1
+            }
+            */
+            // coils sent automatically as data message, configured in ModbusManager (LOG.SET file)
+            // max 20 coils, only 8 and 16 bit data types supported (u8, s8, u16, s16)
+            "45001": { "name":"nibe_alarm"},
+            "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},
+            "40067": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1 avg\"}"},
+            "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
+            "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},
+            "43009": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"calculated\"}"},
+            "40008": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT2 supply\"}"},
+            "40012": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT3 return\"}"},
+            "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14\"}"},
+            "40072": { "name":"nibe_heat_medium_flow_liter_per_min{sensor=\"BF1 EP14\"}"},
+            "43005": { "name":"nibe_degree_minutes"},
+            "44701": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 actual\"}"},
+            "44775": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 requested\"}"},
+            "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
+            "44396": { "name":"nibe_charge_pump_speed_percent{sensor=\"EB101\"}"},
+            // polled coils
+            "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100},
+            "44308": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100},
+            "44300": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr+add\"}", "factor": 1, "scale": 100},
+            "44306": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr\"}", "factor": 1, "scale": 100},
+            "44298": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr+add\"}", "factor": 1, "scale": 100},
+            "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}"},
+            "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600},
+            "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600},
+            "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600}
+        }
+    },
+    "logging": {
+        "mqttLoggingEnabled": true,     // whether to log to mqtt
+        "stdoutLoggingEnabled": true,   // whether to log to serial in addition to mqtt
+        "logTopic": "nibegw/log",
+        // see https://docs.espressif.com/projects/esp-idf/en/release-v5.1/esp32/api-reference/system/log.html
+        // cannot log above CONFIG_LOG_MAXIMUM_LEVEL
+        "logLevels": {
+            // "*" : "info", // change default log level
+            "mqtt": "info",
+            "nibegw_mqtt": "info"
+        }
+    }
+}

@@ -1,8 +1,7 @@
 build/
 managed_components/
 sdkconfig
-config.json
 .DS_Store
 dependencies.lock
 sdkconfig.old
-nibe-modbus*.csv
+config/config.json

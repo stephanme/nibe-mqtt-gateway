@@ -3,6 +3,7 @@
 
 #include <esp_log.h>
 
+#include "config.h"
 #include "mqtt.h"
 #include "mqtt_logging.h"
 #include "nibegw_config.h"
@@ -21,6 +22,7 @@ class NibeMqttGwConfigManager {
     const NibeMqttGwConfig& getConfig() { return config; }
 
     const std::string getConfigAsJson();
+    const std::string getRuntimeConfigAsJson();
     esp_err_t saveConfig(const char* configJson);
 
     const std::string getNibeModbusConfig();

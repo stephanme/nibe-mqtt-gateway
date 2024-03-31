@@ -60,7 +60,7 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 
 ### Configuration
 
-The configuration consists:
+The configuration consists of:
 - general configuration json `config.json` like MQTT broker url and credentials, heatpump coils to be polled, logging etc.
 - a Nibe ModbusManager file that defines all available coils, `nibe-modbus.csv`
 - the Energy Meter value can be set to adjust it with the real meter reading
@@ -68,45 +68,11 @@ The configuration consists:
 When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory and reboots to activate the configuration change.
 
 General configuration:
-- http://nibegw/config shows the current configuration as json, save e.g. as `config.json` and use as template
-- adapt `config.json` file (MQTT broker URL and credentials etc.)
-- upload `config.json`: `curl -X POST -H "Content-Type: application/json" -d @config.json http://nibegw/config`
+- see `config/config.json.template` for format and configuration options, json file allows comments
+- http://nibegw/config shows the current configuration as uploaded
+- http://nibegw/config?runtime=true shows the current runtime configuration (internal data structures translated back to json)
+- upload `config.json`: `curl -X POST -H "Content-Type: application/json" --data-binary @config.json http://nibegw/config`
 
-`config.json` format:
-```
-{
-    "mqtt": {
-        "brokerUri": "mqtt://broker",
-        "user": "user",
-        "password": "***",
-        "rootTopic": "nibegw",
-        "discoveryPrefix": "homeassistant"
-    },
-    "nibe": {
-        "coilsToPoll": [40004, 40013, 40014, 40940],  # list of coil ids to poll every 30s
-        "metrics": {  # configure prometheus metrics for coils, metric = value * scale / factor
-            "<coid id>": { "name":"<metric name including attributes>", "factor": <optional factor>, "scale": <opt. scaling> },   # format
-            "<coid id>": {}  # use defaults for name, scale and factor, see next line
-            "<coid id>": { "name":"nibe_<metric title>{coil=\"<coil id>\"}, "factor": <from nibe-modbus.csv>, "scale": 1 },  # defaults
-            "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},  # coil attribute is added automatically
-            "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
-            "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},
-            "40940": { "name":"nibe_degree_minutes"},
-            "44308": { "name":"nibe_heat_meter_wh{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100}  # 0.1 kWh -> Wh
-        }
-    },
-    "logging": {
-        "mqttLoggingEnabled": true,    # wether to log to mqtt
-        "stdoutLoggingEnabled": true,  # wether to log to serial in addition to mqtt
-        "logTopic": "nibegw/log",
-        "logLevels": {
-            "*" : "info",              # default log level
-            "mqtt": "info",
-            "nibegw_mqtt": "debug"
-        }
-    }
-}
-```
 
 Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
@@ -122,7 +88,6 @@ Energy Meter configuration (also via UI):
   - decreases are waited, i.e. energy counter stops counting for the diff to avoid breaking counter metric
 - set energy counter to an initial value, no checks, can break counter metrics
   - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter?init=true`
-
 - no reboot
 
 ### Trouble Shooting
@@ -154,7 +119,7 @@ Log levels can be configured via `config.json` (see above):
 After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
 - only OTA upload is supported
 - no mqtt, nibegw, energy meter, etc. 
-- the heat pump will go into an alarm state because of missing acknowledge responses
+- Nibe RS485 protocol is maintained so that the heat pump should not go into alarm state (received data is acknowledged but ignored)
 - init status is shown as 0x0001 (= InitStatus::SafeBoot)
 - metrics other than `nibegw_status_info` are missing   
 - logs are only available via serial interface
