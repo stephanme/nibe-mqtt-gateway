@@ -40,7 +40,7 @@ Additionally helpful:
 
 ### Wiring
 
-todo
+![nibegw wiring](nibegw-wiring.png)
 
 ### Building
 
