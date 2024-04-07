@@ -16,6 +16,7 @@ void app_main(void)
     print_banner("Running all the registered tests");
     UNITY_BEGIN();
     unity_run_all_tests();
+    // unity_run_tests_by_tag("[nibegw_config]", false);
     UNITY_END();
 }
 

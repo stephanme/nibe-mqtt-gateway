@@ -93,6 +93,9 @@ class Coil {
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
 
+    std::string homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+                                              const std::string& deviceDiscoveryInfo) const;
+
     NibeCoilMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
     std::string promMetricName() const;
     void appendPromAttributes(std::string& promMetricName) const;

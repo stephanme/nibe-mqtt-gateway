@@ -171,6 +171,71 @@ const char* Coil::unitAsString() const {
     }
 }
 
+static const char* DISCOVERY_PAYLOAD = R"({
+"object_id":"nibegw-coil-%u",
+"unique_id":"nibegw-coil-%u",
+"name":"%s",
+"state_topic":"%s",
+%s
+%s
+})";
+
+std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+                                                const std::string& deviceDiscoveryInfo) const {
+    char stateTopic[64];
+    snprintf(stateTopic, sizeof(stateTopic), "%s%u", nibeRootTopic.c_str(), id);
+    char unit[128];  // TODO: rename
+    switch (this->unit) {
+        case CoilUnit::Unknown:
+        case CoilUnit::NoUnit:
+            unit[0] = '\0';
+            break;
+        case CoilUnit::GradCelcius:
+            snprintf(unit, sizeof(unit),
+                     R"("unit_of_measurement":"%s","device_class":"temperature","state_class":"measurement",)", unitAsString());
+            break;
+        case CoilUnit::Hours:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"total",)",
+                     unitAsString());
+            break;
+        case CoilUnit::Minutes:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"measurement",)",
+                     unitAsString());
+            break;
+        case CoilUnit::Watt:
+        case CoilUnit::KiloWatt:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power","state_class":"measurement",)",
+                     unitAsString());
+            break;
+        case CoilUnit::WattHour:
+        case CoilUnit::KiloWattHour:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy","state_class":"total",)",
+                     unitAsString());
+            break;
+        case CoilUnit::Hertz:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency","state_class":"measurement",)",
+                     unitAsString());
+            break;
+        default:
+            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","state_class":"measurement",)", unitAsString());
+            break;
+    }
+
+    // special handling for certain coils
+    switch (id) {
+        case 40940:
+        case 43005:  // degree minutes, no unit
+            std::strcpy(unit, R"("state_class":"measurement",)");
+            break;
+    }
+    // TODO: writable coils
+    char discoveryPayload[1024];
+    snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, id, id, title.c_str(), stateTopic, unit,
+             deviceDiscoveryInfo.c_str());
+
+    return discoveryPayload;
+}
+
 // prom metric config must be configured explicitly (i.e. coil id) but there are defaults for all config values
 NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) const {
     NibeCoilMetricConfig metricCfg;
