@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "config.h"
 #include "metrics.h"
 #include "nibegw.h"
 
@@ -101,6 +102,10 @@ class Coil {
     void appendPromAttributes(std::string& promMetricName) const;
 
     bool operator==(const Coil& other) const = default;
+
+   private:
+    std::string defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+                                                     const std::string& deviceDiscoveryInfo) const;
 };
 
 struct NibeCoilMetricConfig {
@@ -115,6 +120,7 @@ struct NibeMqttConfig {
     std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
     std::vector<uint16_t> coilsToPoll;
     std::unordered_map<uint16_t, NibeCoilMetricConfig> metrics;
+    std::unordered_map<uint16_t, std::string> homeassistantDiscoveryOverrides;
 };
 
 #endif

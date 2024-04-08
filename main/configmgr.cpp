@@ -49,6 +49,7 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
                 .coils = {},
                 .coilsToPoll = {},
                 .metrics = {},
+                .homeassistantDiscoveryOverrides = {},
             },
         .logging =
             {
@@ -151,6 +152,14 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
         if (metric.factor != 0) m["factor"] = metric.factor;
         if (metric.scale != 0) m["scale"] = metric.scale;
     }
+    JsonObject homeassistantDiscoveryOverrides = doc["nibe"]["homeassistantDiscoveryOverrides"].to<JsonObject>();
+    for (auto [id, override] : config.nibe.homeassistantDiscoveryOverrides) {
+        JsonObject o = homeassistantDiscoveryOverrides[std::to_string(id)].to<JsonObject>();
+        DeserializationError err = deserializeJson(o, override);
+        if (err) {
+            ESP_LOGE(TAG, "deserializeJson() of homeassistantDiscoveryOverrides[%u] failed: %s", id, err.c_str());
+        }
+    }
 
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
     doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
@@ -228,6 +237,18 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
         } else {
             // log and skip
             ESP_LOGE(TAG, "nibe.metrics: invalid coil address %s", metric.key().c_str());
+        }
+    }
+
+    for (auto override : doc["nibe"]["homeassistantDiscoveryOverrides"].as<JsonObject>()) {
+        uint16_t id = atoi(override.key().c_str());
+        if (id > 0) {
+            std::string overrideJson;
+            serializeJson(override.value(), overrideJson);
+            config.nibe.homeassistantDiscoveryOverrides[id] = overrideJson;
+        } else {
+            // log and skip
+            ESP_LOGE(TAG, "nibe.homeassistantDiscoveryOverrides: invalid coil address %s", override.key().c_str());
         }
     }
 

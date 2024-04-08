@@ -23,6 +23,25 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
     }
 
     nibeRootTopic = mqttClient.getConfig().rootTopic + "/coils/";
+
+    // pre-announce known coils for HA auto-discovery, offloads nibegw task 
+    // polled coilds
+    for (const auto& coilId : config.coilsToPoll) {
+        auto iter = config.coils.find(coilId);
+        if (iter != config.coils.end()) {
+            announceCoil(iter->second);
+        }
+    }
+    // nibegw doesn't know upfront about coils sent as NibeDataMessage (20 fast coils) -> get announced on first data
+
+    // announce all coils with homeassistantDiscoveryOverrides as overrides are expensive (json parsing)
+    // writable coils need to be pre-announced and therefore always require overrides (even if empty)
+    for (auto ovrIter = config.homeassistantDiscoveryOverrides.cbegin(); ovrIter != config.homeassistantDiscoveryOverrides.cend(); ovrIter++) {
+        auto iter = config.coils.find(ovrIter->first);
+        if (iter != config.coils.end()) {
+            announceCoil(iter->second);
+        }
+    }
     return ESP_OK;
 }
 

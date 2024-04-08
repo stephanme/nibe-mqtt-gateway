@@ -31,13 +31,16 @@
             "43009": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"calculated\"}"},
             "40008": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT2 supply\"}"},
             "40012": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT3 return\"}"},
+            "44055": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"EB101-BT3 return\"}"},
+            "44058": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"EB101-BT12 condensor out\"}"},
             "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14\"}"},
             "40072": { "name":"nibe_heat_medium_flow_liter_per_min{sensor=\"BF1 EP14\"}"},
             "43005": { "name":"nibe_degree_minutes"},
             "44701": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 actual\"}"},
-            "44775": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 requested\"}"},
             "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
             "44396": { "name":"nibe_charge_pump_speed_percent{sensor=\"EB101\"}"},
+            "44874": { "name":"nibe_sg_ready"},
+
             // polled coils
             "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100},
             "44308": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100},
@@ -47,7 +50,38 @@
             "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}"},
             "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600},
             "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600},
-            "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600}
+            "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600},
+
+            // disabled
+            "44775": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 requested\"}"}
+        },
+
+        // Override/amend default Home Assistant MQTT discovery data.
+        // Setting a value to null will remove the key from the discovery message.
+        "homeassistantDiscoveryOverrides": {
+            /*
+            Default: see nibegw_config.cpp, <...> is taken from ModbusManager csv file
+            Read coils:
+            {
+                "object_id":"nibegw-coil-<id>",
+                "unique_id":"nibegw-coil-<id>",
+                "name":"<title>",
+                "state_topic":"nibegw/coils/<id>",
+                "unit_of_measurement":"<unit>",
+                "device_class":"temperature|duration|energy...", // depends on <unit>
+                "state_class":"measurement|total",  // depends on <unit>
+                "availability": [{"topic":"nibegw/availability"}],
+                "device":{"name":"Nibe GW", ... }
+            }
+            */
+            "43005": { // degree minutes (16bit), has no unit in csv
+                "state_class":"measurement",
+                "unit_of_measurement": "GM"
+            },
+            "44703": { // defrosting, 0=No, 1=Active, 2 = Passive
+                "device_class": "enum",
+                "value_template":"{% set mapper = ['Off', 'Active', 'Passive'] %}{{ mapper[value | int] }}"
+            }
         }
     },
     "logging": {

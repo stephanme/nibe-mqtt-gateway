@@ -1,8 +1,7 @@
+#include <ArduinoJson.h>
 #include <unity.h>
 
 #include "nibegw_config.h"
-#include <ArduinoJson.h>
-
 
 TEST_CASE("formatNumber", "[nibegw_config]") {
     Coil c = {0, "", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
@@ -101,9 +100,11 @@ TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
 }
 
-TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
+TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
     NibeMqttConfig config;
-    Coil c = {40940, "Degree Minutes", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    config.homeassistantDiscoveryOverrides[1] =
+        R"({"unit_of_measurement":"Grad Celsius", "device_class":null, "added":123, "removeNonexistingKey":null})";
+    Coil c = {1, "Override", CoilUnit::GradCelcius, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
     auto discoveryMsg = c.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
 
@@ -111,10 +112,32 @@ TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, discoveryMsg);
     TEST_ASSERT_FALSE(error);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-40940", doc["object_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-40940", doc["unique_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["object_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["unique_id"]);
+    TEST_ASSERT_EQUAL_STRING("Override", doc["name"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1", doc["state_topic"]);
+    TEST_ASSERT_EQUAL_STRING("Grad Celsius", doc["unit_of_measurement"]);  // changed by override
+    TEST_ASSERT_TRUE(doc["device_class"].isUnbound());                     // removed by override
+    TEST_ASSERT_EQUAL(123, doc["added"]);                                  // added by override, integer type
+    TEST_ASSERT_TRUE(doc["removeNonexistingKey"].isUnbound());             // ignore removing of nonexisting key
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
+}
+
+TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
+    NibeMqttConfig config;
+    config.homeassistantDiscoveryOverrides[43005] = R"({"state_class":"measurement"})";
+    Coil c = {43005, "Degree Minutes", CoilUnit::NoUnit, CoilDataType::UInt8, 1, 0, 0, 0, CoilMode::Read};
+    std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
+    auto discoveryMsg = c.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+
+    // must be valid json
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, discoveryMsg);
+    TEST_ASSERT_FALSE(error);
+    TEST_ASSERT_EQUAL_STRING("nibegw-coil-43005", doc["object_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw-coil-43005", doc["unique_id"]);
     TEST_ASSERT_EQUAL_STRING("Degree Minutes", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/40940", doc["state_topic"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/coils/43005", doc["state_topic"]);
     TEST_ASSERT_TRUE(doc["unit_of_measurement"].isUnbound());
     TEST_ASSERT_EQUAL_STRING("measurement", doc["state_class"]);
     TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);

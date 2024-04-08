@@ -17,6 +17,11 @@ TEST_CASE("default config", "[config]") {
     TEST_ASSERT_EQUAL_STRING("", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/log", config.mqtt.logTopic.c_str());
 
+    TEST_ASSERT_EQUAL(0, config.nibe.coils.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.coilsToPoll.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.metrics.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.homeassistantDiscoveryOverrides.size());
+
     TEST_ASSERT_FALSE(config.logging.mqttLoggingEnabled);
     TEST_ASSERT_TRUE(config.logging.stdoutLoggingEnabled);
     TEST_ASSERT_EQUAL_STRING("nibegw/log", config.logging.logTopic.c_str());
@@ -41,6 +46,10 @@ static const char* configJson = R"({
             "1": {"name": "prom_name_1{coil=\"1\"}", "factor": 10},
             "2": {"name": "prom_name_2{coil=\"2\"}"},
             "3": {"name": "prom_name_3{coil=\"3\"}", "scale": 10}
+        },
+        "homeassistantDiscoveryOverrides": {
+            "1": {"override1": "value1"},
+            "2": {"override2": {"sub2": "value2"}}
         }
     },
     "logging": {
@@ -91,6 +100,12 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL(0, metric3.factor);
     TEST_ASSERT_EQUAL(10, metric3.scale);
 
+    TEST_ASSERT_EQUAL(2, config.nibe.homeassistantDiscoveryOverrides.size());
+    const std::string& override1 = config.nibe.homeassistantDiscoveryOverrides.at(1);
+    TEST_ASSERT_EQUAL_STRING(R"({"override1":"value1"})", override1.c_str());
+    const std::string& override2 = config.nibe.homeassistantDiscoveryOverrides.at(2);
+    TEST_ASSERT_EQUAL_STRING(R"({"override2":{"sub2":"value2"}})", override2.c_str());
+
     TEST_ASSERT_TRUE(config.logging.mqttLoggingEnabled);
     TEST_ASSERT_TRUE(config.logging.stdoutLoggingEnabled);
     TEST_ASSERT_EQUAL_STRING("nibegw/logs", config.logging.logTopic.c_str());
@@ -116,7 +131,11 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_FALSE(json.contains(R"("factor": 0)"));
     TEST_ASSERT_TRUE(json.contains("prom_name_3"));
     TEST_ASSERT_FALSE(json.contains(R"("factor": 0)"));
-    TEST_ASSERT_TRUE(json.contains(R"("scale": 10)"));
+    TEST_ASSERT_TRUE(json.contains("override1"));
+    TEST_ASSERT_TRUE(json.contains("value1"));
+    TEST_ASSERT_TRUE(json.contains("override2"));
+    TEST_ASSERT_TRUE(json.contains("sub2"));
+    TEST_ASSERT_TRUE(json.contains("value2"));
 
     // test that returned json can be saved again
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));

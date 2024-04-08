@@ -1,5 +1,6 @@
 #include "nibegw_config.h"
 
+#include <ArduinoJson.h>
 #include <esp_log.h>
 
 #include <cstring>
@@ -171,6 +172,42 @@ const char* Coil::unitAsString() const {
     }
 }
 
+std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+                                                const std::string& deviceDiscoveryInfo) const {
+    auto defDiscoveryMsg = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
+    auto iter = config.homeassistantDiscoveryOverrides.find(id);
+    if (iter == config.homeassistantDiscoveryOverrides.end()) {
+        return defDiscoveryMsg;
+    } else {
+        auto override = iter->second;
+        // parse override json and defDiscoveryMsg and merge them
+        JsonDocument discoveryMsgDoc;
+        DeserializationError errDefMsg = deserializeJson(discoveryMsgDoc, defDiscoveryMsg);
+        JsonDocument overrideDoc;
+        DeserializationError errOverride = deserializeJson(overrideDoc, override);
+        if (errDefMsg) {
+            ESP_LOGE(TAG, "Failed to parse default discovery message for coil %d: %s", id, errDefMsg.c_str());
+            return defDiscoveryMsg;
+        }
+        if (errOverride) {
+            ESP_LOGE(TAG, "Failed to parse override discovery message for coil %d: %s", id, errOverride.c_str());
+            return defDiscoveryMsg;
+        }
+        // merge overrideDoc into discoveryMsgDoc
+        for (auto kv : overrideDoc.as<JsonObject>()) {
+            if (kv.value().isNull()) {
+                discoveryMsgDoc.remove(kv.key());
+            } else {
+                discoveryMsgDoc[kv.key()] = kv.value();
+            }
+        }
+        // return serialized merged doc
+        std::string mergedDiscoveryMsg;
+        serializeJson(discoveryMsgDoc, mergedDiscoveryMsg);
+        return mergedDiscoveryMsg;
+    }
+}
+
 static const char* DISCOVERY_PAYLOAD = R"({
 "object_id":"nibegw-coil-%u",
 "unique_id":"nibegw-coil-%u",
@@ -180,8 +217,8 @@ static const char* DISCOVERY_PAYLOAD = R"({
 %s
 })";
 
-std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
-                                                const std::string& deviceDiscoveryInfo) const {
+std::string Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+                                                       const std::string& deviceDiscoveryInfo) const {
     char stateTopic[64];
     snprintf(stateTopic, sizeof(stateTopic), "%s%u", nibeRootTopic.c_str(), id);
     char unit[128];  // TODO: rename
@@ -221,13 +258,6 @@ std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, co
             break;
     }
 
-    // special handling for certain coils
-    switch (id) {
-        case 40940:
-        case 43005:  // degree minutes, no unit
-            std::strcpy(unit, R"("state_class":"measurement",)");
-            break;
-    }
     // TODO: writable coils
     char discoveryPayload[1024];
     snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, id, id, title.c_str(), stateTopic, unit,
