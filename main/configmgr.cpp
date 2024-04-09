@@ -41,6 +41,10 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
                 .clientId = "",
                 .rootTopic = "nibegw",
                 .discoveryPrefix = "homeassistant",
+                .deviceName = "Nibe GW",
+                .deviceManufacturer = "Nibe",
+                .deviceModel = "Heatpump",
+                .deviceConfigurationUrl = "",
                 .hostname = "",
                 .logTopic = "nibegw/log",
             },
@@ -140,6 +144,10 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
     doc["mqtt"]["clientId"] = config.mqtt.clientId;
     doc["mqtt"]["rootTopic"] = config.mqtt.rootTopic;
     doc["mqtt"]["discoveryPrefix"] = config.mqtt.discoveryPrefix;
+    doc["mqtt"]["deviceName"] = config.mqtt.deviceName;
+    doc["mqtt"]["deviceModel"] = config.mqtt.deviceModel;
+    doc["mqtt"]["deviceManufacturer"] = config.mqtt.deviceManufacturer;
+    doc["mqtt"]["deviceConfigurationUrl"] = config.mqtt.deviceConfigurationUrl;
 
     JsonArray coilsToPoll = doc["nibe"]["coilsToPoll"].to<JsonArray>();
     for (auto coil : config.nibe.coilsToPoll) {
@@ -221,6 +229,15 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
     config.mqtt.rootTopic = doc["mqtt"]["rootTopic"] | "nibegw";
     config.mqtt.discoveryPrefix = doc["mqtt"]["discoveryPrefix"] | "homeassistant";
     config.mqtt.hostname = hostname;
+    config.mqtt.deviceName = doc["mqtt"]["deviceName"] | "Nibe GW";
+    config.mqtt.deviceModel = doc["mqtt"]["deviceModel"] | "Heatpump";
+    config.mqtt.deviceManufacturer = doc["mqtt"]["deviceManufacturer"] | "Nibe";
+    config.mqtt.deviceConfigurationUrl = doc["mqtt"]["deviceConfigurationUrl"] | "";
+    if (config.mqtt.deviceConfigurationUrl.empty()) {
+        char defaultConfigUrl[128];
+        snprintf(defaultConfigUrl, sizeof(defaultConfigUrl), "http://%s.fritz.box", hostname.c_str());
+        config.mqtt.deviceConfigurationUrl = defaultConfigUrl;
+    }
 
     for (auto coil : doc["nibe"]["coilsToPoll"].as<JsonArray>()) {
         config.nibe.coilsToPoll.push_back(coil.as<uint16_t>());

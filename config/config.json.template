@@ -1,10 +1,16 @@
 {
     "mqtt": {
-        "brokerUri": "mqtt://mosquitto.fritz.box",
+        "brokerUri": "mqtt://mosquitto.fritz.box", // required
         "user": "mqtt",
         "password": "****",
+        // optional config with defaults
+        "clientId": "<hostname>-<mac>",
         "rootTopic": "nibegw",
-        "discoveryPrefix": "homeassistant"
+        "discoveryPrefix": "homeassistant",
+        "deviceName": "Nibe GW",
+        "deviceManufacturer": "Nibe",
+        "deviceModel": "Heatpump",
+        "deviceConfigurationUrl": "http://nibegw.fritz.box"
     },
     "nibe": {
         // list of coil ids to poll every 30s

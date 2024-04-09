@@ -10,7 +10,7 @@ static const char* TAG = "mqtt";
 // TODO: hostname and mac address
 static const char* DEVICE_DISCOVERY_INFO = R"(
 "availability": [{"topic":"%s"}],
-"device":{"name":"Nibe GW","identifiers":["%s"],"manufacturer":"KMP Electronics Ltd.","model":"ProDino ESP32","sw_version":"%s","configuration_url":"http://%s.fritz.box"}
+"device":{"name":"%s","identifiers":["%s"],"manufacturer":"%s","model":"%s","sw_version":"%s","configuration_url":"%s"}
 )";
 
 MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(METRIC_NAME_MQTT_STATUS, 1)) {
@@ -47,11 +47,10 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
     availabilityTopic += "/availability";
 
     const esp_app_desc_t* app_desc = esp_app_get_description();
-    size_t len = strlen(DEVICE_DISCOVERY_INFO) + availabilityTopic.length() + config.clientId.length() +
-                 strlen(app_desc->version) + config.hostname.length() + 1;
-    char str[len];
-    snprintf(str, len, DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.clientId.c_str(), app_desc->version,
-             config.hostname.c_str());
+    char str[512];
+    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.deviceName.c_str(),
+             config.clientId.c_str(), config.deviceManufacturer.c_str(), config.deviceModel.c_str(), app_desc->version,
+             config.deviceConfigurationUrl.c_str());
     deviceDiscoveryInfo = str;
 
     ESP_LOGI(TAG, "MQTT Broker URL: %s", config.brokerUri.c_str());

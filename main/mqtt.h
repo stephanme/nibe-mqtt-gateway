@@ -25,8 +25,13 @@ struct MqttConfig {
 
     std::string rootTopic;
     std::string discoveryPrefix;
-    std::string hostname;
+    // HA discovery info for device
+    std::string deviceName;
+    std::string deviceManufacturer;
+    std::string deviceModel;
+    std::string deviceConfigurationUrl;
 
+    std::string hostname;
     // do not log for logTopic, would lead to recursion
     std::string logTopic;
 };

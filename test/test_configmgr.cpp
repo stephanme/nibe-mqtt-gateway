@@ -14,6 +14,10 @@ TEST_CASE("default config", "[config]") {
     TEST_ASSERT_EQUAL_STRING("", config.mqtt.clientId.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw", config.mqtt.rootTopic.c_str());
     TEST_ASSERT_EQUAL_STRING("homeassistant", config.mqtt.discoveryPrefix.c_str());
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", config.mqtt.deviceName.c_str());
+    TEST_ASSERT_EQUAL_STRING("Nibe", config.mqtt.deviceManufacturer.c_str());
+    TEST_ASSERT_EQUAL_STRING("Heatpump", config.mqtt.deviceModel.c_str());
+    TEST_ASSERT_EQUAL_STRING("", config.mqtt.deviceConfigurationUrl.c_str());
     TEST_ASSERT_EQUAL_STRING("", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/log", config.mqtt.logTopic.c_str());
 
@@ -38,7 +42,10 @@ static const char* configJson = R"({
         "user": "user",
         "password": "password",
         "rootTopic": "nibegw",
-        "discoveryPrefix": "homeassistant"
+        "discoveryPrefix": "homeassistant",
+        "deviceName": "Nibe GW",
+        "deviceManufacturer": "Nibe",
+        "deviceModel": "VVM 310, S 2125-8"
     },
     "nibe": {
         "coilsToPoll": [1,2],
@@ -75,6 +82,11 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL_STRING("nibegw-00:00:00:00:00:00", config.mqtt.clientId.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw", config.mqtt.rootTopic.c_str());
     TEST_ASSERT_EQUAL_STRING("homeassistant", config.mqtt.discoveryPrefix.c_str());
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", config.mqtt.deviceName.c_str());
+    TEST_ASSERT_EQUAL_STRING("Nibe", config.mqtt.deviceManufacturer.c_str());
+    TEST_ASSERT_EQUAL_STRING("VVM 310, S 2125-8", config.mqtt.deviceModel.c_str());
+    TEST_ASSERT_EQUAL_STRING("http://nibegw.fritz.box", config.mqtt.deviceConfigurationUrl.c_str());
+
 
     TEST_ASSERT_EQUAL_STRING("nibegw", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/logs", config.mqtt.logTopic.c_str());
