@@ -5,13 +5,13 @@
 static const char* TAG = "relay";
 
 static const char* DISCOVERY_PAYLOAD = R"({
-"object_id":"nibegw-%s",
-"unique_id":"nibegw-%s",
+"obj_id":"nibegw-%s",
+"uniq_id":"nibegw-%s",
 "name":"%s",
-"command_topic":"%s",
-"state_topic":"%s",
-"payload_on":"ON",
-"payload_off":"OFF",
+"cmd_t":"%s",
+"stat_t":"%s",
+"pl_on":"ON",
+"pl_off":"OFF",
 %s
 })";
 
@@ -35,10 +35,11 @@ int MqttRelay::begin(MqttClient* mqttClient) {
 
     // publish MQTT discovery, TODO: move to onConnected() callback?
     std::string discoveryTopic = mqttClient->getConfig().discoveryPrefix + "/switch/nibegw/" + mqttTopic + "/config";
-    char discoveryPayload[strlen(DISCOVERY_PAYLOAD) + 2 * mqttTopic.length() + name.length() + commandTopic.length() +
-                          stateTopic.length() + mqttClient->getDeviceDiscoveryInfo().length() + 1];
-    sprintf(discoveryPayload, DISCOVERY_PAYLOAD, mqttTopic.c_str(), mqttTopic.c_str(), name.c_str(), commandTopic.c_str(),
-            stateTopic.c_str(), mqttClient->getDeviceDiscoveryInfo().c_str());
+    int len = strlen(DISCOVERY_PAYLOAD) + 2 * mqttTopic.length() + name.length() + commandTopic.length() + stateTopic.length() +
+              mqttClient->getDeviceDiscoveryInfoRef().length() + 1;
+    char discoveryPayload[len];
+    snprintf(discoveryPayload, len, DISCOVERY_PAYLOAD, mqttTopic.c_str(), mqttTopic.c_str(), name.c_str(), commandTopic.c_str(),
+             stateTopic.c_str(), mqttClient->getDeviceDiscoveryInfoRef().c_str());
     mqttClient->publish(discoveryTopic, discoveryPayload, QOS0, true);
     return 0;
 }

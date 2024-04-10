@@ -67,26 +67,27 @@
         "homeassistantDiscoveryOverrides": {
             /*
             Default: see nibegw_config.cpp, <...> is taken from ModbusManager csv file
+            Uses appreviations: https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery
             Read coils:
             {
-                "object_id":"nibegw-coil-<id>",
-                "unique_id":"nibegw-coil-<id>",
+                "obj_id":"nibegw-coil-<id>",
+                "uniq_id":"nibegw-coil-<id>",
                 "name":"<title>",
-                "state_topic":"nibegw/coils/<id>",
-                "unit_of_measurement":"<unit>",
-                "device_class":"temperature|duration|energy...", // depends on <unit>
-                "state_class":"measurement|total",  // depends on <unit>
-                "availability": [{"topic":"nibegw/availability"}],
-                "device":{"name":"Nibe GW", ... }
+                "stat_t":"nibegw/coils/<id>",
+                "unit_of_meas":"<unit>",
+                "dev_cla":"temperature|duration|energy...", // depends on <unit>
+                "stat_cla":"measurement|total",  // depends on <unit>
+                "avty_t":"nibegw/availability",
+                "dev":{"name":"Nibe GW", ... }
             }
             */
             "43005": { // degree minutes (16bit), has no unit in csv
-                "state_class":"measurement",
-                "unit_of_measurement": "GM"
+                "stat_cla":"measurement",
+                "unit_of_meas": "GM"
             },
             "44703": { // defrosting, 0=No, 1=Active, 2 = Passive
-                "device_class": "enum",
-                "value_template":"{% set mapper = ['Off', 'Active', 'Passive'] %}{{ mapper[value | int] }}"
+               "dev_cla": "enum",
+               "val_tpl": "{% set mapping = {'0':'Off','1':'Active','2':'Passive'} %}{{ mapping[value] if value in mapping.keys() else 'off' }}"
             }
         }
     },

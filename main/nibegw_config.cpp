@@ -209,10 +209,10 @@ std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, co
 }
 
 static const char* DISCOVERY_PAYLOAD = R"({
-"object_id":"nibegw-coil-%u",
-"unique_id":"nibegw-coil-%u",
+"obj_id":"nibegw-coil-%u",
+"uniq_id":"nibegw-coil-%u",
 "name":"%s",
-"state_topic":"%s",
+"stat_t":"%s",
 %s
 %s
 })";
@@ -229,32 +229,32 @@ std::string Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeRo
             break;
         case CoilUnit::GradCelcius:
             snprintf(unit, sizeof(unit),
-                     R"("unit_of_measurement":"%s","device_class":"temperature","state_class":"measurement",)", unitAsString());
+                     R"("unit_of_meas":"%s","dev_cla":"temperature","stat_cla":"measurement",)", unitAsString());
             break;
         case CoilUnit::Hours:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"total",)",
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"duration","stat_cla":"total",)",
                      unitAsString());
             break;
         case CoilUnit::Minutes:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"duration","state_class":"measurement",)",
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"duration","stat_cla":"measurement",)",
                      unitAsString());
             break;
         case CoilUnit::Watt:
         case CoilUnit::KiloWatt:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"power","state_class":"measurement",)",
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"power","stat_cla":"measurement",)",
                      unitAsString());
             break;
         case CoilUnit::WattHour:
         case CoilUnit::KiloWattHour:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"energy","state_class":"total",)",
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"energy","stat_cla":"total",)",
                      unitAsString());
             break;
         case CoilUnit::Hertz:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","device_class":"frequency","state_class":"measurement",)",
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"frequency","stat_cla":"measurement",)",
                      unitAsString());
             break;
         default:
-            snprintf(unit, sizeof(unit), R"("unit_of_measurement":"%s","state_class":"measurement",)", unitAsString());
+            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","stat_cla":"measurement",)", unitAsString());
             break;
     }
 

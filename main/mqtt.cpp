@@ -7,10 +7,14 @@
 
 static const char* TAG = "mqtt";
 
-// TODO: hostname and mac address
-static const char* DEVICE_DISCOVERY_INFO = R"(
-"availability": [{"topic":"%s"}],
-"device":{"name":"%s","identifiers":["%s"],"manufacturer":"%s","model":"%s","sw_version":"%s","configuration_url":"%s"}
+// https://www.home-assistant.io/integrations/mqtt/#discovery-payload
+static const char* DEVICE_DISCOVERY_INFO_FULL = R"(
+"avty_t":"%s",
+"dev":{"name":"%s","ids":["%s"],"mf":"%s","mdl":"%s","sw":"%s","cu":"%s"}
+)";
+static const char* DEVICE_DISCOVERY_INFO_REF = R"(
+"avty_t":"%s",
+"dev":{"ids":["%s"]}
 )";
 
 MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(METRIC_NAME_MQTT_STATUS, 1)) {
@@ -48,10 +52,12 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
 
     const esp_app_desc_t* app_desc = esp_app_get_description();
     char str[512];
-    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO, availabilityTopic.c_str(), config.deviceName.c_str(),
+    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO_FULL, availabilityTopic.c_str(), config.deviceName.c_str(),
              config.clientId.c_str(), config.deviceManufacturer.c_str(), config.deviceModel.c_str(), app_desc->version,
              config.deviceConfigurationUrl.c_str());
     deviceDiscoveryInfo = str;
+    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO_REF, availabilityTopic.c_str(), config.clientId.c_str());
+    deviceDiscoveryInfoRef = str;
 
     ESP_LOGI(TAG, "MQTT Broker URL: %s", config.brokerUri.c_str());
     esp_mqtt_client_config_t mqtt_cfg = {};

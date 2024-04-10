@@ -60,6 +60,7 @@ class MqttClient {
     const MqttConfig& getConfig() { return *config; }
     const std::string& getAvailabilityTopic() { return availabilityTopic; }
     const std::string& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
+    const std::string& getDeviceDiscoveryInfoRef() { return deviceDiscoveryInfoRef; }
 
     esp_err_t begin(const MqttConfig& config);
     MqttStatus status() const { return (MqttStatus)metricMqttStatus.getValue(); }
@@ -77,6 +78,7 @@ class MqttClient {
     const MqttConfig* config;
     std::string availabilityTopic;
     std::string deviceDiscoveryInfo;
+    std::string deviceDiscoveryInfoRef;
     esp_mqtt_client_handle_t client;
     MqttClientLifecycleCallback* lifecycleCallbacks[MAX_SUBSCRIPTIONS];
     int lifecycleCallbackCount = 0;

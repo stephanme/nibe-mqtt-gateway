@@ -186,7 +186,7 @@ void NibeMqttGw::announceCoil(const Coil& coil) {
              mqttClient->getConfig().discoveryPrefix.c_str(), component, coil.id);
 
     mqttClient->publish(discoveryTopic,
-                        coil.homeassistantDiscoveryMessage(*config, nibeRootTopic, mqttClient->getDeviceDiscoveryInfo()), QOS0,
+                        coil.homeassistantDiscoveryMessage(*config, nibeRootTopic, mqttClient->getDeviceDiscoveryInfoRef()), QOS0,
                         true);
     announcedCoils.insert(coil.id);
 }

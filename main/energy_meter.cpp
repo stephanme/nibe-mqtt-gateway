@@ -63,13 +63,13 @@ esp_err_t EnergyMeter::begin() {
 }
 
 static const char* DISCOVERY_PAYLOAD = R"({
-"object_id":"nibegw-energy-meter",
-"unique_id":"nibegw-energy-meter",
+"obj_id":"nibegw-energy-meter",
+"uniq_id":"nibegw-energy-meter",
 "name":"Nibe Energy Meter",
-"state_topic":"%s",
-"unit_of_measurement":"kWh",
-"device_class":"energy",
-"state_class":"total_increasing",
+"stat_t":"%s",
+"unit_of_meas":"kWh",
+"dev_cla":"energy",
+"stat_cla":"total_increasing",
 %s
 })";
 
@@ -78,7 +78,7 @@ esp_err_t EnergyMeter::beginMqtt(MqttClient& mqttClient) {
     this->mqttClient = &mqttClient;
 
     mqttTopic = mqttClient.getConfig().rootTopic + "/energy-meter";
-    // announce energy meter
+    // announce energy meter, use full device info
     char discoveryPayload[strlen(DISCOVERY_PAYLOAD) + mqttTopic.length() + mqttClient.getDeviceDiscoveryInfo().length() + 1];
     snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, mqttTopic.c_str(),
              mqttClient.getDeviceDiscoveryInfo().c_str());
