@@ -3,6 +3,8 @@
 
 #include <esp_log.h>
 
+#include <functional>
+
 #include "config.h"
 #include "mqtt.h"
 #include "mqtt_logging.h"
@@ -13,6 +15,10 @@ struct NibeMqttGwConfig {
     NibeMqttConfig nibe;
     LogConfig logging;
 };
+
+// filter function for coil ids
+// typedef bool (* coilFilterFunction_t)(u_int16_t coilId);
+typedef std::function<bool(u_int16_t)> coilFilterFunction_t;
 
 // Configuration is stored in SPIFFS as JSON file.
 class NibeMqttGwConfigManager {
@@ -36,15 +42,20 @@ class NibeMqttGwConfigManager {
     NibeMqttGwConfig config;
 
     esp_err_t parseJson(const char* configJson, NibeMqttGwConfig& config);
-    static esp_err_t parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils);
+    static esp_err_t parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils = nullptr,
+                                        coilFilterFunction_t filter = coilFilterAll);
     static CoilDataType nibeModbusSizeToDataType(const std::string& size);
     static CoilMode nibeModbusMode(const std::string& size);
 
     // for testing only
    public:
-    static esp_err_t parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils);
+    static esp_err_t parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils = nullptr,
+                                        coilFilterFunction_t filter = coilFilterAll);
     static esp_err_t parseNibeModbusCSVLine(const std::string& line, Coil& coil);
     static esp_err_t getNextCsvToken(std::istream& is, std::string& token);
+
+    static bool coilFilterAll(u_int16_t id) { return true; }
+    bool coilFilterConfigured(u_int16_t id) const;
 };
 
 #if CONFIG_IDF_TARGET_LINUX

@@ -15,7 +15,7 @@
     "nibe": {
         // list of coil ids to poll every 30s
         // 1 coils takes ~1s
-        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44069, 44071, 44073, 40737],
+        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44071, 44073, 40737],
 
         // prometheus metrics for coils: metric = value * scale / factor
         "metrics": {

@@ -193,6 +193,13 @@ TEST_CASE("parseNibeModbusCSV", "[config]") {
     TEST_ASSERT_EQUAL(1, coils.size());
     TEST_ASSERT(coils[40004] ==
                 Coil(40004, "BT1 Outdoor Temperature", CoilUnit::GradCelcius, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
+
+    coils.clear();
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(nibeModbusConfig, &coils, [](uint16_t id) { return false; }));
+    TEST_ASSERT_EQUAL(0, coils.size());
+
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(nibeModbusConfig, &coils, [](uint16_t id) { return id == 40004; }));
+    TEST_ASSERT_EQUAL(1, coils.size());
 }
 
 TEST_CASE("parseNibeModbusCSV, validate only", "[config]") {
@@ -283,5 +290,33 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv", "[config]") {
     TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(csv.c_str(), &coils));
     TEST_ASSERT_GREATER_THAN(800, coils.size());
 
-    printf("File contains coils: %lu\n", coils.size());
+    printf("nibe-modbus-vvm310.csv contains %lu coils\n", coils.size());
+}
+
+TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv, filter configured coils", "[config]") {
+    std::ifstream is("config/config.json.template");
+    std::stringstream buffer;
+    buffer << is.rdbuf();
+    std::string json = buffer.str();
+    TEST_ASSERT(json.size() > 0);  // check file was found and not empty
+    is.close();
+    is.clear();
+
+    NibeMqttGwConfigManager configManager;
+    configManager.begin();
+    TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));
+
+    is.open("config/nibe-modbus-vvm310.csv");
+    buffer.str("");
+    buffer << is.rdbuf();
+    std::string csv = buffer.str();
+    TEST_ASSERT(csv.size() > 0);  // check file was found and not empty
+
+    std::unordered_map<uint16_t, Coil> coils;
+
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(csv.c_str(), &coils, std::bind(&NibeMqttGwConfigManager::coilFilterConfigured, configManager, std::placeholders::_1)));
+    TEST_ASSERT_GREATER_THAN(20, coils.size());
+    TEST_ASSERT_LESS_THAN(50, coils.size());
+
+    printf("config.json.template references %lu coils\n", coils.size());
 }
