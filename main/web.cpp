@@ -216,8 +216,6 @@ void NibeMqttGwWebServer::handlePostLogLevel() {
 }
 
 void NibeMqttGwWebServer::handlePostReboot() {
-    // enforces a normal boot -> allows to debug boot issues via serial logs
-    resetBootCounter();
     send200AndReboot(ROOT_REDIRECT_HTML "Rebooting...");
 }
 
@@ -299,7 +297,6 @@ void NibeMqttGwWebServer::handlePostUpdate() {
     if (Update.hasError()) {
         httpServer.send(200, "text/html", String("Update error: ") + _updaterError);
     } else {
-        resetBootCounter();  // OTA update should fix a crash loop
         send200AndReboot(OTA_SUCCESS);
     }
 }
@@ -358,5 +355,7 @@ void NibeMqttGwWebServer::send200AndReboot(const char *msg) {
     delay(1000);
     httpServer.client().stop();
     delay(1000);
+    // no safe boot after intentional reboot due to OTA or config change
+    resetBootCounter();
     ESP.restart();
 }
