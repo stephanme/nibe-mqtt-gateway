@@ -6,6 +6,7 @@ idf_component_register(
         "test_nibegw_config.cpp" "../main/nibegw_config.cpp"
         "test_configmgr.cpp" "../main/configmgr.cpp"
         "test_metrics.cpp" "../main/metrics.cpp"
+        "test_nonstd_stream.cpp" "../main/nonstd_stream.cpp"
     INCLUDE_DIRS "./fake_header" "../main"
     REQUIRES unity
     WHOLE_ARCHIVE

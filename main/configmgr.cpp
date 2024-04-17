@@ -3,28 +3,11 @@
 #include <ArduinoJson.h>
 
 #include <cstring>
-#include <istream>
-#include <streambuf>
 
 #if CONFIG_IDF_TARGET_LINUX
 #else
 #include <ETH.h>
 #endif
-
-// streambuf that operates on passed in data (no memory allocation)
-struct externbuf : public std::streambuf {
-    externbuf(const char* data, unsigned int len) : begin(data), crt(data), end(data + len) {}
-
-    int_type underflow() { return crt == end ? traits_type::eof() : traits_type::to_int_type(*crt); }
-    int_type uflow() { return crt == end ? traits_type::eof() : traits_type::to_int_type(*crt++); }
-    int_type pbackfail(int_type ch) {
-        bool cond = crt == begin || (ch != traits_type::eof() && ch != crt[-1]);
-        return cond ? traits_type::eof() : traits_type::to_int_type(*--crt);
-    }
-    std::streamsize showmanyc() { return end - crt; }
-
-    const char *begin, *crt, *end;
-};
 
 static const char* TAG = "config";
 
@@ -103,8 +86,7 @@ esp_err_t NibeMqttGwConfigManager::begin() {
     File file = LittleFS.open(NIBE_MODBUS_FILE);
     if (file) {
         ESP_LOGI(TAG, "Reading nibe modbus config file %s", NIBE_MODBUS_FILE);
-        ArduinoStream as(file);
-        std::istream is(&as);
+        nonstd::arduinostream is(file);
         // filter for coils that are specified in config to poll, as metrics or for HA discovery
         if (parseNibeModbusCSV(is, &config.nibe.coils,
                                std::bind(&NibeMqttGwConfigManager::coilFilterConfigured, this, std::placeholders::_1)) !=
@@ -296,7 +278,8 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
 #if CONFIG_IDF_TARGET_LINUX
     // uploadFileName = csv - only for testing
     std::unordered_map<uint16_t, Coil> tmpCoils;
-    if (parseNibeModbusCSV(uploadFileName, &tmpCoils) != ESP_OK) {
+    auto is = nonstd::icharbufstream(uploadFileName);
+    if (parseNibeModbusCSV(is, &tmpCoils) != ESP_OK) {
         return ESP_FAIL;
     }
     ESP_LOGW(TAG, "Skip writing config on Linux target");
@@ -309,8 +292,7 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
         ESP_LOGE(TAG, "Failed to open nibe modbus config file %s", uploadFileName);
         return ESP_FAIL;
     }
-    ArduinoStream as(file);
-    std::istream is(&as);
+    nonstd::arduinostream is(file);
     if (parseNibeModbusCSV(is) != ESP_OK) {
         file.close();
         return ESP_FAIL;
@@ -327,13 +309,6 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
     return ESP_OK;
 }
 
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unordered_map<uint16_t, Coil>* coils,
-                                                      coilFilterFunction_t filter) {
-    externbuf buf(csv, strlen(csv));
-    std::istream is(&buf);
-    return parseNibeModbusCSV(is, coils, filter);
-}
-
 // Nibe ModbusManager CSV format:
 // ModbusManager 1.0.9
 // 20200624
@@ -343,7 +318,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(const char* csv, std::unor
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
 // if coils is null, the input is only checked for format
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::unordered_map<uint16_t, Coil>* coils,
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::unordered_map<uint16_t, Coil>* coils,
                                                       coilFilterFunction_t filter) {
     std::string line;
     line.reserve(256);
@@ -354,21 +329,21 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
         ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Bad header", line_num);
         return ESP_FAIL;
     }
-    std::getline(is, line);
+    nonstd::getline(is, line);
     line_num++;
     if (!line.starts_with("ModbusManager")) {
         ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Bad header", line_num);
         return ESP_FAIL;
     }
     for (int i = 0; i < 3; i++) {
-        std::getline(is, line);
+        nonstd::getline(is, line);
         line_num++;
         if (!is) {
             ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Bad header", line_num);
             return ESP_FAIL;
         }
     }
-    std::getline(is, line);
+    nonstd::getline(is, line);
     line_num++;
     if (!is || line != "Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode") {
         ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Bad header", line_num);
@@ -376,7 +351,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
     }
     // read coil configuration
     while (is) {
-        std::getline(is, line);
+        nonstd::getline(is, line);
         line_num++;
         // if (line_num % 50 == 0) {
         //     ESP_LOGI(TAG, "Nibe Modbus CSV, line %d, minHeap %lu", line_num, ESP.getMinFreeHeap());
@@ -403,8 +378,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(std::istream& is, std::uno
 //
 // returns ESP_OK if correctly parsed and coil is valid or the number of the bad token
 esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, Coil& coil) {
-    externbuf buf(line.c_str(), line.size());
-    std::istream is(&buf);
+    auto is = nonstd::istringstream(line);
     std::string token;
     esp_err_t token_num = 1;  // returned as err msg
     try {
@@ -469,7 +443,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& lin
 
 // Reads next CSV token and stores it in 'token', reads ; separator
 // handles quoting
-esp_err_t NibeMqttGwConfigManager::getNextCsvToken(std::istream& is, std::string& token) {
+esp_err_t NibeMqttGwConfigManager::getNextCsvToken(nonstd::istream& is, std::string& token) {
     token.clear();
 
     bool quoted = false;
