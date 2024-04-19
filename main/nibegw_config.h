@@ -1,11 +1,15 @@
 #ifndef _nibegw_config_h_
 #define _nibegw_config_h_
 
+#include "config.h"
+
+// ensure that config.h is included before ArduinoJson
+#include <ArduinoJson.h>
+
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "config.h"
 #include "metrics.h"
 #include "nibegw.h"
 
@@ -94,8 +98,8 @@ class Coil {
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
 
-    std::string homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
-                                              const std::string& deviceDiscoveryInfo) const;
+    JsonDocument homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+                                               const std::string& deviceDiscoveryInfo) const;
 
     NibeCoilMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
     std::string promMetricName() const;
@@ -104,8 +108,8 @@ class Coil {
     bool operator==(const Coil& other) const = default;
 
    private:
-    std::string defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                     const std::string& deviceDiscoveryInfo) const;
+    JsonDocument defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+                                                      const std::string& deviceDiscoveryInfo) const;
 };
 
 struct NibeCoilMetricConfig {

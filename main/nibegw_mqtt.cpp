@@ -179,15 +179,17 @@ void NibeMqttGw::publishMetric(const Coil& coil, const uint8_t* const data) {
 void NibeMqttGw::announceCoil(const Coil& coil) {
     ESP_LOGI(TAG, "Announcing coil %u", coil.id);
 
+    auto discoveryDoc = coil.homeassistantDiscoveryMessage(*config, nibeRootTopic, mqttClient->getDeviceDiscoveryInfoRef());
     // !!! if crash (strlen in ROM) -> stack too small (nibegw.h: NIBE_GW_TASK_STACK_SIZE) or incorrect format string!!!
     char discoveryTopic[64];
-    const char* component = "sensor";
+    const char* component = discoveryDoc["_component_"] | "sensor";
     snprintf(discoveryTopic, sizeof(discoveryTopic), "%s/%s/nibegw/coil-%u/config",
              mqttClient->getConfig().discoveryPrefix.c_str(), component, coil.id);
 
-    mqttClient->publish(discoveryTopic,
-                        coil.homeassistantDiscoveryMessage(*config, nibeRootTopic, mqttClient->getDeviceDiscoveryInfoRef()), QOS0,
-                        true);
+    discoveryDoc.remove("_component_");
+    std::string discoveryMsg;
+    serializeJson(discoveryDoc, discoveryMsg);
+    mqttClient->publish(discoveryTopic, discoveryMsg, QOS0, true);
     announcedCoils.insert(coil.id);
 }
 

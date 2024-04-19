@@ -1,6 +1,5 @@
 #include "nibegw_config.h"
 
-#include <ArduinoJson.h>
 #include <esp_log.h>
 
 #include <cstring>
@@ -172,98 +171,107 @@ const char* Coil::unitAsString() const {
     }
 }
 
-std::string Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
-                                                const std::string& deviceDiscoveryInfo) const {
-    auto defDiscoveryMsg = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
+JsonDocument Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+                                                 const std::string& deviceDiscoveryInfo) const {
+    auto discoveryDoc = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
     auto iter = config.homeassistantDiscoveryOverrides.find(id);
     if (iter == config.homeassistantDiscoveryOverrides.end()) {
-        return defDiscoveryMsg;
+        return discoveryDoc;
     } else {
         auto override = iter->second;
         // parse override json and defDiscoveryMsg and merge them
-        JsonDocument discoveryMsgDoc;
-        DeserializationError errDefMsg = deserializeJson(discoveryMsgDoc, defDiscoveryMsg);
         JsonDocument overrideDoc;
         DeserializationError errOverride = deserializeJson(overrideDoc, override);
-        if (errDefMsg) {
-            ESP_LOGE(TAG, "Failed to parse default discovery message for coil %d: %s", id, errDefMsg.c_str());
-            return defDiscoveryMsg;
-        }
         if (errOverride) {
             ESP_LOGE(TAG, "Failed to parse override discovery message for coil %d: %s", id, errOverride.c_str());
-            return defDiscoveryMsg;
+            return discoveryDoc;
         }
         // merge overrideDoc into discoveryMsgDoc
         for (auto kv : overrideDoc.as<JsonObject>()) {
             if (kv.value().isNull()) {
-                discoveryMsgDoc.remove(kv.key());
+                discoveryDoc.remove(kv.key());
             } else {
-                discoveryMsgDoc[kv.key()] = kv.value();
+                discoveryDoc[kv.key()] = kv.value();
             }
         }
-        // return serialized merged doc
-        std::string mergedDiscoveryMsg;
-        serializeJson(discoveryMsgDoc, mergedDiscoveryMsg);
-        return mergedDiscoveryMsg;
+        // return merged doc
+        return discoveryDoc;
     }
 }
 
-static const char* DISCOVERY_PAYLOAD = R"({
-"obj_id":"nibegw-coil-%u",
-"uniq_id":"nibegw-coil-%u",
-"name":"%s",
-"stat_t":"%s",
-%s
-%s
-})";
+JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+                                                        const std::string& deviceDiscoveryInfo) const {
+    JsonDocument discoveryDoc;
 
-std::string Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                       const std::string& deviceDiscoveryInfo) const {
-    char stateTopic[64];
-    snprintf(stateTopic, sizeof(stateTopic), "%s%u", nibeRootTopic.c_str(), id);
-    char unit[128];  // TODO: rename
-    switch (this->unit) {
-        case CoilUnit::Unknown:
-        case CoilUnit::NoUnit:
-            unit[0] = '\0';
-            break;
-        case CoilUnit::GradCelcius:
-            snprintf(unit, sizeof(unit),
-                     R"("unit_of_meas":"%s","dev_cla":"temperature","stat_cla":"measurement",)", unitAsString());
-            break;
-        case CoilUnit::Hours:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"duration","stat_cla":"total",)",
-                     unitAsString());
-            break;
-        case CoilUnit::Minutes:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"duration","stat_cla":"measurement",)",
-                     unitAsString());
-            break;
-        case CoilUnit::Watt:
-        case CoilUnit::KiloWatt:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"power","stat_cla":"measurement",)",
-                     unitAsString());
-            break;
-        case CoilUnit::WattHour:
-        case CoilUnit::KiloWattHour:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"energy","stat_cla":"total",)",
-                     unitAsString());
-            break;
-        case CoilUnit::Hertz:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","dev_cla":"frequency","stat_cla":"measurement",)",
-                     unitAsString());
-            break;
-        default:
-            snprintf(unit, sizeof(unit), R"("unit_of_meas":"%s","stat_cla":"measurement",)", unitAsString());
-            break;
+    // TODO: ugly, maybe treat discovery info as json everywhere
+    char str[deviceDiscoveryInfo.size() + 3];
+    str[0] = '{';
+    strcpy(str + 1, deviceDiscoveryInfo.c_str());
+    str[deviceDiscoveryInfo.size() + 1] = '}';
+    str[deviceDiscoveryInfo.size() + 2] = '\0';
+    DeserializationError err = deserializeJson(discoveryDoc, str);
+    if (err) {
+        // should not happen
+        ESP_LOGE(TAG, "Failed to parse device discovery info for coil %d: %s", id, err.c_str());
     }
 
     // TODO: writable coils
-    char discoveryPayload[1024];
-    snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, id, id, title.c_str(), stateTopic, unit,
-             deviceDiscoveryInfo.c_str());
+    discoveryDoc["_component_"] = "sensor";
 
-    return discoveryPayload;
+    char objId[64];
+    snprintf(objId, sizeof(objId), "nibegw-coil-%u", id);
+    discoveryDoc["obj_id"] = objId;
+    discoveryDoc["uniq_id"] = objId;
+
+    discoveryDoc["name"] = title;
+
+    char stateTopic[64];
+    snprintf(stateTopic, sizeof(stateTopic), "%s%u", nibeRootTopic.c_str(), id);
+    discoveryDoc["stat_t"] = stateTopic;
+
+    switch (this->unit) {
+        case CoilUnit::Unknown:
+        case CoilUnit::NoUnit:
+            break;
+        case CoilUnit::GradCelcius:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "temperature";
+            discoveryDoc["stat_cla"] = "measurement";
+            break;
+        case CoilUnit::Hours:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "duration";
+            discoveryDoc["stat_cla"] = "total";
+            break;
+        case CoilUnit::Minutes:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "duration";
+            discoveryDoc["stat_cla"] = "measurement";
+            break;
+        case CoilUnit::Watt:
+        case CoilUnit::KiloWatt:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "power";
+            discoveryDoc["stat_cla"] = "measurement";
+            break;
+        case CoilUnit::WattHour:
+        case CoilUnit::KiloWattHour:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "energy";
+            discoveryDoc["stat_cla"] = "total";
+            break;
+        case CoilUnit::Hertz:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["dev_cla"] = "frequency";
+            discoveryDoc["stat_cla"] = "measurement";
+            break;
+        default:
+            discoveryDoc["unit_of_meas"] = unitAsString();
+            discoveryDoc["stat_cla"] = "measurement";
+            break;
+    }
+
+    return discoveryDoc;
 }
 
 // prom metric config must be configured explicitly (i.e. coil id) but there are defaults for all config values
