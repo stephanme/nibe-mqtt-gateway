@@ -116,6 +116,7 @@ struct NibeCoilMetricConfig {
     std::string name;
     int factor;
     int scale;
+    bool counter;
 
     bool isValid() const { return !name.empty() && factor != 0 && scale != 0; }
 };

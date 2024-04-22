@@ -282,6 +282,7 @@ NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) cons
         metricCfg.name = metricCfgIter->second.name;
         metricCfg.factor = metricCfgIter->second.factor;
         metricCfg.scale = metricCfgIter->second.scale;
+        metricCfg.counter = metricCfgIter->second.counter;
         if (metricCfg.name.empty()) {
             metricCfg.name = promMetricName();
         }
@@ -295,6 +296,7 @@ NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) cons
     } else {
         metricCfg.factor = 0;
         metricCfg.scale = 0;
+        metricCfg.counter = false;
     }
     return metricCfg;
 }

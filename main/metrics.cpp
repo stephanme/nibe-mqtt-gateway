@@ -9,12 +9,13 @@ esp_err_t Metrics::begin() {
     return ESP_OK;
 }
 
-Metric& Metrics::addMetric(const char* name, int factor, int scale) {
+Metric& Metrics::addMetric(const char* name, int factor, int scale, bool counter) {
     // Metric objects are statically pre-allocted
     Metric& m = metrics[numMetrics];
     m.name = name;
     m.factor = factor;
     m.scale = scale;
+    m.counter = counter;
     if (numMetrics < MAX_METRICS) {
         numMetrics++;
     } else {

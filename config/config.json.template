@@ -17,7 +17,7 @@
         // 1 coils takes ~1s
         "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44071, 44073, 40737],
 
-        // prometheus metrics for coils: metric = value * scale / factor
+        // Prometheus metrics for coils: metric = value * scale / factor
         "metrics": {
             /*
             Format:
@@ -25,6 +25,9 @@
                 "name":"<metric name including attributes>",    // default: nibe_<metric title>{coil="<coil id>"}, coil attribute is always added
                 "factor": <factor>,                             // default: factor from nibe-modbus.csv
                 "scale": <scaling>                              // default: 1
+                "counter": true|false                           // default: false
+                                                                // counter=true skips new values if they are less than last know metric value
+                                                                // counter metrics must not decrease (unless they are reset), nibe heat meter was observed to decrease during defrosting
             }
             */
             // coils sent automatically as data message, configured in ModbusManager (LOG.SET file)
@@ -48,15 +51,15 @@
             "44874": { "name":"nibe_sg_ready"},
 
             // polled coils
-            "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100},
-            "44308": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100},
-            "44300": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr+add\"}", "factor": 1, "scale": 100},
-            "44306": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr\"}", "factor": 1, "scale": 100},
-            "44298": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr+add\"}", "factor": 1, "scale": 100},
-            "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}"},
-            "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600},
-            "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600},
-            "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600},
+            "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100, "counter": true},
+            "44308": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100, "counter": true},
+            "44300": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr+add\"}", "factor": 1, "scale": 100, "counter": true},
+            "44306": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr\"}", "factor": 1, "scale": 100, "counter": true},
+            "44298": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr+add\"}", "factor": 1, "scale": 100, "counter": true},
+            "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}", "counter": true},
+            "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600, "counter": true},
+            "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600, "counter": true},
+            "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600, "counter": true},
 
             // disabled
             "44775": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 requested\"}"}

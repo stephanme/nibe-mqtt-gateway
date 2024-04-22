@@ -2,6 +2,37 @@
 
 #include "metrics.h"
 
+
+TEST_CASE("counter metrics", "[metrics]") {
+    Metric m1("metric1", 1, 1, true);
+    m1.setValue(123);
+    TEST_ASSERT_EQUAL(123, m1.getValue());
+    m1.setValue(122);
+    TEST_ASSERT_EQUAL(123, m1.getValue());
+    m1.setValue(124);
+    TEST_ASSERT_EQUAL(124, m1.getValue());
+    m1.incrementValue(1);
+    TEST_ASSERT_EQUAL(125, m1.getValue());
+    m1.incrementValue(-1);
+    TEST_ASSERT_EQUAL(125, m1.getValue());
+    m1.incrementValue(0);
+    TEST_ASSERT_EQUAL(125, m1.getValue());
+
+    Metric m2("metric2", 1, 1, false);
+    m2.setValue(123);
+    TEST_ASSERT_EQUAL(123, m2.getValue());
+    m2.setValue(122);
+    TEST_ASSERT_EQUAL(122, m2.getValue());
+    m2.setValue(124);
+    TEST_ASSERT_EQUAL(124, m2.getValue());
+    m2.incrementValue(1);
+    TEST_ASSERT_EQUAL(125, m2.getValue());
+    m2.incrementValue(-1);
+    TEST_ASSERT_EQUAL(124, m2.getValue());
+    m2.incrementValue(0);
+    TEST_ASSERT_EQUAL(124, m2.getValue());
+}
+
 TEST_CASE("formatNumber", "[metrics]") {
     TEST_ASSERT_EQUAL_STRING("0", Metrics::formatNumber(0, 1, 1).c_str());
     TEST_ASSERT_EQUAL_STRING("10", Metrics::formatNumber(10, 1, 1).c_str());

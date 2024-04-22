@@ -243,6 +243,7 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
                 .name = metric.value()["name"] | "",
                 .factor = metric.value()["factor"].as<int>() | 0,
                 .scale = metric.value()["scale"].as<int>() | 0,
+                .counter = metric.value()["counter"] | false,
             };
         } else {
             // log and skip

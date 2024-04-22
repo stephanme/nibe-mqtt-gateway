@@ -162,7 +162,7 @@ void NibeMqttGw::publishMetric(const Coil& coil, const uint8_t* const data) {
     if (iter2 == coilMetrics.end()) {
         const NibeCoilMetricConfig& metricCfg = coil.toPromMetricConfig(*config);
         if (metricCfg.isValid()) {
-            Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale);
+            Metric& metric = metrics.addMetric(metricCfg.name.c_str(), metricCfg.factor, metricCfg.scale, metricCfg.counter);
             iter2 = coilMetrics.insert({coil.id, &metric}).first;
         } else {
             // do not publish this coil as metric

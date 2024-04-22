@@ -11,7 +11,7 @@
 
 // indicates a metric w/o a value
 // uninitialized metrics are not included in getAllMetricsAsString() to avoid e.g. broken counter metrics
-#define METRIC_UNINITIALIZED INT_MAX
+#define METRIC_UNINITIALIZED INT_MIN
 
 // Prometheus like metric
 // Features/Limitations:
@@ -22,13 +22,35 @@
 class Metric {
    public:
     Metric() {}
-    Metric(const char* name, int factor = 1, int scale = 1) : name(name), factor(factor), scale(scale) {}
+    Metric(const char* name, int factor = 1, int scale = 1, bool counter = false)
+        : name(name), factor(factor), scale(scale), counter(counter) {}
 
     const std::string& getName() const { return name; }
     int getFactor() const { return factor; }
 
-    void setValue(int32_t value) { this->value = value; }
-    int32_t incrementValue(int32_t increment) { return value += increment; }
+    void setValue(int32_t value) {
+        if (!counter) {
+            this->value = value;
+        } else {
+            while (1) {
+                int32_t current = this->value;
+                if (value < current) {
+                    break;
+                }
+                if (this->value.compare_exchange_weak(current, value)) {
+                    break;
+                }
+            }
+        }
+    }
+    
+    int32_t incrementValue(int32_t increment) {
+        if (counter && increment <= 0) {
+            return value;
+        }
+        return value += increment;
+    }
+
     int32_t getValue() const { return value; }
     bool isInitialized() const { return value != METRIC_UNINITIALIZED; }
 
@@ -39,6 +61,7 @@ class Metric {
     // value is formatted as value * scale / factor
     int factor;  // same semantic as in nibe modbus csv
     int scale;
+    bool counter;
     std::atomic<int32_t> value = METRIC_UNINITIALIZED;
 
     friend class Metrics;
@@ -53,7 +76,7 @@ class Metrics {
 
     esp_err_t begin();
 
-    Metric& addMetric(const char* name, int factor = 1, int scale = 1);
+    Metric& addMetric(const char* name, int factor = 1, int scale = 1, bool counter = false);
     Metric* findMetric(const char* name);
 
     std::string getAllMetricsAsString();
