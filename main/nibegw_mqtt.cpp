@@ -21,10 +21,15 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
         ESP_LOGE(TAG, "Could not create readCoilsRingBuffer");
         return ESP_FAIL;
     }
+    writeCoilsRingBuffer = xRingbufferCreateNoSplit(sizeof(NibeMqttGwWriteRequest), WRITE_COILS_RING_BUFFER_SIZE);
+    if (readCoilsRingBuffer == nullptr) {
+        ESP_LOGE(TAG, "Could not create writeCoilsRingBuffer");
+        return ESP_FAIL;
+    }
 
     nibeRootTopic = mqttClient.getConfig().rootTopic + "/coils/";
 
-    // pre-announce known coils for HA auto-discovery, offloads nibegw task 
+    // pre-announce known coils for HA auto-discovery, offloads nibegw task
     // polled coilds
     for (const auto& coilId : config.coilsToPoll) {
         auto iter = config.coils.find(coilId);
@@ -36,7 +41,8 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
 
     // announce all coils with homeassistantDiscoveryOverrides as overrides are expensive (json parsing)
     // writable coils need to be pre-announced and therefore always require overrides (even if empty)
-    for (auto ovrIter = config.homeassistantDiscoveryOverrides.cbegin(); ovrIter != config.homeassistantDiscoveryOverrides.cend(); ovrIter++) {
+    for (auto ovrIter = config.homeassistantDiscoveryOverrides.cbegin(); ovrIter != config.homeassistantDiscoveryOverrides.cend();
+         ovrIter++) {
         auto iter = config.coils.find(ovrIter->first);
         if (iter != config.coils.end()) {
             announceCoil(iter->second);
@@ -59,6 +65,24 @@ void NibeMqttGw::publishState() {
 void NibeMqttGw::requestCoil(uint16_t coilAddress) {
     if (!xRingbufferSend(readCoilsRingBuffer, &coilAddress, sizeof(coilAddress), 0)) {
         ESP_LOGW(TAG, "Could not send coil %d to readCoilsRingBuffer. Buffer full.", coilAddress);
+    }
+}
+
+void NibeMqttGw::writeCoil(uint16_t coilAddress, const char* value) {
+    if (value == nullptr) {
+        ESP_LOGE(TAG, "writeCoil: value is null for coil %d", coilAddress);
+        return;
+    }
+    if (strlen(value) > sizeof(NibeMqttGwWriteRequest::value) - 1) {
+        ESP_LOGE(TAG, "writeCoil: value too long for coil %d: %s", coilAddress, value);
+        return;
+    }
+    NibeMqttGwWriteRequest writeRequest;
+    writeRequest.coilAddress = coilAddress;
+    strncpy(writeRequest.value, value, sizeof(writeRequest.value));
+    writeRequest.value[sizeof(writeRequest.value) - 1] = '\0';  // ensure null termination
+    if (!xRingbufferSend(writeCoilsRingBuffer, &writeRequest, sizeof(writeRequest), 0)) {
+        ESP_LOGE(TAG, "Could not send coil %d to writeCoilsRingBuffer. Buffer full.", coilAddress);
     }
 }
 
@@ -116,6 +140,17 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
             }
             modbusDataMsgMqttPublish += 2;  // 2 coils published per ModbusDataMsg
             ESP_LOGD(TAG, "onMessageReceived ModbusDataMsg: received %d coils", receivedCoils);
+            break;
+        }
+
+        case NibeCmd::ModbusWriteResp: {
+            ESP_LOGV(TAG, "onMessageReceived ModbusWriteResp: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
+            // TODO: would be nice to know which coil was written
+            if (msg->writeResponse.result == 0) {
+                ESP_LOGW(TAG, "Last ModbusWriteReq failed");
+            } else {
+                ESP_LOGD(TAG, "Last ModbusWriteReq succeeded");
+            }
             break;
         }
 
@@ -220,8 +255,34 @@ int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
     return sizeof(NibeReadRequestMessage);
 }
 
-int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* data) {
-    // TODO: send data to nibe
-    // ESP_LOGD(TAG, "onWriteTokenReceived");
-    return 0;
+int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* writeRequest) {
+    size_t item_size;
+    NibeMqttGwWriteRequest* coilAddressPtr = (NibeMqttGwWriteRequest*)xRingbufferReceive(writeCoilsRingBuffer, &item_size, 0);
+    if (coilAddressPtr == nullptr) {
+        // no more coils to write
+        return 0;
+    }
+    uint16_t coilAddress = coilAddressPtr->coilAddress;
+    const Coil* coil = findCoil(coilAddress);
+    if (coil == nullptr) {
+        vRingbufferReturnItem(writeCoilsRingBuffer, (void*)coilAddressPtr);
+        ESP_LOGW(TAG, "Received write request for unknown coil %d", coilAddress);
+        return 0;
+    }
+
+    writeRequest->start = NibeStart::Request;
+    writeRequest->cmd = NibeCmd::ModbusWriteReq;
+    writeRequest->len = 6;
+    writeRequest->coilAddress = coilAddress;
+    if (!coil->encodeCoilData(coilAddressPtr->value, writeRequest->value)) {
+        vRingbufferReturnItem(writeCoilsRingBuffer, (void*)coilAddressPtr);
+        return 0;
+    }
+    writeRequest->chksum = NibeGw::calcCheckSum((uint8_t*)writeRequest, sizeof(NibeWriteRequestMessage) - 1);
+
+    vRingbufferReturnItem(writeCoilsRingBuffer, (void*)coilAddressPtr);
+
+    ESP_LOGD(TAG, "onWriteTokenReceived for coil %d: %s", (int)coilAddress,
+             NibeGw::dataToString((uint8_t*)writeRequest, sizeof(NibeWriteRequestMessage)).c_str());
+    return sizeof(NibeWriteRequestMessage);
 }

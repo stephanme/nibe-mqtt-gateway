@@ -132,7 +132,7 @@ TEST_CASE("NibeReadRequestMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(0xa2, request->chksum);
 }
 
-TEST_CASE("NibeResponseMessage", "[nibegw]") {
+TEST_CASE("NibeReadResponseMessage", "[nibegw]") {
     uint8_t data[] = {0x5C, 0x00, 0x20, 0x6A, 0x06, 0x44, 0x9C, 0x6E, 0x00, 0x00, 0x80, 0x7A};
     NibeResponseMessage* response = (NibeResponseMessage*)data;
     TEST_ASSERT_EQUAL_HEX8(NibeStart::Response, response->start);
@@ -168,6 +168,26 @@ TEST_CASE("NibeDataMessage", "[nibegw]") {
         TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.coils[i].value[0]);
         TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.coils[i].value[1]);
     }
+}
+
+TEST_CASE("NibeWriteRequestMessage", "[nibegw]") {
+    uint8_t data[] = {0xc0, 0x6B, 0x06, 0x04, 0xbc, 0x04, 0, 0, 0, 0x11};
+    NibeWriteRequestMessage* request = (NibeWriteRequestMessage*)data;
+    TEST_ASSERT_EQUAL_HEX8(NibeStart::Request, request->start);
+    TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusWriteReq, request->cmd);
+    TEST_ASSERT_EQUAL_HEX8(6, request->len);
+    TEST_ASSERT_EQUAL_HEX16(48132, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX8(0x11, request->chksum);
+}
+
+TEST_CASE("NibeWriteResponseMessage", "[nibegw]") {
+    uint8_t data[] = {0x5C, 0x00, 0x20, 0x6C, 0x01, 0x01, 0x4C};
+    NibeResponseMessage* response = (NibeResponseMessage*)data;
+    TEST_ASSERT_EQUAL_HEX8(NibeStart::Response, response->start);
+    TEST_ASSERT_EQUAL_HEX16(NibeDeviceAddress::MODBUS40, response->deviceAddress);
+    TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusWriteResp, response->cmd);
+    TEST_ASSERT_EQUAL(1, response->len);
+    TEST_ASSERT_EQUAL_HEX8(1, response->writeResponse.result);
 }
 
 TEST_CASE("dataToString", "[nibegw]") {
@@ -218,6 +238,26 @@ TEST_CASE("read response", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX16(40004, callback.lastMessageReceived->readResponse.coilAddress);
     TEST_ASSERT_EQUAL_HEX8(0x6e, callback.lastMessageReceived->readResponse.value[0]);
 
+    // check ACK
+    interface.assertWriteData((uint8_t[]){0x06}, 1);
+}
+
+TEST_CASE("write token", "[nibegw]") {
+    NibeMockInterface interface;
+    NibeMockCallback callback;
+    NibeGw gw(interface);
+    gw.setNibeGwCallback(callback);
+
+    uint8_t data[] = {0x5C, 0x00, 0x20, 0x6B, 0x00, 0x4B};
+    // data[sizeof(data) - 1] = NibeGw::calcCheckSum(data + 1, sizeof(data) - 2);
+    interface.setReadData(data, sizeof(data));
+
+    gw.stateMachineLoop();
+    TEST_ASSERT_EQUAL(eState::STATE_WAIT_START, gw.getState());
+
+    TEST_ASSERT_EQUAL(0, callback.onReadTokenReceivedCnt);
+    TEST_ASSERT_EQUAL(1, callback.onWriteTokenReceivedCnt);
+    TEST_ASSERT_EQUAL(0, callback.onMessageReceivedCnt);
     // check ACK
     interface.assertWriteData((uint8_t[]){0x06}, 1);
 }

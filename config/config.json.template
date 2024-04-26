@@ -15,7 +15,7 @@
     "nibe": {
         // list of coil ids to poll every 30s
         // 1 coils takes ~1s
-        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44071, 44073, 40737],
+        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44071, 44073, 40737, 48043],
 
         // Prometheus metrics for coils: metric = value * scale / factor
         "metrics": {
@@ -42,12 +42,12 @@
             "40012": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT3 return\"}"},
             "44055": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"EB101-BT3 return\"}"},
             "44058": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"EB101-BT12 condensor out\"}"},
-            "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14\"}"},
+            "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14 GP1\"}"},
+            "44396": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EB101 GP12\"}"},
             "40072": { "name":"nibe_heat_medium_flow_liter_per_min{sensor=\"BF1 EP14\"}"},
             "43005": { "name":"nibe_degree_minutes"},
             "44701": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 actual\"}"},
             "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
-            "44396": { "name":"nibe_charge_pump_speed_percent{sensor=\"EB101\"}"},
             "44874": { "name":"nibe_sg_ready"},
 
             // polled coils
@@ -85,14 +85,44 @@
                 "avty_t":"nibegw/availability",
                 "dev":{"ids":["nibegw-<mac>"]}
             }
+            Read/Write coils:
+            {
+                "_component_":"number", // MQTT integration like sensor, binary_sensor, switch, ...
+                "obj_id":"nibegw-coil-<id>",
+                "uniq_id":"nibegw-coil-<id>",
+                "name":"<title>",
+                "stat_t":"nibegw/coils/<id>",
+                "cmd_t":"nibegw/coils/<id>/set",
+                "unit_of_meas":"<unit>",
+                "dev_cla":"temperature|duration|energy...", // depends on <unit>
+                "min":<min>,
+                "max":<max>,
+                "step":1/<factor>,
+                "avty_t":"nibegw/availability",
+                "dev":{"ids":["nibegw-<mac>"]}
+            }
             */
-            "43005": { // degree minutes (16bit), has no unit in csv
+            "43005": { // degree minutes (16bit), has no unit in csv, R/W
+                "_component_": "sensor",
                 "stat_cla":"measurement",
                 "unit_of_meas": "GM"
             },
             "44703": { // defrosting, 0=No, 1=Active, 2 = Passive
                "dev_cla": "enum",
                "val_tpl": "{% set mapping = {'0':'Off','1':'Active','2':'Passive'} %}{{ mapping[value] if value in mapping.keys() else 'off' }}"
+            },
+            "48043": { // Holiday - Activated, 0=inactive, 10=active
+                "_component_": "switch",
+                "pl_on": "10",
+                "pl_off": "0"
+            },
+            "48130": { // Manual heat medium pump speed, 0=off, 1=on
+                "_component_": "switch",
+                "pl_on": "1",
+                "pl_off": "0",
+                "unit_of_meas": null // bug in csv
+            },
+            "48085": { // Heat medium pump speed if manual, [%]
             }
         }
     },

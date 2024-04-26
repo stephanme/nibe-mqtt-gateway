@@ -94,7 +94,10 @@ class Coil {
 
     int32_t decodeCoilDataRaw(const uint8_t* const data) const;
     std::string decodeCoilData(const uint8_t* const data) const;
+    bool encodeCoilData(const std::string& value, uint8_t* data) const;
     std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor, 1); }
+    int32_t parseSignedNumber(const std::string& value) const;
+    uint32_t parseUnsignedNumber(const std::string& value) const;
     const char* unitAsString() const;
     static CoilUnit stringToUnit(const char* unit);
 

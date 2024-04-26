@@ -9,7 +9,8 @@
 #include "nibegw.h"
 #include "nibegw_config.h"
 
-#define READ_COILS_RING_BUFFER_SIZE 256  // max number of coils to poll
+#define READ_COILS_RING_BUFFER_SIZE 256  // max number of pending coils to poll
+#define WRITE_COILS_RING_BUFFER_SIZE 16  // max number of pending coils to write
 
 class NibeMqttGw : public NibeGwCallback {
    public:
@@ -21,6 +22,8 @@ class NibeMqttGw : public NibeGwCallback {
     void publishState();
     // request and publish a single coil
     void requestCoil(uint16_t coilAddress);
+    // write a single coil
+    void writeCoil(uint16_t coilAddress, const char* str);
 
     // NibeGwCallback
     void onMessageReceived(const NibeResponseMessage* const msg, int len);
@@ -38,6 +41,7 @@ class NibeMqttGw : public NibeGwCallback {
     int modbusDataMsgMqttPublish;
 
     RingbufHandle_t readCoilsRingBuffer;
+    RingbufHandle_t writeCoilsRingBuffer;
 
     Metric& metricPublishStateTime;
     std::atomic<uint32_t> lastPublishStateStartTime;
@@ -46,6 +50,11 @@ class NibeMqttGw : public NibeGwCallback {
     void publishMetric(const Coil& coil, const uint8_t* const data);
     void publishMqtt(const Coil& coil, const uint8_t* const data);
     void announceCoil(const Coil& coil);
+};
+
+struct NibeMqttGwWriteRequest {
+    uint16_t coilAddress;
+    char value[16];  // zero terminated string
 };
 
 #endif

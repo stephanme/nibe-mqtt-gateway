@@ -48,7 +48,8 @@ class NibeMqttGwWebServer {
     void handlePostEnergyMeter();
     void handlePostLogLevel();
     void handlePostReboot();
-    void handlePostCoil();
+    void handlePostCoilRead();
+    void handlePostCoilWrite();
 
     void handleGetMetrics();
     void handleNotFound();

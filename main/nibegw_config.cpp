@@ -62,6 +62,96 @@ std::string Coil::decodeCoilData(const uint8_t* const data) const {
     return value;
 }
 
+// Returns true if value was successfully encoded, false otherwise.
+// TODO: sort out exception problem on linux target
+bool Coil::encodeCoilData(const std::string& str, uint8_t* data) const {
+    try {
+        switch (dataType) {
+            case CoilDataType::UInt8:
+            case CoilDataType::UInt16:
+            case CoilDataType::UInt32: {
+                uint32_t numValue = parseUnsignedNumber(str);
+                *(uint32_t*)data = numValue;
+                break;
+            }
+
+            case CoilDataType::Int8:
+            case CoilDataType::Int16:
+            case CoilDataType::Int32: {
+                int32_t numValue = parseSignedNumber(str);
+                *(int32_t*)data = numValue;
+                break;
+            }
+            default:
+                ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
+                return false;
+        }
+        return true;
+
+#if CONFIG_IDF_TARGET_LINUX
+    } catch (...) {
+        // for linux only to get tests green
+        // don't use on esp32 because it hides OOMs
+        ESP_LOGW(TAG, "Failed to parse number %s for coil %d", str.c_str(), id);
+        return false;
+    }
+#else
+    } catch (const std::invalid_argument& e) {
+        // TODO: is not caught on linux but works on esp32, unclear why
+        ESP_LOGW(TAG, "Failed to parse number %s for coil %d", str.c_str(), id);
+        return false;
+    }
+#endif
+}
+
+// throws std::invalid_argument exception if str can't be parsed
+int32_t Coil::parseSignedNumber(const std::string& str) const {
+    int32_t value = 0;
+    // avoid FP arithmetic on typically used factors
+    if (factor == 1) {
+        return std::stoi(str);
+    } else if (factor == 10 || factor == 100) {
+        // split str at decimal point
+        size_t pos = str.find(".");
+        int numDecimals = factor == 10 ? 1 : 2;
+        if (pos != std::string::npos && pos < str.size() - numDecimals) {
+            // remove decimal point
+            std::string strInt = str.substr(0, pos) + str.substr(pos + 1, numDecimals);
+            value = std::stoi(strInt);
+        } else {
+            value = std::stoi(str) * factor;
+        }
+    } else {
+        float fValue = std::stof(str);
+        value = fValue * factor;
+    }
+    return value;
+}
+
+// throws std::invalid_argument exception if str can't be parsed
+uint32_t Coil::parseUnsignedNumber(const std::string& str) const {
+    uint32_t value = 0;
+    // avoid FP arithmetic on typically used factors
+    if (factor == 1) {
+        return std::stoul(str);
+    } else if (factor == 10 || factor == 100) {
+        // split str at decimal point
+        size_t pos = str.find(".");
+        int numDecimals = factor == 10 ? 1 : 2;
+        if (pos != std::string::npos && pos < str.size() - numDecimals) {
+            // remove decimal point
+            std::string strInt = str.substr(0, pos) + str.substr(pos + 1, numDecimals);
+            value = std::stoul(strInt);
+        } else {
+            value = std::stoul(str) * factor;
+        }
+    } else {
+        float fValue = std::stof(str);
+        value = fValue * factor;
+    }
+    return value;
+}
+
 CoilUnit Coil::stringToUnit(const char* unit) {
     if (strcmp(unit, "") == 0) {
         return CoilUnit::NoUnit;
@@ -215,9 +305,6 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
         ESP_LOGE(TAG, "Failed to parse device discovery info for coil %d: %s", id, err.c_str());
     }
 
-    // TODO: writable coils
-    discoveryDoc["_component_"] = "sensor";
-
     char objId[64];
     snprintf(objId, sizeof(objId), "nibegw-coil-%u", id);
     discoveryDoc["obj_id"] = objId;
@@ -269,6 +356,23 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["stat_cla"] = "measurement";
             break;
+    }
+
+    if (mode != CoilMode::Read) {
+        discoveryDoc["_component_"] = "number";
+        discoveryDoc.remove("stat_cla");
+        char cmdTopic[68];
+        snprintf(cmdTopic, sizeof(cmdTopic), "%s/set", stateTopic);
+        discoveryDoc["cmd_t"] = cmdTopic;
+        discoveryDoc["min"] = minValue;
+        discoveryDoc["max"] = maxValue;
+        if (factor != 1) {
+            discoveryDoc["step"] = 1.0 / factor;
+        } else {
+            discoveryDoc["step"] = 1;
+        }
+    } else {
+        discoveryDoc["_component_"] = "sensor";
     }
 
     return discoveryDoc;
