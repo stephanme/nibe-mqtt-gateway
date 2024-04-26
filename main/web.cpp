@@ -376,6 +376,8 @@ void NibeMqttGwWebServer::send200AndReboot(const char *msg) {
     httpServer.send(200, "text/html", msg);
     delay(1000);
     httpServer.client().stop();
+    // ensure that energy meter is stored in NVS (otherwise there is a small risk of decreasing counter metric)
+    energyMeter.publishState();
     delay(1000);
     // no safe boot after intentional reboot due to OTA or config change
     resetBootCounter();

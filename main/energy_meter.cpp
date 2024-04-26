@@ -59,6 +59,7 @@ esp_err_t EnergyMeter::begin() {
     MCP23S08.GetPinState();  // clears any old pending interrupt, TODO: is this really safe?
     MCP23S08.ConfigureInterrupt(3, true, false, true);
 
+    ESP_LOGI(TAG, "init from NVS: %lu", lastStoredEnergyInWh);
     return err;
 }
 
@@ -122,6 +123,11 @@ void EnergyMeter::task(void* pvParameters) {
 }
 
 esp_err_t EnergyMeter::publishState() {
+    // skip if not initialized (e.g. when booting in safe mode)
+    if (mqttClient == nullptr) {
+        return ESP_FAIL;
+    }
+
     auto energyInWh = metricEnergyInWh.getValue();
     ESP_LOGD(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
 

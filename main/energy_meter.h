@@ -41,7 +41,7 @@ class EnergyMeter {
     Metric& metricEnergyInWh;
     int skipNextPulses = 0;
 
-    MqttClient* mqttClient;
+    MqttClient* mqttClient = nullptr;
     std::string mqttTopic;
 };
 
