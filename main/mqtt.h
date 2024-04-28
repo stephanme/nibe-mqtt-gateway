@@ -10,6 +10,9 @@
 
 #define MAX_SUBSCRIPTIONS 10
 
+// mqtt_helper.cpp
+bool mqtt_match_topic(const char* topic, const char* filter);
+
 enum class MqttStatus {
     OK = 0,
 

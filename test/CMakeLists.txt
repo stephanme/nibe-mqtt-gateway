@@ -7,6 +7,7 @@ idf_component_register(
         "test_configmgr.cpp" "../main/configmgr.cpp"
         "test_metrics.cpp" "../main/metrics.cpp"
         "test_nonstd_stream.cpp" "../main/nonstd_stream.cpp"
+        "test_mqtt_helper.cpp" "../main/mqtt_helper.cpp"
     INCLUDE_DIRS "./fake_header" "../main"
     REQUIRES unity
     WHOLE_ARCHIVE

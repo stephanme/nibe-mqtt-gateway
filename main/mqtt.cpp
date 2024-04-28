@@ -156,8 +156,7 @@ void MqttClient::onDataEvent(esp_mqtt_event_handle_t event) {
     std::string topic = std::string((char*)event->topic, event->topic_len);
     std::string data = std::string((char*)event->data, event->data_len);
     for (size_t i = 0; i < subscriptionCount; i++) {
-        // TODO: handle wildcard topics
-        if (subscriptions[i].topic == topic) {
+        if (mqtt_match_topic(topic.c_str(), subscriptions[i].topic.c_str())) {
             subscriptions[i].callback->onMqttMessage(topic, data);
             return;
         }

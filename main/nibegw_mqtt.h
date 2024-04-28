@@ -12,7 +12,7 @@
 #define READ_COILS_RING_BUFFER_SIZE 256  // max number of pending coils to poll
 #define WRITE_COILS_RING_BUFFER_SIZE 16  // max number of pending coils to write
 
-class NibeMqttGw : public NibeGwCallback {
+class NibeMqttGw : public NibeGwCallback, MqttSubscriptionCallback {
    public:
     NibeMqttGw(Metrics& metrics);
 
@@ -29,6 +29,8 @@ class NibeMqttGw : public NibeGwCallback {
     void onMessageReceived(const NibeResponseMessage* const msg, int len);
     int onReadTokenReceived(NibeReadRequestMessage* data);
     int onWriteTokenReceived(NibeWriteRequestMessage* data);
+    // MqttSubscriptionCallback
+    void onMqttMessage(const std::string& topic, const std::string& payload);
 
    private:
     Metrics& metrics;

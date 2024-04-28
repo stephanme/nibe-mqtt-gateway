@@ -29,6 +29,10 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
 
     nibeRootTopic = mqttClient.getConfig().rootTopic + "/coils/";
 
+    // subscribe to 'set' topic of all coils
+    std::string commandTopic = nibeRootTopic + "+/set";
+    mqttClient.subscribe(commandTopic, this);
+
     // pre-announce known coils for HA auto-discovery, offloads nibegw task
     // polled coilds
     for (const auto& coilId : config.coilsToPoll) {
@@ -62,6 +66,22 @@ void NibeMqttGw::publishState() {
     }
 }
 
+// topic: nibegw/coils/<id>/set
+// payload: new value
+void NibeMqttGw::onMqttMessage(const std::string& topic, const std::string& payload) {
+    ESP_LOGI(TAG, "Received MQTT message: %s: %s", topic.c_str(), payload.c_str());
+    if (!topic.starts_with(nibeRootTopic) || !topic.ends_with("/set")) {
+        ESP_LOGW(TAG, "Invalid topic %s", topic.c_str());
+        return;
+    }
+    uint16_t coilId = strtoul(topic.c_str() + nibeRootTopic.length(), nullptr, 10);
+    if (coilId == 0) {
+        ESP_LOGW(TAG, "Invalid topic %s", topic.c_str());
+        return;
+    }
+    writeCoil(coilId, payload.c_str());
+}
+
 void NibeMqttGw::requestCoil(uint16_t coilAddress) {
     if (!xRingbufferSend(readCoilsRingBuffer, &coilAddress, sizeof(coilAddress), 0)) {
         ESP_LOGW(TAG, "Could not send coil %d to readCoilsRingBuffer. Buffer full.", coilAddress);
@@ -73,7 +93,12 @@ void NibeMqttGw::writeCoil(uint16_t coilAddress, const char* value) {
         ESP_LOGE(TAG, "writeCoil: value is null for coil %d", coilAddress);
         return;
     }
-    if (strlen(value) > sizeof(NibeMqttGwWriteRequest::value) - 1) {
+    auto valueLen = strlen(value);
+    if (valueLen == 0) {
+        ESP_LOGE(TAG, "writeCoil: missing value for coil %d", coilAddress);
+        return;
+    }
+    if (valueLen > sizeof(NibeMqttGwWriteRequest::value) - 1) {
         ESP_LOGE(TAG, "writeCoil: value too long for coil %d: %s", coilAddress, value);
         return;
     }
@@ -267,6 +292,11 @@ int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* writeRequest) {
     if (coil == nullptr) {
         vRingbufferReturnItem(writeCoilsRingBuffer, (void*)coilAddressPtr);
         ESP_LOGW(TAG, "Received write request for unknown coil %d", coilAddress);
+        return 0;
+    }
+    if (coil->mode == CoilMode::Read) {
+        vRingbufferReturnItem(writeCoilsRingBuffer, (void*)coilAddressPtr);
+        ESP_LOGW(TAG, "Received write request for read-only coil %d", coilAddress);
         return 0;
     }
 
