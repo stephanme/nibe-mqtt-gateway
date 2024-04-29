@@ -10,6 +10,7 @@ static const char* TAG = "nibegw_mqtt";
 NibeMqttGw::NibeMqttGw(Metrics& metrics)
     : metrics(metrics), metricPublishStateTime(metrics.addMetric(R"(nibegw_task_runtime_seconds{task="publishCoils"})", 1000)) {
     mqttClient = nullptr;
+    numCoilsToPoll = 0;
 }
 
 esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient) {
@@ -33,9 +34,18 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
     std::string commandTopic = nibeRootTopic + "+/set";
     mqttClient.subscribe(commandTopic, this);
 
+    nextCoilToPollLowFrequency = config.coilsToPollLowFrequency.cbegin();
+    numCoilsToPoll = config.coilsToPoll.size() + (config.coilsToPollLowFrequency.size() > 0 ? 1 : 0);
+
     // pre-announce known coils for HA auto-discovery, offloads nibegw task
-    // polled coilds
+    // polled coils
     for (const auto& coilId : config.coilsToPoll) {
+        auto iter = config.coils.find(coilId);
+        if (iter != config.coils.end()) {
+            announceCoil(iter->second);
+        }
+    }
+    for (const auto& coilId : config.coilsToPollLowFrequency) {
         auto iter = config.coils.find(coilId);
         if (iter != config.coils.end()) {
             announceCoil(iter->second);
@@ -57,12 +67,20 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
 
 void NibeMqttGw::publishState() {
     // put subscribed coils into queue so that onMessageTokenReceived can send them to nibe
-    ESP_LOGI(TAG, "publishState, requesting %d coils", config->coilsToPoll.size());
+    ESP_LOGI(TAG, "publishState, requesting %d coils", numCoilsToPoll);
 
     // TODO: clear ring buffer? - nibegw should be fast enough to keep up with the queue
     lastPublishStateStartTime = esp_timer_get_time() / 1000;
     for (auto coil : config->coilsToPoll) {
         requestCoil(coil);
+    }
+    // plus one coil from low frequency list
+    if (nextCoilToPollLowFrequency  == config->coilsToPollLowFrequency.cend()) {
+        nextCoilToPollLowFrequency = config->coilsToPollLowFrequency.cbegin();
+    }
+    if (nextCoilToPollLowFrequency != config->coilsToPollLowFrequency.cend()) {
+        requestCoil(*nextCoilToPollLowFrequency);
+        nextCoilToPollLowFrequency++;
     }
 }
 

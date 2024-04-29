@@ -35,6 +35,7 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
             {
                 .coils = {},
                 .coilsToPoll = {},
+                .coilsToPollLowFrequency = {},
                 .metrics = {},
                 .homeassistantDiscoveryOverrides = {},
             },
@@ -106,7 +107,9 @@ esp_err_t NibeMqttGwConfigManager::begin() {
 bool NibeMqttGwConfigManager::coilFilterConfigured(u_int16_t id) const {
     // filter for coils that are specified in config to poll, as metrics or for HA discovery
     auto coilsToPollEnd = this->config.nibe.coilsToPoll.end();
+    auto coilsToPollLFEnd = this->config.nibe.coilsToPollLowFrequency.end();
     return std::find(this->config.nibe.coilsToPoll.begin(), coilsToPollEnd, id) != coilsToPollEnd ||
+           std::find(this->config.nibe.coilsToPollLowFrequency.begin(), coilsToPollLFEnd, id) != coilsToPollLFEnd ||
            this->config.nibe.metrics.find(id) != this->config.nibe.metrics.end() ||
            this->config.nibe.homeassistantDiscoveryOverrides.find(id) != this->config.nibe.homeassistantDiscoveryOverrides.end();
 }
@@ -145,6 +148,10 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
     JsonArray coilsToPoll = doc["nibe"]["coilsToPoll"].to<JsonArray>();
     for (auto coil : config.nibe.coilsToPoll) {
         coilsToPoll.add(coil);
+    }
+    JsonArray coilsToPollLowFrequency = doc["nibe"]["coilsToPollLowFrequency"].to<JsonArray>();
+    for (auto coil : config.nibe.coilsToPollLowFrequency) {
+        coilsToPollLowFrequency.add(coil);
     }
     JsonObject metrics = doc["nibe"]["metrics"].to<JsonObject>();
     for (auto [id, metric] : config.nibe.metrics) {
@@ -234,6 +241,9 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
 
     for (auto coil : doc["nibe"]["coilsToPoll"].as<JsonArray>()) {
         config.nibe.coilsToPoll.push_back(coil.as<uint16_t>());
+    }
+    for (auto coil : doc["nibe"]["coilsToPollLowFrequency"].as<JsonArray>()) {
+        config.nibe.coilsToPollLowFrequency.push_back(coil.as<uint16_t>());
     }
 
     for (auto metric : doc["nibe"]["metrics"].as<JsonObject>()) {

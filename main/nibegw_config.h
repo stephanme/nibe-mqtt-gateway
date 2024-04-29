@@ -127,6 +127,7 @@ struct NibeCoilMetricConfig {
 struct NibeMqttConfig {
     std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
     std::vector<uint16_t> coilsToPoll;
+    std::vector<uint16_t> coilsToPollLowFrequency;
     std::unordered_map<uint16_t, NibeCoilMetricConfig> metrics;
     std::unordered_map<uint16_t, std::string> homeassistantDiscoveryOverrides;
 };

@@ -23,6 +23,7 @@ TEST_CASE("default config", "[config]") {
 
     TEST_ASSERT_EQUAL(0, config.nibe.coils.size());
     TEST_ASSERT_EQUAL(0, config.nibe.coilsToPoll.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.coilsToPollLowFrequency.size());
     TEST_ASSERT_EQUAL(0, config.nibe.metrics.size());
     TEST_ASSERT_EQUAL(0, config.nibe.homeassistantDiscoveryOverrides.size());
 
@@ -49,6 +50,7 @@ static const char* configJson = R"({
     },
     "nibe": {
         "coilsToPoll": [1,2],
+        "coilsToPollLowFrequency": [3,4],
         "metrics": {
             "1": {"name": "prom_name_1{coil=\"1\"}", "factor": 10},
             "2": {"name": "prom_name_2{coil=\"2\"}"},
@@ -98,6 +100,10 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL(1, config.nibe.coilsToPoll[0]);
     TEST_ASSERT_EQUAL(2, config.nibe.coilsToPoll[1]);
 
+    TEST_ASSERT_EQUAL(2, config.nibe.coilsToPollLowFrequency.size());
+    TEST_ASSERT_EQUAL(3, config.nibe.coilsToPollLowFrequency[0]);
+    TEST_ASSERT_EQUAL(4, config.nibe.coilsToPollLowFrequency[1]);
+
     TEST_ASSERT_EQUAL(3, config.nibe.metrics.size());
     const NibeCoilMetricConfig& metric1 = config.nibe.metrics.at(1);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_1{coil="1"})", metric1.name.c_str());
@@ -136,6 +142,8 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_TRUE(json.contains(R"("mqtt": "debug")"));
     TEST_ASSERT_TRUE(json.contains("coilsToPoll"));
     TEST_ASSERT_TRUE(json.contains("1,"));
+    TEST_ASSERT_TRUE(json.contains("coilsToPollLowFrequency"));
+    TEST_ASSERT_TRUE(json.contains("3,"));
     TEST_ASSERT_TRUE(json.contains("metrics"));
     TEST_ASSERT_TRUE(json.contains("prom_name_1"));
     TEST_ASSERT_TRUE(json.contains(R"("factor": 10)"));

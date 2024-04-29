@@ -3,6 +3,7 @@
 nibe-mqtt-gateway is an MQTT integration for Nibe heatpumps.
 
 It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional monitoring systems via Mosquitto as MQTT broker.
+Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus metrics, provides 4 relays that can be used to control the Nibe AUX inputs and it can count the electrical energy consumption via an S0 interface.
 
 ## Features
 
@@ -10,14 +11,14 @@ It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional m
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
 - [x] configurable set of of published Nibe registers/coils
-- [x] support Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager, no 32 bit registers)
-- [ ] supports writing to Nibe registers
-- [x] energy meter connected via S0 interface to OptIn1, persisted in nvs
+- [x] supports Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager, no 32 bit registers)
+- [x] supports writing to Nibe registers
+- [x] energy meter connected via S0 interface to OptIn1, persisted in NVS
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
 - [x] supports Home Assistant MQTT auto-discovery
 - [x] simple web UI for info and administration
 - [x] OTA updates (well, over Ethernet)
-- [x] upload of configuration files
+- [x] upload of configuration files including the ModbusManager CSV file
 - [x] metrics via Prometheus endpoint
 - [x] nibe coils and other measurements as Prometheus metrics
 - [x] logging via MQTT topic (as alternative to serial interface)
@@ -42,13 +43,13 @@ Additionally helpful:
 
 ![nibegw wiring](nibegw-wiring.png)
 
-### Building
+### Build Firmware
 
 - install ESP-IDF v5.1.3 (or release-5.1 branch)
 - clone this project
 - adapt settings, especially `idf.espIdfPath` to point to ESP-IDF installation
 - generate sdkconfig and adapt if necessary
-- build project
+- build project, see also Development section below
 
 Result is a firmware file: `./build/nige-mqtt-gateway.bin`
 
@@ -70,22 +71,20 @@ When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory
 General configuration:
 - see `config/config.json.template` for format and configuration options, json file allows comments
 - http://nibegw/config shows the current configuration as uploaded
-- http://nibegw/config?runtime=true shows the current runtime configuration (internal data structures translated back to json)
+- http://nibegw/config?runtime=true shows the current runtime configuration (internal data structures translated back to json, for debugging)
 - upload `config.json`: `curl -X POST -H "Content-Type: application/json" --data-binary @config.json http://nibegw/config`
-
 
 Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
 - use Nibe ModbusManager to get a CSV with all coil. Save e.g. as `nibe-modbus.csv`
-- (optional) delete coils that will never be needed, e.g. because of add-ons/hardware that is not installed 
 - upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
 Energy Meter configuration (also via UI):
 - adjusting energy meter
-  - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter`
+  - `curl -X POST -H "Content-Type: application/json" -d <energy in Wh> http://nibegw/config/energymeter`
   - to prevent misconfiguration: value can only be changed by +-10kWh
   - increases are set immediately
-  - decreases are waited, i.e. energy counter stops counting for the diff to avoid breaking counter metric
+  - decreases are waited, i.e. energy counter stops counting for the diff to avoid breaking counter metrics
 - set energy counter to an initial value, no checks, can break counter metrics
   - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter?init=true`
 - no reboot
@@ -93,7 +92,8 @@ Energy Meter configuration (also via UI):
 ### Trouble Shooting
 
 The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
-- blue - initializing, waiting for IP address (blue blinking)
+- blue - initializing
+- blue blinking - waiting for IP address
 - green blinking - running ok, connected with MQTT broker
 - red blinking - error, got IP address but e.g. not connected with MQTT broker, check http://nibegw or logs
 - orange blinking - OTA firmware upload in progress
@@ -101,7 +101,7 @@ The RGB multi-functional LED shows the status of nibe-mqtt-gateway:
 Web UI:
 - http://nibegw - main page with some status info and several config options
 - http://nibegw/update - OTA update and upload of file system
-- http://nibegw/metrics - Prometheus endpoint with some insights like heap, uptime and execution times
+- http://nibegw/metrics - Prometheus endpoint with some insights like heap, uptime and execution times (in addition to heatpump metrics)
 
 Depending on the configuration, logs are available via Serial interface or the MQTT topic `nibegw/log`.
 Show logging over MQTT:
@@ -113,7 +113,8 @@ Log levels can be configured via `config.json` (see above):
 - standard ESP logging config applies, especially `CONFIG_LOG_MAXIMUM_LEVEL`
 - default log level is `info`, unless changed in `sdkconfig`
 - nibe-mqtt-gateway sources are complied with `LOG_LOCAL_LEVEL=ESP_LOG_DEBUG` to allow debug logging
-- log levels can be temporarily changed via UI or `curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "tag=<tag>&level=<none|error|war|info|debug|verbose>"  http://nibegw/config/log`
+- log levels can be temporarily changed via UI or curl
+  - `curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "tag=<tag>&level=<none|error|war|info|debug|verbose>"  http://nibegw/config/log`
   - log level are set back to `config.json` settings after reset
 
 After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
@@ -145,9 +146,9 @@ How to run unit tests using vscode:
 - switch target to `linux`
 - delete `sdkconfig` file
 - 'Full Clean' (delete `build` directory)
-- 'Build' project, ignore the error on running `esp_idf_size`
+- 'Build' project, ignore the error by `esp_idf_size`
 - 'Monitor' runs the unit tests and prints results to console
-  - attention: 'Monitor' doesn't build -> an explicit 'Build' is needed after any source change
+  - attention: 'Monitor' doesn't build -> an explicit 'Build' is needed after any source code change
 
 Implementation:
 - tests are located in a special `test` component, this component picks source files from `main` that can be tested 

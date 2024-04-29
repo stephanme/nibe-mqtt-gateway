@@ -14,8 +14,11 @@
     },
     "nibe": {
         // list of coil ids to poll every 30s
-        // 1 coils takes ~1s
-        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069, 44071, 44073, 40737, 48043],
+        // 1 coil takes ~1s
+        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069],
+        // list of coils to poll with low frequency, every 30s one coil of this list is polled
+        // should include R/W coils announced to Home Assistant
+        "coilsToPollLowFrequency": [44071, 44073, 40737, 48043, 48130, 48085],
 
         // Prometheus metrics for coils: metric = value * scale / factor
         "metrics": {
@@ -57,6 +60,8 @@
             "44306": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr\"}", "factor": 1, "scale": 100, "counter": true},
             "44298": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr+add\"}", "factor": 1, "scale": 100, "counter": true},
             "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}", "counter": true},
+
+            // polled coils, low frequency
             "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600, "counter": true},
             "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600, "counter": true},
             "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600, "counter": true},
