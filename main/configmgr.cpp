@@ -90,7 +90,7 @@ esp_err_t NibeMqttGwConfigManager::begin() {
         nonstd::arduinostream is(file);
         // filter for coils that are specified in config to poll, as metrics or for HA discovery
         if (parseNibeModbusCSV(is, &config.nibe.coils,
-                               std::bind(&NibeMqttGwConfigManager::coilFilterConfigured, this, std::placeholders::_1)) !=
+                               std::bind(&NibeMqttGwConfigManager::nibeRegisterFilterConfigured, this, std::placeholders::_1)) !=
             ESP_OK) {
             file.close();
             return ESP_FAIL;
@@ -104,7 +104,7 @@ esp_err_t NibeMqttGwConfigManager::begin() {
     return ESP_OK;
 }
 
-bool NibeMqttGwConfigManager::coilFilterConfigured(u_int16_t id) const {
+bool NibeMqttGwConfigManager::nibeRegisterFilterConfigured(u_int16_t id) const {
     // filter for coils that are specified in config to poll, as metrics or for HA discovery
     auto coilsToPollEnd = this->config.nibe.coilsToPoll.end();
     auto coilsToPollLFEnd = this->config.nibe.coilsToPollLowFrequency.end();
@@ -288,14 +288,14 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
 esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileName) {
 #if CONFIG_IDF_TARGET_LINUX
     // uploadFileName = csv - only for testing
-    std::unordered_map<uint16_t, Coil> tmpCoils;
+    std::unordered_map<uint16_t, NibeRegister> tmpNibeRegisters;
     auto is = nonstd::icharbufstream(uploadFileName);
-    if (parseNibeModbusCSV(is, &tmpCoils) != ESP_OK) {
+    if (parseNibeModbusCSV(is, &tmpNibeRegisters) != ESP_OK) {
         return ESP_FAIL;
     }
     ESP_LOGW(TAG, "Skip writing config on Linux target");
     // store for testing
-    config.nibe.coils = tmpCoils;
+    config.nibe.coils = tmpNibeRegisters;
 #else
     // validate csv
     File file = LittleFS.open(uploadFileName);
@@ -328,9 +328,9 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
-// if coils is null, the input is only checked for format
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::unordered_map<uint16_t, Coil>* coils,
-                                                      coilFilterFunction_t filter) {
+// if registers is null, the input is only checked for format
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::unordered_map<uint16_t, NibeRegister>* registers,
+                                                      nibeRegisterFilterFunction_t filter) {
     std::string line;
     line.reserve(256);
     int line_num = 0;
@@ -360,7 +360,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::
         ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Bad header", line_num);
         return ESP_FAIL;
     }
-    // read coil configuration
+    // read register configuration
     while (is) {
         nonstd::getline(is, line);
         line_num++;
@@ -370,14 +370,14 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::
         if (line.empty()) {
             continue;
         }
-        Coil coil;
-        esp_err_t err = parseNibeModbusCSVLine(line, coil);
+        NibeRegister _register;
+        esp_err_t err = parseNibeModbusCSVLine(line, _register);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Nibe Modbus CSV, line %d: Format error in token #%d: %s", line_num, err, line.c_str());
             return ESP_FAIL;
         }
-        if (coils != nullptr && filter(coil.id)) {
-            coils->operator[](coil.id) = coil;
+        if (registers != nullptr && filter(_register.id)) {
+            registers->operator[](_register.id) = _register;
         }
     }
     return ESP_OK;
@@ -387,8 +387,8 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSV(nonstd::istream& is, std::
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
 // "BT1 Outdoor Temperature";"Current outdoor temperature";40004;"°C";s16;10;0;0;0;R;
 //
-// returns ESP_OK if correctly parsed and coil is valid or the number of the bad token
-esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, Coil& coil) {
+// returns ESP_OK if correctly parsed and register is valid or the number of the bad token
+esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& line, NibeRegister& _register) {
     auto is = nonstd::istringstream(line);
     std::string token;
     esp_err_t token_num = 1;  // returned as err msg
@@ -396,7 +396,7 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& lin
         // Title (mandatory)
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         if (token.empty()) return token_num;
-        coil.title = token;
+        _register.title = token;
         token_num++;
         // Info (optional), ignored
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
@@ -404,38 +404,38 @@ esp_err_t NibeMqttGwConfigManager::parseNibeModbusCSVLine(const std::string& lin
         // ID
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
         if (token.empty()) return token_num;
-        coil.id = std::stoi(token);
+        _register.id = std::stoi(token);
         token_num++;
         // Unit
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.unit = Coil::stringToUnit(token.c_str());
-        if (coil.unit == CoilUnit::Unknown) return token_num;
+        _register.unit = NibeRegister::stringToUnit(token.c_str());
+        if (_register.unit == NibeRegisterUnit::Unknown) return token_num;
         token_num++;
         // Size
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.dataType = nibeModbusSizeToDataType(token);
-        if (coil.dataType == CoilDataType::Unknown) return token_num;
+        _register.dataType = nibeModbusSizeToDataType(token);
+        if (_register.dataType == NibeRegisterDataType::Unknown) return token_num;
         token_num++;
         // Factor
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.factor = std::stoi(token);
+        _register.factor = std::stoi(token);
         token_num++;
         // Min
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.minValue = std::stoi(token);
+        _register.minValue = std::stoi(token);
         token_num++;
         // Max
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.maxValue = std::stoi(token);
+        _register.maxValue = std::stoi(token);
         token_num++;
         // Default
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.defaultValue = std::stoi(token);
+        _register.defaultValue = std::stoi(token);
         token_num++;
         // Mode
         if (getNextCsvToken(is, token) != ESP_OK) return token_num;
-        coil.mode = nibeModbusMode(token);
-        if (coil.mode == CoilMode::Unknown) return token_num;
+        _register.mode = nibeModbusMode(token);
+        if (_register.mode == NibeRegisterMode::Unknown) return token_num;
 
         return ESP_OK;
 #if CONFIG_IDF_TARGET_LINUX
@@ -495,22 +495,21 @@ esp_err_t NibeMqttGwConfigManager::getNextCsvToken(nonstd::istream& is, std::str
     return ESP_OK;
 }
 
-CoilDataType NibeMqttGwConfigManager::nibeModbusSizeToDataType(const std::string& size) {
-    // TODO: more data types like date, needs additional metadata because not encoded in CSV
-    if (size == "s8") return CoilDataType::Int8;
-    if (size == "s16") return CoilDataType::Int16;
-    if (size == "s32") return CoilDataType::Int32;
-    if (size == "u8") return CoilDataType::UInt8;
-    if (size == "u16") return CoilDataType::UInt16;
-    if (size == "u32") return CoilDataType::UInt32;
-    return CoilDataType::Unknown;
+NibeRegisterDataType NibeMqttGwConfigManager::nibeModbusSizeToDataType(const std::string& size) {
+    if (size == "s8") return NibeRegisterDataType::Int8;
+    if (size == "s16") return NibeRegisterDataType::Int16;
+    if (size == "s32") return NibeRegisterDataType::Int32;
+    if (size == "u8") return NibeRegisterDataType::UInt8;
+    if (size == "u16") return NibeRegisterDataType::UInt16;
+    if (size == "u32") return NibeRegisterDataType::UInt32;
+    return NibeRegisterDataType::Unknown;
 }
 
-CoilMode NibeMqttGwConfigManager::nibeModbusMode(const std::string& mode) {
-    if (mode == "R") return CoilMode::Read;
-    if (mode == "W") return CoilMode::Write;
-    if (mode == "R/W") return CoilMode::ReadWrite;
-    return CoilMode::Unknown;
+NibeRegisterMode NibeMqttGwConfigManager::nibeModbusMode(const std::string& mode) {
+    if (mode == "R") return NibeRegisterMode::Read;
+    if (mode == "W") return NibeRegisterMode::Write;
+    if (mode == "R/W") return NibeRegisterMode::ReadWrite;
+    return NibeRegisterMode::Unknown;
 }
 
 void NibeMqttGwConfigManager::setLogLevels(const std::unordered_map<std::string, std::string>& logLevels) {

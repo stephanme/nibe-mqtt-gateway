@@ -6,57 +6,57 @@
 
 static const char* TAG = "nibegw_config";
 
-int32_t Coil::decodeCoilDataRaw(const uint8_t* const data) const {
+int32_t NibeRegister::decodeDataRaw(const uint8_t* const data) const {
     int32_t value = 0;
     switch (dataType) {
-        case CoilDataType::UInt8:
+        case NibeRegisterDataType::UInt8:
             value = data[0];
             break;
-        case CoilDataType::Int8:
+        case NibeRegisterDataType::Int8:
             value = (int8_t)data[0];
             break;
-        case CoilDataType::UInt16:
+        case NibeRegisterDataType::UInt16:
             value = *(uint16_t*)data;
             break;
-        case CoilDataType::Int16:
+        case NibeRegisterDataType::Int16:
             value = *(int16_t*)data;
             break;
-        case CoilDataType::UInt32:
+        case NibeRegisterDataType::UInt32:
             value = *(uint32_t*)data;
             break;
-        case CoilDataType::Int32:
+        case NibeRegisterDataType::Int32:
             value = *(int32_t*)data;
             break;
         default:
-            ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
+            ESP_LOGW(TAG, "Register %d has unknown data type %d", id, (int)dataType);
             break;
     }
     return value;
 }
 
-std::string Coil::decodeCoilData(const uint8_t* const data) const {
+std::string NibeRegister::decodeData(const uint8_t* const data) const {
     std::string value;
     switch (dataType) {
-        case CoilDataType::UInt8:
+        case NibeRegisterDataType::UInt8:
             value = formatNumber(data[0]);
             break;
-        case CoilDataType::Int8:
+        case NibeRegisterDataType::Int8:
             value = formatNumber((int8_t)data[0]);
             break;
-        case CoilDataType::UInt16:
+        case NibeRegisterDataType::UInt16:
             value = formatNumber(*(uint16_t*)data);
             break;
-        case CoilDataType::Int16:
+        case NibeRegisterDataType::Int16:
             value = formatNumber(*(int16_t*)data);
             break;
-        case CoilDataType::UInt32:
+        case NibeRegisterDataType::UInt32:
             value = formatNumber(*(uint32_t*)data);
             break;
-        case CoilDataType::Int32:
+        case NibeRegisterDataType::Int32:
             value = formatNumber(*(int32_t*)data);
             break;
         default:
-            ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
+            ESP_LOGW(TAG, "Register %d has unknown data type %d", id, (int)dataType);
             break;
     }
     return value;
@@ -64,26 +64,26 @@ std::string Coil::decodeCoilData(const uint8_t* const data) const {
 
 // Returns true if value was successfully encoded, false otherwise.
 // TODO: sort out exception problem on linux target
-bool Coil::encodeCoilData(const std::string& str, uint8_t* data) const {
+bool NibeRegister::encodeData(const std::string& str, uint8_t* data) const {
     try {
         switch (dataType) {
-            case CoilDataType::UInt8:
-            case CoilDataType::UInt16:
-            case CoilDataType::UInt32: {
+            case NibeRegisterDataType::UInt8:
+            case NibeRegisterDataType::UInt16:
+            case NibeRegisterDataType::UInt32: {
                 uint32_t numValue = parseUnsignedNumber(str);
                 *(uint32_t*)data = numValue;
                 break;
             }
 
-            case CoilDataType::Int8:
-            case CoilDataType::Int16:
-            case CoilDataType::Int32: {
+            case NibeRegisterDataType::Int8:
+            case NibeRegisterDataType::Int16:
+            case NibeRegisterDataType::Int32: {
                 int32_t numValue = parseSignedNumber(str);
                 *(int32_t*)data = numValue;
                 break;
             }
             default:
-                ESP_LOGW(TAG, "Coil %d has unknown data type %d", id, (int)dataType);
+                ESP_LOGW(TAG, "Register %d has unknown data type %d", id, (int)dataType);
                 return false;
         }
         return true;
@@ -92,20 +92,20 @@ bool Coil::encodeCoilData(const std::string& str, uint8_t* data) const {
     } catch (...) {
         // for linux only to get tests green
         // don't use on esp32 because it hides OOMs
-        ESP_LOGW(TAG, "Failed to parse number %s for coil %d", str.c_str(), id);
+        ESP_LOGW(TAG, "Failed to parse number %s for register %d", str.c_str(), id);
         return false;
     }
 #else
     } catch (const std::invalid_argument& e) {
         // TODO: is not caught on linux but works on esp32, unclear why
-        ESP_LOGW(TAG, "Failed to parse number %s for coil %d", str.c_str(), id);
+        ESP_LOGW(TAG, "Failed to parse number %s for register %d", str.c_str(), id);
         return false;
     }
 #endif
 }
 
 // throws std::invalid_argument exception if str can't be parsed
-int32_t Coil::parseSignedNumber(const std::string& str) const {
+int32_t NibeRegister::parseSignedNumber(const std::string& str) const {
     int32_t value = 0;
     // avoid FP arithmetic on typically used factors
     if (factor == 1) {
@@ -129,7 +129,7 @@ int32_t Coil::parseSignedNumber(const std::string& str) const {
 }
 
 // throws std::invalid_argument exception if str can't be parsed
-uint32_t Coil::parseUnsignedNumber(const std::string& str) const {
+uint32_t NibeRegister::parseUnsignedNumber(const std::string& str) const {
     uint32_t value = 0;
     // avoid FP arithmetic on typically used factors
     if (factor == 1) {
@@ -152,116 +152,116 @@ uint32_t Coil::parseUnsignedNumber(const std::string& str) const {
     return value;
 }
 
-CoilUnit Coil::stringToUnit(const char* unit) {
+NibeRegisterUnit NibeRegister::stringToUnit(const char* unit) {
     if (strcmp(unit, "") == 0) {
-        return CoilUnit::NoUnit;
+        return NibeRegisterUnit::NoUnit;
     } else if (strcmp(unit, "1") == 0) {
-        return CoilUnit::NoUnit;
+        return NibeRegisterUnit::NoUnit;
     } else if (strcmp(unit, " ") == 0) {
-        return CoilUnit::NoUnit;
+        return NibeRegisterUnit::NoUnit;
     } else if (strcmp(unit, "°C") == 0) {  // °C in UTF-8
-        return CoilUnit::GradCelcius;
+        return NibeRegisterUnit::GradCelcius;
     } else if (strcmp(unit,
                       "\xB0"
                       "C") == 0) {  // °C in ISO-8859-1
-        return CoilUnit::GradCelcius;
+        return NibeRegisterUnit::GradCelcius;
     } else if (strcmp(unit,
                       "\xba"
                       "C") == 0) {  // buggy °C found in csv
-        return CoilUnit::GradCelcius;
+        return NibeRegisterUnit::GradCelcius;
     } else if (strcmp(unit, "%") == 0) {
-        return CoilUnit::Percent;
+        return NibeRegisterUnit::Percent;
     } else if (strcmp(unit, "l/m") == 0) {
-        return CoilUnit::LiterPerMinute;
+        return NibeRegisterUnit::LiterPerMinute;
     } else if (strcmp(unit, "%RH") == 0) {
-        return CoilUnit::RelativeHumidity;
+        return NibeRegisterUnit::RelativeHumidity;
     } else if (strcmp(unit, "rpm") == 0) {
-        return CoilUnit::RPM;
+        return NibeRegisterUnit::RPM;
     } else if (strcmp(unit, "kPa") == 0) {
-        return CoilUnit::KiloPascal;
+        return NibeRegisterUnit::KiloPascal;
     } else if (strcmp(unit, "bar") == 0) {
-        return CoilUnit::Bar;
+        return NibeRegisterUnit::Bar;
     } else if (strcmp(unit, "V") == 0) {
-        return CoilUnit::Volt;
+        return NibeRegisterUnit::Volt;
     } else if (strcmp(unit, "A") == 0) {
-        return CoilUnit::Ampere;
+        return NibeRegisterUnit::Ampere;
     } else if (strcmp(unit, "W") == 0) {
-        return CoilUnit::Watt;
+        return NibeRegisterUnit::Watt;
     } else if (strcmp(unit, "kW") == 0) {
-        return CoilUnit::KiloWatt;
+        return NibeRegisterUnit::KiloWatt;
     } else if (strcmp(unit, "Wh") == 0) {
-        return CoilUnit::WattHour;
+        return NibeRegisterUnit::WattHour;
     } else if (strcmp(unit, "kWh") == 0) {
-        return CoilUnit::KiloWattHour;
+        return NibeRegisterUnit::KiloWattHour;
     } else if (strcmp(unit, "Hz") == 0) {
-        return CoilUnit::Hertz;
+        return NibeRegisterUnit::Hertz;
     } else if (strcmp(unit, "s") == 0) {
-        return CoilUnit::Seconds;
+        return NibeRegisterUnit::Seconds;
     } else if (strcmp(unit, "secs") == 0) {
-        return CoilUnit::Seconds;
+        return NibeRegisterUnit::Seconds;
     } else if (strcmp(unit, "min") == 0) {
-        return CoilUnit::Minutes;
+        return NibeRegisterUnit::Minutes;
     } else if (strcmp(unit, "h") == 0) {
-        return CoilUnit::Hours;
+        return NibeRegisterUnit::Hours;
     } else if (strcmp(unit, "hrs") == 0) {
-        return CoilUnit::Hours;
+        return NibeRegisterUnit::Hours;
     } else if (strcmp(unit, "days") == 0) {
-        return CoilUnit::Days;
+        return NibeRegisterUnit::Days;
     } else if (strcmp(unit, "Months") == 0) {
-        return CoilUnit::Months;
+        return NibeRegisterUnit::Months;
     } else {
-        return CoilUnit::Unknown;
+        return NibeRegisterUnit::Unknown;
     }
 }
 
-const char* Coil::unitAsString() const {
+const char* NibeRegister::unitAsString() const {
     switch (unit) {
-        case CoilUnit::NoUnit:
+        case NibeRegisterUnit::NoUnit:
             return "";
-        case CoilUnit::GradCelcius:
+        case NibeRegisterUnit::GradCelcius:
             return "°C";  // UTF-8
-        case CoilUnit::Percent:
+        case NibeRegisterUnit::Percent:
             return "%";
-        case CoilUnit::LiterPerMinute:
+        case NibeRegisterUnit::LiterPerMinute:
             return "l/m";
-        case CoilUnit::KiloPascal:
+        case NibeRegisterUnit::KiloPascal:
             return "kPa";
-        case CoilUnit::Bar:
+        case NibeRegisterUnit::Bar:
             return "bar";
-        case CoilUnit::RelativeHumidity:
+        case NibeRegisterUnit::RelativeHumidity:
             return "%RH";
-        case CoilUnit::RPM:
+        case NibeRegisterUnit::RPM:
             return "rpm";
-        case CoilUnit::Volt:
+        case NibeRegisterUnit::Volt:
             return "V";
-        case CoilUnit::Ampere:
+        case NibeRegisterUnit::Ampere:
             return "A";
-        case CoilUnit::Watt:
+        case NibeRegisterUnit::Watt:
             return "W";
-        case CoilUnit::KiloWatt:
+        case NibeRegisterUnit::KiloWatt:
             return "kW";
-        case CoilUnit::WattHour:
+        case NibeRegisterUnit::WattHour:
             return "Wh";
-        case CoilUnit::KiloWattHour:
+        case NibeRegisterUnit::KiloWattHour:
             return "kWh";
-        case CoilUnit::Hertz:
+        case NibeRegisterUnit::Hertz:
             return "Hz";
-        case CoilUnit::Seconds:
+        case NibeRegisterUnit::Seconds:
             return "s";
-        case CoilUnit::Minutes:
+        case NibeRegisterUnit::Minutes:
             return "min";
-        case CoilUnit::Hours:
+        case NibeRegisterUnit::Hours:
             return "h";
-        case CoilUnit::Days:
+        case NibeRegisterUnit::Days:
             return "days";
-        case CoilUnit::Months:
+        case NibeRegisterUnit::Months:
             return "months";
         default:
             return "Unknown";
     }
 }
 
-JsonDocument Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
+JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
                                                  const std::string& deviceDiscoveryInfo) const {
     auto discoveryDoc = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
     auto iter = config.homeassistantDiscoveryOverrides.find(id);
@@ -273,7 +273,7 @@ JsonDocument Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, c
         JsonDocument overrideDoc;
         DeserializationError errOverride = deserializeJson(overrideDoc, override);
         if (errOverride) {
-            ESP_LOGE(TAG, "Failed to parse override discovery message for coil %d: %s", id, errOverride.c_str());
+            ESP_LOGE(TAG, "Failed to parse override discovery message for register %d: %s", id, errOverride.c_str());
             return discoveryDoc;
         }
         // merge overrideDoc into discoveryMsgDoc
@@ -289,7 +289,7 @@ JsonDocument Coil::homeassistantDiscoveryMessage(const NibeMqttConfig& config, c
     }
 }
 
-JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+JsonDocument NibeRegister::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
                                                         const std::string& deviceDiscoveryInfo) const {
     JsonDocument discoveryDoc;
 
@@ -302,7 +302,7 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
     DeserializationError err = deserializeJson(discoveryDoc, str);
     if (err) {
         // should not happen
-        ESP_LOGE(TAG, "Failed to parse device discovery info for coil %d: %s", id, err.c_str());
+        ESP_LOGE(TAG, "Failed to parse device discovery info for register %d: %s", id, err.c_str());
     }
 
     char objId[64];
@@ -317,37 +317,37 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
     discoveryDoc["stat_t"] = stateTopic;
 
     switch (this->unit) {
-        case CoilUnit::Unknown:
-        case CoilUnit::NoUnit:
+        case NibeRegisterUnit::Unknown:
+        case NibeRegisterUnit::NoUnit:
             break;
-        case CoilUnit::GradCelcius:
+        case NibeRegisterUnit::GradCelcius:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "temperature";
             discoveryDoc["stat_cla"] = "measurement";
             break;
-        case CoilUnit::Hours:
+        case NibeRegisterUnit::Hours:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "duration";
             discoveryDoc["stat_cla"] = "total";
             break;
-        case CoilUnit::Minutes:
+        case NibeRegisterUnit::Minutes:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "duration";
             discoveryDoc["stat_cla"] = "measurement";
             break;
-        case CoilUnit::Watt:
-        case CoilUnit::KiloWatt:
+        case NibeRegisterUnit::Watt:
+        case NibeRegisterUnit::KiloWatt:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "power";
             discoveryDoc["stat_cla"] = "measurement";
             break;
-        case CoilUnit::WattHour:
-        case CoilUnit::KiloWattHour:
+        case NibeRegisterUnit::WattHour:
+        case NibeRegisterUnit::KiloWattHour:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "energy";
             discoveryDoc["stat_cla"] = "total";
             break;
-        case CoilUnit::Hertz:
+        case NibeRegisterUnit::Hertz:
             discoveryDoc["unit_of_meas"] = unitAsString();
             discoveryDoc["dev_cla"] = "frequency";
             discoveryDoc["stat_cla"] = "measurement";
@@ -358,7 +358,7 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
             break;
     }
 
-    if (mode != CoilMode::Read) {
+    if (mode != NibeRegisterMode::Read) {
         discoveryDoc["_component_"] = "number";
         discoveryDoc.remove("stat_cla");
         char cmdTopic[68];
@@ -378,9 +378,9 @@ JsonDocument Coil::defaultHomeassistantDiscoveryMessage(const std::string& nibeR
     return discoveryDoc;
 }
 
-// prom metric config must be configured explicitly (i.e. coil id) but there are defaults for all config values
-NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) const {
-    NibeCoilMetricConfig metricCfg;
+// prom metric config must be configured explicitly (i.e. register id) but there are defaults for all config values
+NibeRegisterMetricConfig NibeRegister::toPromMetricConfig(const NibeMqttConfig& config) const {
+    NibeRegisterMetricConfig metricCfg;
     auto metricCfgIter = config.metrics.find(id);
     if (metricCfgIter != config.metrics.end()) {
         metricCfg.name = metricCfgIter->second.name;
@@ -406,7 +406,7 @@ NibeCoilMetricConfig Coil::toPromMetricConfig(const NibeMqttConfig& config) cons
 }
 
 // https://prometheus.io/docs/concepts/data_model/
-std::string Coil::promMetricName() const {
+std::string NibeRegister::promMetricName() const {
     std::string name = "nibe";
     if (!title.empty()) {
         name += "_";
@@ -421,7 +421,7 @@ std::string Coil::promMetricName() const {
 }
 
 // append coil attributes to promMetricName
-void Coil::appendPromAttributes(std::string& promMetricName) const {
+void NibeRegister::appendPromAttributes(std::string& promMetricName) const {
     size_t attrPos = promMetricName.find("{");
     if (attrPos == std::string::npos) {
         // no attributes yet

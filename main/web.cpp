@@ -40,8 +40,8 @@ void NibeMqttGwWebServer::begin() {
     httpServer.on("/config/log", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostLogLevel, this));
     httpServer.on("/metrics", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetMetrics, this));
     httpServer.on("/reboot", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostReboot, this));
-    httpServer.on("/coil/read", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostCoilRead, this));
-    httpServer.on("/coil/write", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostCoilWrite, this));
+    httpServer.on("/nibe/read", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeRead, this));
+    httpServer.on("/nibe/write", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostNibeWrite, this));
 
     httpServer.on("/update", HTTP_GET, std::bind(&NibeMqttGwWebServer::handleGetUpdate, this));
     httpServer.on("/update", HTTP_POST, std::bind(&NibeMqttGwWebServer::handlePostUpdate, this),
@@ -80,15 +80,15 @@ static const char *ROOT_HTML = R"(<!DOCTYPE html>
   <button name="reboot" value="reboot">Reboot</button>
 </form>
 <br/>
-<form action="./coil/read" method="post">
-  <label for="coil">Nibe coil: </label>
-  <input type="text" id="coil" name="coil" value="">
+<form action="./nibe/read" method="post">
+  <label for="register">Nibe register: </label>
+  <input type="text" id="register" name="register" value="">
   <button>Read</button>
 </form>
 <br/>
-<form action="./coil/write" method="post">
-  <label for="coil">Nibe coil: </label>
-  <input type="text" id="coil" name="coil" value="">
+<form action="./nibe/write" method="post">
+  <label for="register">Nibe register: </label>
+  <input type="text" id="register" name="register" value="">
   <label for="value">Value: </label>
   <input type="text" id="value" name="value" value="">
   <button>Write</button>
@@ -228,28 +228,28 @@ void NibeMqttGwWebServer::handlePostReboot() {
     send200AndReboot(ROOT_REDIRECT_HTML "Rebooting...");
 }
 
-void NibeMqttGwWebServer::handlePostCoilRead() {
-    String coil = httpServer.arg("coil");
-    uint16_t coilAddress = coil.toInt();
-    if (coilAddress > 0) {
-        ESP_LOGI(TAG, "Requesting coil %d", coilAddress);
-        nibeMqttGw.requestCoil(coilAddress);
-        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Sent request to Nibe for coil " + coil);
+void NibeMqttGwWebServer::handlePostNibeRead() {
+    String _register = httpServer.arg("register");
+    uint16_t registerAddress = _register.toInt();
+    if (registerAddress > 0) {
+        ESP_LOGI(TAG, "Requesting register %d", registerAddress);
+        nibeMqttGw.requestNibeRegister(registerAddress);
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Sent request to Nibe for register " + _register);
     } else {
-        httpServer.send(400, "text/plain", "Bad coil parameter: " + coil);
+        httpServer.send(400, "text/plain", "Bad register parameter: " + _register);
     }
 }
 
-void NibeMqttGwWebServer::handlePostCoilWrite() {
-    String coil = httpServer.arg("coil");
-    uint16_t coilAddress = coil.toInt();
+void NibeMqttGwWebServer::handlePostNibeWrite() {
+    String _register = httpServer.arg("register");
+    uint16_t registerAddress = _register.toInt();
     String value = httpServer.arg("value");
-    if (coilAddress > 0 && !value.isEmpty()) {
-        ESP_LOGI(TAG, "Write coil %d: %s", coilAddress, value.c_str());
-        nibeMqttGw.writeCoil(coilAddress, value.c_str());
-        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Sent request to Nibe for coil " + coil);
+    if (registerAddress > 0 && !value.isEmpty()) {
+        ESP_LOGI(TAG, "Write register %d: %s", registerAddress, value.c_str());
+        nibeMqttGw.writeNibeRegister(registerAddress, value.c_str());
+        httpServer.send(200, "text/html", ROOT_REDIRECT_HTML "Sent request to Nibe for register " + _register);
     } else {
-        httpServer.send(400, "text/plain", "Bad coil parameter: " + coil);
+        httpServer.send(400, "text/plain", "Bad register parameter: " + _register);
     }
 }
 

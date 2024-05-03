@@ -9,8 +9,8 @@
 #include "nibegw.h"
 #include "nibegw_config.h"
 
-#define READ_COILS_RING_BUFFER_SIZE 256  // max number of pending coils to poll
-#define WRITE_COILS_RING_BUFFER_SIZE 16  // max number of pending coils to write
+#define READ_REGISTER_RING_BUFFER_SIZE 256  // max number of pending registers to poll
+#define WRITE_REGISTER_RING_BUFFER_SIZE 16  // max number of pending registers to write
 
 class NibeMqttGw : public NibeGwCallback, MqttSubscriptionCallback {
    public:
@@ -18,12 +18,12 @@ class NibeMqttGw : public NibeGwCallback, MqttSubscriptionCallback {
 
     esp_err_t begin(const NibeMqttConfig& config, MqttClient& mqttClient);
 
-    // request and publish configured coils to mqtt
+    // request and publish configured registers to mqtt
     void publishState();
-    // request and publish a single coil
-    void requestCoil(uint16_t coilAddress);
-    // write a single coil
-    void writeCoil(uint16_t coilAddress, const char* str);
+    // request and publish a single register
+    void requestNibeRegister(uint16_t address);
+    // write a single register
+    void writeNibeRegister(uint16_t address, const char* str);
 
     // NibeGwCallback
     void onMessageReceived(const NibeResponseMessage* const msg, int len);
@@ -38,26 +38,26 @@ class NibeMqttGw : public NibeGwCallback, MqttSubscriptionCallback {
     MqttClient* mqttClient;
 
     std::string nibeRootTopic;
-    std::unordered_set<uint16_t> announcedCoils;
-    std::unordered_map<uint16_t, Metric*> coilMetrics;
+    std::unordered_set<uint16_t> announcedNibeRegisters;
+    std::unordered_map<uint16_t, Metric*> nibeRegisterMetrics;
     int modbusDataMsgMqttPublish;
 
-    RingbufHandle_t readCoilsRingBuffer;
-    RingbufHandle_t writeCoilsRingBuffer;
+    RingbufHandle_t readNibeRegistersRingBuffer;
+    RingbufHandle_t writeNibeRegistersRingBuffer;
 
     Metric& metricPublishStateTime;
     std::atomic<uint32_t> lastPublishStateStartTime;
-    std::vector<uint16_t>::const_iterator nextCoilToPollLowFrequency;
-    int numCoilsToPoll;
+    std::vector<uint16_t>::const_iterator nextNibeRegisterToPollLowFrequency;
+    int numNibeRegistersToPoll;
 
-    const Coil* findCoil(uint16_t coilAddress);
-    void publishMetric(const Coil& coil, const uint8_t* const data);
-    void publishMqtt(const Coil& coil, const uint8_t* const data);
-    void announceCoil(const Coil& coil);
+    const NibeRegister* findNibeRegister(uint16_t address);
+    void publishMetric(const NibeRegister& _register, const uint8_t* const data);
+    void publishMqtt(const NibeRegister& _register, const uint8_t* const data);
+    void announceNibeRegister(const NibeRegister& _register);
 };
 
 struct NibeMqttGwWriteRequest {
-    uint16_t coilAddress;
+    uint16_t address;
     char value[16];  // zero terminated string
 };
 

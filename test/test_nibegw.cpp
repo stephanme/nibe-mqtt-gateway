@@ -120,7 +120,7 @@ TEST_CASE("NibeReadRequestMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(NibeStart::Request, request->start);
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusReadReq, request->cmd);
     TEST_ASSERT_EQUAL_HEX8(2, request->len);
-    TEST_ASSERT_EQUAL_HEX16(40004, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(40004, request->registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0x73, request->chksum);
 
     uint8_t data2[] = {0xc0, 0x69, 0x02, 0xa0, 0xa9, 0xa2};
@@ -128,7 +128,7 @@ TEST_CASE("NibeReadRequestMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(NibeStart::Request, request->start);
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusReadReq, request->cmd);
     TEST_ASSERT_EQUAL_HEX8(2, request->len);
-    TEST_ASSERT_EQUAL_HEX16(43424, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(43424, request->registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0xa2, request->chksum);
 }
 
@@ -139,7 +139,7 @@ TEST_CASE("NibeReadResponseMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX16(NibeDeviceAddress::MODBUS40, response->deviceAddress);
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusReadResp, response->cmd);
     TEST_ASSERT_EQUAL(6, response->len);
-    TEST_ASSERT_EQUAL_HEX16(40004, response->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(40004, response->readResponse.registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0x6e, response->readResponse.value[0]);
 
     uint8_t data2[] = {0x5c, 0x00, 0x20, 0x6a, 0x06, 0xa0, 0xa9, 0xf5, 0x12, 0x00, 0x00, 0xa2};
@@ -148,7 +148,7 @@ TEST_CASE("NibeReadResponseMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX16(NibeDeviceAddress::MODBUS40, response->deviceAddress);
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusReadResp, response->cmd);
     TEST_ASSERT_EQUAL(6, response->len);
-    TEST_ASSERT_EQUAL_HEX16(43424, response->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(43424, response->readResponse.registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0xf5, response->readResponse.value[0]);
 }
 
@@ -164,9 +164,9 @@ TEST_CASE("NibeDataMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusDataMsg, response->cmd);
     TEST_ASSERT_EQUAL(80, response->len);
     for (int i = 0; i < 20; i++) {
-        TEST_ASSERT_EQUAL_HEX16(40004 + i, response->dataMessage.coils[i].coilAddress);
-        TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.coils[i].value[0]);
-        TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.coils[i].value[1]);
+        TEST_ASSERT_EQUAL_HEX16(40004 + i, response->dataMessage.registers[i].registerAddress);
+        TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.registers[i].value[0]);
+        TEST_ASSERT_EQUAL_HEX8(i, response->dataMessage.registers[i].value[1]);
     }
 }
 
@@ -176,7 +176,7 @@ TEST_CASE("NibeWriteRequestMessage", "[nibegw]") {
     TEST_ASSERT_EQUAL_HEX8(NibeStart::Request, request->start);
     TEST_ASSERT_EQUAL_HEX8(NibeCmd::ModbusWriteReq, request->cmd);
     TEST_ASSERT_EQUAL_HEX8(6, request->len);
-    TEST_ASSERT_EQUAL_HEX16(48132, request->coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(48132, request->registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0x11, request->chksum);
 }
 
@@ -235,7 +235,7 @@ TEST_CASE("read response", "[nibegw]") {
 
     TEST_ASSERT_EQUAL(12, callback.lastMessageReceivedLen);
     TEST_ASSERT_EQUAL(6, callback.lastMessageReceived->len);
-    TEST_ASSERT_EQUAL_HEX16(40004, callback.lastMessageReceived->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL_HEX16(40004, callback.lastMessageReceived->readResponse.registerAddress);
     TEST_ASSERT_EQUAL_HEX8(0x6e, callback.lastMessageReceived->readResponse.value[0]);
 
     // check ACK
@@ -369,7 +369,7 @@ TEST_CASE("deduplicate 5C in response data", "[nibegw]") {
 
     TEST_ASSERT_EQUAL(12, callback.lastMessageReceivedLen);   // even though 13 bytes are read
     TEST_ASSERT_EQUAL(6, callback.lastMessageReceived->len);  // was 7 on wire
-    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.registerAddress);
     uint8_t expected[] = {0x5c, 0xe6, 0x05, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, callback.lastMessageReceived->readResponse.value, 4);
     // check ACK
@@ -382,7 +382,7 @@ TEST_CASE("deduplicate 5C in response data", "[nibegw]") {
     TEST_ASSERT_EQUAL(2, callback.onMessageReceivedCnt);
     TEST_ASSERT_EQUAL(12, callback.lastMessageReceivedLen);   // even though 16 bytes are read
     TEST_ASSERT_EQUAL(6, callback.lastMessageReceived->len);  // was 10 on wire
-    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.coilAddress);
+    TEST_ASSERT_EQUAL(513, callback.lastMessageReceived->readResponse.registerAddress);
     uint8_t expected2[] = {0x5c, 0x5c, 0x5c, 0x5c};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expected2, callback.lastMessageReceived->readResponse.value, 4);
 

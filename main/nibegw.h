@@ -105,31 +105,31 @@ struct __attribute__((packed)) NibeReadRequestMessage {
     NibeStart start;  // const 0xc0
     NibeCmd cmd;      // NibeCmd
     uint8_t len;      // = 2
-    uint16_t coilAddress;
-    uint8_t chksum;  // xor of start..coilAddress
+    uint16_t registerAddress;
+    uint8_t chksum;  // xor of start..registerAddress
 };
 
 struct __attribute__((packed)) NibeWriteRequestMessage {
     NibeStart start;  // const 0xc0
     NibeCmd cmd;      // NibeCmd
     uint8_t len;      // = 6
-    uint16_t coilAddress;
+    uint16_t registerAddress;
     uint8_t value[4];
     uint8_t chksum;  // xor of start..value[]
 };
 
 struct __attribute__((packed)) NibeReadResponseData {
-    uint16_t coilAddress;
-    uint8_t value[4];  // unclear if always 4 bytes or depends on coil address/type
+    uint16_t registerAddress;
+    uint8_t value[4];  // unclear if always 4 bytes or depends on register address/type
 };
 
-struct __attribute__((packed)) NibeDataMessageCoil {
-    uint16_t coilAddress;
+struct __attribute__((packed)) NibeDataMessageRegister {
+    uint16_t registerAddress;
     uint8_t value[2];
 };
 
 struct __attribute__((packed)) NibeDataMessage {
-    NibeDataMessageCoil coils[20];
+    NibeDataMessageRegister registers[20];
 };
 
 struct __attribute__((packed)) NibeWriteResponseData {

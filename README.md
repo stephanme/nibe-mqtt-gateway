@@ -2,7 +2,7 @@
 
 nibe-mqtt-gateway is an MQTT integration for Nibe heatpumps.
 
-It is used to integrate a Nibe VVM310/S2125 into Home Assistant and additional monitoring systems via Mosquitto as MQTT broker.
+It is used to integrate a Nibe VVM310/S2125 into Home Assistant via Mosquitto as MQTT broker.
 Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus metrics, provides 4 relays that can be used to control the Nibe AUX inputs and it can count the electrical energy consumption via an S0 interface.
 
 ## Features
@@ -10,7 +10,7 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [x] connection to Nibe heatpump VVM310/S2125 via RS485
 - [x] wired Ethernet (no Wifi needed nor supported)
 - [x] direct connection to MQTT broker
-- [x] configurable set of of published Nibe registers/coils
+- [x] configurable set of of published Nibe registers
 - [x] supports Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager, no 32 bit registers)
 - [x] supports writing to Nibe registers
 - [x] energy meter connected via S0 interface to OptIn1, persisted in NVS
@@ -20,7 +20,7 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [x] OTA updates (well, over Ethernet)
 - [x] upload of configuration files including the ModbusManager CSV file
 - [x] metrics via Prometheus endpoint
-- [x] nibe coils and other measurements as Prometheus metrics
+- [x] nibe registers and other measurements as Prometheus metrics
 - [x] logging via MQTT topic (as alternative to serial interface)
 - [x] automatic safe-boot mode when ending up in crash loop
 
@@ -62,8 +62,8 @@ For subsequent installations, the firmware can be uploaded via OTA: http://nibeg
 ### Configuration
 
 The configuration consists of:
-- general configuration json `config.json` like MQTT broker url and credentials, heatpump coils to be polled, logging etc.
-- a Nibe ModbusManager file that defines all available coils, `nibe-modbus.csv`
+- general configuration json `config.json` like MQTT broker url and credentials, heatpump registers to be polled, logging etc.
+- a Nibe ModbusManager file that defines all available registers, `nibe-modbus.csv`
 - the Energy Meter value can be set to adjust it with the real meter reading
 
 When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory and reboots to activate the configuration change.
@@ -76,7 +76,7 @@ General configuration:
 
 Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
-- use Nibe ModbusManager to get a CSV with all coil. Save e.g. as `nibe-modbus.csv`
+- use Nibe ModbusManager to get a CSV with all registers. Save e.g. as `nibe-modbus.csv`
 - upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
 
 Energy Meter configuration (also via UI):
@@ -115,7 +115,7 @@ Log levels can be configured via `config.json` (see above):
 - nibe-mqtt-gateway sources are complied with `LOG_LOCAL_LEVEL=ESP_LOG_DEBUG` to allow debug logging
 - log levels can be temporarily changed via UI or curl
   - `curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "tag=<tag>&level=<none|error|war|info|debug|verbose>"  http://nibegw/config/log`
-  - log level are set back to `config.json` settings after reset
+  - log levels are set back to `config.json` settings after reset
 
 After 3 fast crashes in a row, nibe-mqtt-gateway boots into a safe-mode that should allow to upload a fixed/working firmware via OTA:
 - only OTA upload is supported

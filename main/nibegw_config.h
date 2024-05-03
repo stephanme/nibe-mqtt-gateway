@@ -14,7 +14,7 @@
 #include "nibegw.h"
 
 // configuration
-enum class CoilDataType {
+enum class NibeRegisterDataType {
     Unknown,
     UInt8,
     Int8,
@@ -22,17 +22,16 @@ enum class CoilDataType {
     Int16,
     UInt32,
     Int32,
-    // Date?
 };
 
-enum class CoilMode {
+enum class NibeRegisterMode {
     Unknown = 0x00,
     Read = 0x01,
     Write = 0x02,
     ReadWrite = Read | Write,
 };
 
-enum class CoilUnit {
+enum class NibeRegisterUnit {
     Unknown,
     NoUnit,  // no unit
 
@@ -57,31 +56,28 @@ enum class CoilUnit {
     Hours,    // h, hrs
     Days,     // days
     Months,   // months
-
 };
 
-struct NibeCoilMetricConfig;
+struct NibeRegisterMetricConfig;
 struct NibeMqttConfig;
 
-// represents coil configuration from ModbusManager
+// represents register configuration from ModbusManager
 // Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
-//
-// TODO: make immutable? memory overhead - especially strings?
-class Coil {
+class NibeRegister {
    public:
     uint16_t id;
     std::string title;
-    CoilUnit unit;
-    CoilDataType dataType;  // = size
+    NibeRegisterUnit unit;
+    NibeRegisterDataType dataType;  // = size
     int factor;
     int minValue;
     int maxValue;
     int defaultValue;
-    CoilMode mode;
+    NibeRegisterMode mode;
 
-    Coil() = default;
-    Coil(uint16_t id, const std::string& title, CoilUnit unit, CoilDataType dataType, int factor, int minValue, int maxValue,
-         int defaultValue, CoilMode mode)
+    NibeRegister() = default;
+    NibeRegister(uint16_t id, const std::string& title, NibeRegisterUnit unit, NibeRegisterDataType dataType, int factor, int minValue, int maxValue,
+         int defaultValue, NibeRegisterMode mode)
         : id(id),
           title(title),
           unit(unit),
@@ -92,30 +88,30 @@ class Coil {
           defaultValue(defaultValue),
           mode(mode) {}
 
-    int32_t decodeCoilDataRaw(const uint8_t* const data) const;
-    std::string decodeCoilData(const uint8_t* const data) const;
-    bool encodeCoilData(const std::string& value, uint8_t* data) const;
+    int32_t decodeDataRaw(const uint8_t* const data) const;
+    std::string decodeData(const uint8_t* const data) const;
+    bool encodeData(const std::string& value, uint8_t* data) const;
     std::string formatNumber(auto value) const { return Metrics::formatNumber(value, factor, 1); }
     int32_t parseSignedNumber(const std::string& value) const;
     uint32_t parseUnsignedNumber(const std::string& value) const;
     const char* unitAsString() const;
-    static CoilUnit stringToUnit(const char* unit);
+    static NibeRegisterUnit stringToUnit(const char* unit);
 
     JsonDocument homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
                                                const std::string& deviceDiscoveryInfo) const;
 
-    NibeCoilMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
+    NibeRegisterMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
     std::string promMetricName() const;
     void appendPromAttributes(std::string& promMetricName) const;
 
-    bool operator==(const Coil& other) const = default;
+    bool operator==(const NibeRegister& other) const = default;
 
    private:
     JsonDocument defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
                                                       const std::string& deviceDiscoveryInfo) const;
 };
 
-struct NibeCoilMetricConfig {
+struct NibeRegisterMetricConfig {
     std::string name;
     int factor;
     int scale;
@@ -125,10 +121,10 @@ struct NibeCoilMetricConfig {
 };
 
 struct NibeMqttConfig {
-    std::unordered_map<uint16_t, Coil> coils;  // TODO const Coil, but doesn't work
+    std::unordered_map<uint16_t, NibeRegister> coils;  // TODO const NibeRegister, but doesn't work
     std::vector<uint16_t> coilsToPoll;
     std::vector<uint16_t> coilsToPollLowFrequency;
-    std::unordered_map<uint16_t, NibeCoilMetricConfig> metrics;
+    std::unordered_map<uint16_t, NibeRegisterMetricConfig> metrics;
     std::unordered_map<uint16_t, std::string> homeassistantDiscoveryOverrides;
 };
 

@@ -89,7 +89,6 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL_STRING("VVM 310, S 2125-8", config.mqtt.deviceModel.c_str());
     TEST_ASSERT_EQUAL_STRING("http://nibegw.fritz.box", config.mqtt.deviceConfigurationUrl.c_str());
 
-
     TEST_ASSERT_EQUAL_STRING("nibegw", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/logs", config.mqtt.logTopic.c_str());
     TEST_ASSERT_EQUAL(2, config.logging.logLevels.size());
@@ -105,15 +104,15 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL(4, config.nibe.coilsToPollLowFrequency[1]);
 
     TEST_ASSERT_EQUAL(3, config.nibe.metrics.size());
-    const NibeCoilMetricConfig& metric1 = config.nibe.metrics.at(1);
+    const NibeRegisterMetricConfig& metric1 = config.nibe.metrics.at(1);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_1{coil="1"})", metric1.name.c_str());
     TEST_ASSERT_EQUAL(10, metric1.factor);
     TEST_ASSERT_EQUAL(0, metric1.scale);
-    const NibeCoilMetricConfig& metric2 = config.nibe.metrics.at(2);
+    const NibeRegisterMetricConfig& metric2 = config.nibe.metrics.at(2);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_2{coil="2"})", metric2.name.c_str());
     TEST_ASSERT_EQUAL(0, metric2.factor);
     TEST_ASSERT_EQUAL(0, metric2.scale);
-    const NibeCoilMetricConfig& metric3 = config.nibe.metrics.at(3);
+    const NibeRegisterMetricConfig& metric3 = config.nibe.metrics.at(3);
     TEST_ASSERT_EQUAL_STRING(R"(prom_name_3{coil="3"})", metric3.name.c_str());
     TEST_ASSERT_EQUAL(0, metric3.factor);
     TEST_ASSERT_EQUAL(10, metric3.scale);
@@ -175,7 +174,7 @@ TEST_CASE("saveConfig - config.json.template", "[config]") {
     NibeMqttGwConfigManager configManager;
     configManager.begin();
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));
-    
+
     const NibeMqttGwConfig& config = configManager.getConfig();
     TEST_ASSERT_EQUAL_STRING("mqtt://mosquitto.fritz.box", config.mqtt.brokerUri.c_str());
 }
@@ -191,7 +190,7 @@ Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
                                       R"(C";s16;10;0;0;0;R;)";
 
 TEST_CASE("parseNibeModbusCSV", "[config]") {
-    std::unordered_map<uint16_t, Coil> coils;
+    std::unordered_map<uint16_t, NibeRegister> coils;
     auto is = nonstd::icharbufstream("");
     TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
     std::string badConfig = std::string(nibeModbusConfig);
@@ -202,8 +201,8 @@ TEST_CASE("parseNibeModbusCSV", "[config]") {
     is = nonstd::icharbufstream(nibeModbusConfig);
     TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
     TEST_ASSERT_EQUAL(1, coils.size());
-    TEST_ASSERT(coils[40004] ==
-                Coil(40004, "BT1 Outdoor Temperature", CoilUnit::GradCelcius, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
+    TEST_ASSERT(coils[40004] == NibeRegister(40004, "BT1 Outdoor Temperature", NibeRegisterUnit::GradCelcius,
+                                             NibeRegisterDataType::Int16, 10, 0, 0, 0, NibeRegisterMode::Read));
 
     coils.clear();
     is = nonstd::icharbufstream(nibeModbusConfig);
@@ -221,7 +220,7 @@ TEST_CASE("parseNibeModbusCSV, validate only", "[config]") {
 }
 
 TEST_CASE("parseNibeModbusCSVLine", "[config]") {
-    Coil coil;
+    NibeRegister coil;
 
     TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine("", coil));
     TEST_ASSERT_EQUAL(2, NibeMqttGwConfigManager::parseNibeModbusCSVLine("bad csv", coil));
@@ -239,10 +238,12 @@ TEST_CASE("parseNibeModbusCSVLine", "[config]") {
 
     TEST_ASSERT_EQUAL(ESP_OK,
                       NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT(coil == Coil(40004, "title", CoilUnit::Percent, CoilDataType::Int16, 10, 0, 0, 0, CoilMode::Read));
+    TEST_ASSERT(coil == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::Int16, 10, 0, 0, 0,
+                                     NibeRegisterMode::Read));
     TEST_ASSERT_EQUAL(ESP_OK,
                       NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;%;u32;1;100;200;1;R/W;)", coil));
-    TEST_ASSERT(coil == Coil(40004, "title", CoilUnit::Percent, CoilDataType::UInt32, 1, 100, 200, 1, CoilMode::ReadWrite));
+    TEST_ASSERT(coil == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::UInt32, 1, 100, 200, 1,
+                                     NibeRegisterMode::ReadWrite));
 }
 
 TEST_CASE("getNextCsvToken", "[config]") {
@@ -291,7 +292,7 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv", "[config]") {
 
     std::ifstream ifs("config/nibe-modbus-vvm310.csv");
     nonstd::istdstream is(ifs);
-    std::unordered_map<uint16_t, Coil> coils;
+    std::unordered_map<uint16_t, NibeRegister> coils;
 
     TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
     TEST_ASSERT_GREATER_THAN(800, coils.size());
@@ -314,9 +315,12 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv, filter configured coils"
 
     ifs.open("config/nibe-modbus-vvm310.csv");
     nonstd::istdstream is(ifs);
-    std::unordered_map<uint16_t, Coil> coils;
+    std::unordered_map<uint16_t, NibeRegister> coils;
 
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils, std::bind(&NibeMqttGwConfigManager::coilFilterConfigured, configManager, std::placeholders::_1)));
+    TEST_ASSERT_EQUAL(
+        ESP_OK,
+        NibeMqttGwConfigManager::parseNibeModbusCSV(
+            is, &coils, std::bind(&NibeMqttGwConfigManager::nibeRegisterFilterConfigured, configManager, std::placeholders::_1)));
     TEST_ASSERT_GREATER_THAN(20, coils.size());
     TEST_ASSERT_LESS_THAN(50, coils.size());
 
