@@ -33,9 +33,9 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
             },
         .nibe =
             {
-                .coils = {},
-                .coilsToPoll = {},
-                .coilsToPollLowFrequency = {},
+                .registers = {},
+                .pollRegisters = {},
+                .pollRegistersSlow = {},
                 .metrics = {},
                 .homeassistantDiscoveryOverrides = {},
             },
@@ -88,8 +88,8 @@ esp_err_t NibeMqttGwConfigManager::begin() {
     if (file) {
         ESP_LOGI(TAG, "Reading nibe modbus config file %s", NIBE_MODBUS_FILE);
         nonstd::arduinostream is(file);
-        // filter for coils that are specified in config to poll, as metrics or for HA discovery
-        if (parseNibeModbusCSV(is, &config.nibe.coils,
+        // filter for registers that are specified in config to poll, as metrics or for HA discovery
+        if (parseNibeModbusCSV(is, &config.nibe.registers,
                                std::bind(&NibeMqttGwConfigManager::nibeRegisterFilterConfigured, this, std::placeholders::_1)) !=
             ESP_OK) {
             file.close();
@@ -105,11 +105,11 @@ esp_err_t NibeMqttGwConfigManager::begin() {
 }
 
 bool NibeMqttGwConfigManager::nibeRegisterFilterConfigured(u_int16_t id) const {
-    // filter for coils that are specified in config to poll, as metrics or for HA discovery
-    auto coilsToPollEnd = this->config.nibe.coilsToPoll.end();
-    auto coilsToPollLFEnd = this->config.nibe.coilsToPollLowFrequency.end();
-    return std::find(this->config.nibe.coilsToPoll.begin(), coilsToPollEnd, id) != coilsToPollEnd ||
-           std::find(this->config.nibe.coilsToPollLowFrequency.begin(), coilsToPollLFEnd, id) != coilsToPollLFEnd ||
+    // filter for registers that are specified in config for polling, as metrics or for HA discovery
+    auto pollRegistersEnd = this->config.nibe.pollRegisters.end();
+    auto pollRegistersSlowEnd = this->config.nibe.pollRegistersSlow.end();
+    return std::find(this->config.nibe.pollRegisters.begin(), pollRegistersEnd, id) != pollRegistersEnd ||
+           std::find(this->config.nibe.pollRegistersSlow.begin(), pollRegistersSlowEnd, id) != pollRegistersSlowEnd ||
            this->config.nibe.metrics.find(id) != this->config.nibe.metrics.end() ||
            this->config.nibe.homeassistantDiscoveryOverrides.find(id) != this->config.nibe.homeassistantDiscoveryOverrides.end();
 }
@@ -145,13 +145,13 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
     doc["mqtt"]["deviceManufacturer"] = config.mqtt.deviceManufacturer;
     doc["mqtt"]["deviceConfigurationUrl"] = config.mqtt.deviceConfigurationUrl;
 
-    JsonArray coilsToPoll = doc["nibe"]["coilsToPoll"].to<JsonArray>();
-    for (auto coil : config.nibe.coilsToPoll) {
-        coilsToPoll.add(coil);
+    JsonArray pollRegisters = doc["nibe"]["pollRegisters"].to<JsonArray>();
+    for (auto reg : config.nibe.pollRegisters) {
+        pollRegisters.add(reg);
     }
-    JsonArray coilsToPollLowFrequency = doc["nibe"]["coilsToPollLowFrequency"].to<JsonArray>();
-    for (auto coil : config.nibe.coilsToPollLowFrequency) {
-        coilsToPollLowFrequency.add(coil);
+    JsonArray pollRegistersSlow = doc["nibe"]["pollRegistersSlow"].to<JsonArray>();
+    for (auto reg : config.nibe.pollRegistersSlow) {
+        pollRegistersSlow.add(reg);
     }
     JsonObject metrics = doc["nibe"]["metrics"].to<JsonObject>();
     for (auto [id, metric] : config.nibe.metrics) {
@@ -239,11 +239,11 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
         config.mqtt.deviceConfigurationUrl = defaultConfigUrl;
     }
 
-    for (auto coil : doc["nibe"]["coilsToPoll"].as<JsonArray>()) {
-        config.nibe.coilsToPoll.push_back(coil.as<uint16_t>());
+    for (auto reg : doc["nibe"]["pollRegisters"].as<JsonArray>()) {
+        config.nibe.pollRegisters.push_back(reg.as<uint16_t>());
     }
-    for (auto coil : doc["nibe"]["coilsToPollLowFrequency"].as<JsonArray>()) {
-        config.nibe.coilsToPollLowFrequency.push_back(coil.as<uint16_t>());
+    for (auto reg : doc["nibe"]["pollRegistersSlow"].as<JsonArray>()) {
+        config.nibe.pollRegistersSlow.push_back(reg.as<uint16_t>());
     }
 
     for (auto metric : doc["nibe"]["metrics"].as<JsonObject>()) {
@@ -257,7 +257,7 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
             };
         } else {
             // log and skip
-            ESP_LOGE(TAG, "nibe.metrics: invalid coil address %s", metric.key().c_str());
+            ESP_LOGE(TAG, "nibe.metrics: invalid register address %s", metric.key().c_str());
         }
     }
 
@@ -269,7 +269,7 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
             config.nibe.homeassistantDiscoveryOverrides[id] = overrideJson;
         } else {
             // log and skip
-            ESP_LOGE(TAG, "nibe.homeassistantDiscoveryOverrides: invalid coil address %s", override.key().c_str());
+            ESP_LOGE(TAG, "nibe.homeassistantDiscoveryOverrides: invalid register address %s", override.key().c_str());
         }
     }
 
@@ -295,7 +295,7 @@ esp_err_t NibeMqttGwConfigManager::saveNibeModbusConfig(const char* uploadFileNa
     }
     ESP_LOGW(TAG, "Skip writing config on Linux target");
     // store for testing
-    config.nibe.coils = tmpNibeRegisters;
+    config.nibe.registers = tmpNibeRegisters;
 #else
     // validate csv
     File file = LittleFS.open(uploadFileName);

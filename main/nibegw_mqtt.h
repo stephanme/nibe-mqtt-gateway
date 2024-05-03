@@ -47,7 +47,7 @@ class NibeMqttGw : public NibeGwCallback, MqttSubscriptionCallback {
 
     Metric& metricPublishStateTime;
     std::atomic<uint32_t> lastPublishStateStartTime;
-    std::vector<uint16_t>::const_iterator nextNibeRegisterToPollLowFrequency;
+    std::vector<uint16_t>::const_iterator nextNibeRegisterToPollSlow;
     int numNibeRegistersToPoll;
 
     const NibeRegister* findNibeRegister(uint16_t address);

@@ -21,9 +21,9 @@ TEST_CASE("default config", "[config]") {
     TEST_ASSERT_EQUAL_STRING("", config.mqtt.hostname.c_str());
     TEST_ASSERT_EQUAL_STRING("nibegw/log", config.mqtt.logTopic.c_str());
 
-    TEST_ASSERT_EQUAL(0, config.nibe.coils.size());
-    TEST_ASSERT_EQUAL(0, config.nibe.coilsToPoll.size());
-    TEST_ASSERT_EQUAL(0, config.nibe.coilsToPollLowFrequency.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.registers.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.pollRegisters.size());
+    TEST_ASSERT_EQUAL(0, config.nibe.pollRegistersSlow.size());
     TEST_ASSERT_EQUAL(0, config.nibe.metrics.size());
     TEST_ASSERT_EQUAL(0, config.nibe.homeassistantDiscoveryOverrides.size());
 
@@ -49,8 +49,8 @@ static const char* configJson = R"({
         "deviceModel": "VVM 310, S 2125-8"
     },
     "nibe": {
-        "coilsToPoll": [1,2],
-        "coilsToPollLowFrequency": [3,4],
+        "pollRegisters": [1,2],
+        "pollRegistersSlow": [3,4],
         "metrics": {
             "1": {"name": "prom_name_1{coil=\"1\"}", "factor": 10},
             "2": {"name": "prom_name_2{coil=\"2\"}"},
@@ -95,13 +95,13 @@ TEST_CASE("saveConfig", "[config]") {
     TEST_ASSERT_EQUAL_STRING("info", config.logging.logLevels.at("*").c_str());
     TEST_ASSERT_EQUAL_STRING("debug", config.logging.logLevels.at("mqtt").c_str());
 
-    TEST_ASSERT_EQUAL(2, config.nibe.coilsToPoll.size());
-    TEST_ASSERT_EQUAL(1, config.nibe.coilsToPoll[0]);
-    TEST_ASSERT_EQUAL(2, config.nibe.coilsToPoll[1]);
+    TEST_ASSERT_EQUAL(2, config.nibe.pollRegisters.size());
+    TEST_ASSERT_EQUAL(1, config.nibe.pollRegisters[0]);
+    TEST_ASSERT_EQUAL(2, config.nibe.pollRegisters[1]);
 
-    TEST_ASSERT_EQUAL(2, config.nibe.coilsToPollLowFrequency.size());
-    TEST_ASSERT_EQUAL(3, config.nibe.coilsToPollLowFrequency[0]);
-    TEST_ASSERT_EQUAL(4, config.nibe.coilsToPollLowFrequency[1]);
+    TEST_ASSERT_EQUAL(2, config.nibe.pollRegistersSlow.size());
+    TEST_ASSERT_EQUAL(3, config.nibe.pollRegistersSlow[0]);
+    TEST_ASSERT_EQUAL(4, config.nibe.pollRegistersSlow[1]);
 
     TEST_ASSERT_EQUAL(3, config.nibe.metrics.size());
     const NibeRegisterMetricConfig& metric1 = config.nibe.metrics.at(1);
@@ -139,9 +139,9 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_TRUE(json.contains("nibegw/logs"));
     TEST_ASSERT_TRUE(json.contains(R"("*": "info")"));
     TEST_ASSERT_TRUE(json.contains(R"("mqtt": "debug")"));
-    TEST_ASSERT_TRUE(json.contains("coilsToPoll"));
+    TEST_ASSERT_TRUE(json.contains("pollRegisters"));
     TEST_ASSERT_TRUE(json.contains("1,"));
-    TEST_ASSERT_TRUE(json.contains("coilsToPollLowFrequency"));
+    TEST_ASSERT_TRUE(json.contains("pollRegistersSlow"));
     TEST_ASSERT_TRUE(json.contains("3,"));
     TEST_ASSERT_TRUE(json.contains("metrics"));
     TEST_ASSERT_TRUE(json.contains("prom_name_1"));
@@ -177,6 +177,10 @@ TEST_CASE("saveConfig - config.json.template", "[config]") {
 
     const NibeMqttGwConfig& config = configManager.getConfig();
     TEST_ASSERT_EQUAL_STRING("mqtt://mosquitto.fritz.box", config.mqtt.brokerUri.c_str());
+    TEST_ASSERT_GREATER_THAN(0, config.nibe.pollRegisters.size());
+    TEST_ASSERT_GREATER_THAN(0, config.nibe.pollRegistersSlow.size());
+    TEST_ASSERT_GREATER_THAN(0, config.nibe.metrics.size());
+    TEST_ASSERT_GREATER_THAN(0, config.nibe.homeassistantDiscoveryOverrides.size());
 }
 
 // ugly concatenation because of ISO-8859-1 for °C

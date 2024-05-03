@@ -34,20 +34,20 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
     std::string commandTopic = nibeRootTopic + "+/set";
     mqttClient.subscribe(commandTopic, this);
 
-    nextNibeRegisterToPollLowFrequency = config.coilsToPollLowFrequency.cbegin();
-    numNibeRegistersToPoll = config.coilsToPoll.size() + (config.coilsToPollLowFrequency.size() > 0 ? 1 : 0);
+    nextNibeRegisterToPollSlow = config.pollRegistersSlow.cbegin();
+    numNibeRegistersToPoll = config.pollRegisters.size() + (config.pollRegistersSlow.size() > 0 ? 1 : 0);
 
     // pre-announce known registers for HA auto-discovery, offloads nibegw task
     // polled registers
-    for (const auto& regAdr : config.coilsToPoll) {
-        auto iter = config.coils.find(regAdr);
-        if (iter != config.coils.end()) {
+    for (const auto& regAdr : config.pollRegisters) {
+        auto iter = config.registers.find(regAdr);
+        if (iter != config.registers.end()) {
             announceNibeRegister(iter->second);
         }
     }
-    for (const auto& regAdr : config.coilsToPollLowFrequency) {
-        auto iter = config.coils.find(regAdr);
-        if (iter != config.coils.end()) {
+    for (const auto& regAdr : config.pollRegistersSlow) {
+        auto iter = config.registers.find(regAdr);
+        if (iter != config.registers.end()) {
             announceNibeRegister(iter->second);
         }
     }
@@ -57,8 +57,8 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
     // writable registers need to be pre-announced and therefore always require overrides (even if empty)
     for (auto ovrIter = config.homeassistantDiscoveryOverrides.cbegin(); ovrIter != config.homeassistantDiscoveryOverrides.cend();
          ovrIter++) {
-        auto iter = config.coils.find(ovrIter->first);
-        if (iter != config.coils.end()) {
+        auto iter = config.registers.find(ovrIter->first);
+        if (iter != config.registers.end()) {
             announceNibeRegister(iter->second);
         }
     }
@@ -71,16 +71,16 @@ void NibeMqttGw::publishState() {
 
     // TODO: clear ring buffer? - nibegw should be fast enough to keep up with the queue
     lastPublishStateStartTime = esp_timer_get_time() / 1000;
-    for (auto address : config->coilsToPoll) {
+    for (auto address : config->pollRegisters) {
         requestNibeRegister(address);
     }
-    // plus one coil from low frequency list
-    if (nextNibeRegisterToPollLowFrequency  == config->coilsToPollLowFrequency.cend()) {
-        nextNibeRegisterToPollLowFrequency = config->coilsToPollLowFrequency.cbegin();
+    // plus one register from low frequency list
+    if (nextNibeRegisterToPollSlow  == config->pollRegistersSlow.cend()) {
+        nextNibeRegisterToPollSlow = config->pollRegistersSlow.cbegin();
     }
-    if (nextNibeRegisterToPollLowFrequency != config->coilsToPollLowFrequency.cend()) {
-        requestNibeRegister(*nextNibeRegisterToPollLowFrequency);
-        nextNibeRegisterToPollLowFrequency++;
+    if (nextNibeRegisterToPollSlow != config->pollRegistersSlow.cend()) {
+        requestNibeRegister(*nextNibeRegisterToPollSlow);
+        nextNibeRegisterToPollSlow++;
     }
 }
 
@@ -133,14 +133,14 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
     switch (msg->cmd) {
         case NibeCmd::ModbusReadResp: {
             ESP_LOGV(TAG, "onMessageReceived ModbusReadResp: %s", NibeGw::dataToString((uint8_t*)msg, len).c_str());
-            const NibeRegister* coil = findNibeRegister(msg->readResponse.registerAddress);
-            if (coil == nullptr) {
+            const NibeRegister* reg = findNibeRegister(msg->readResponse.registerAddress);
+            if (reg == nullptr) {
                 ESP_LOGW(TAG, "Received NibeResponseMessage for unknown register %d", msg->readResponse.registerAddress);
                 return;
             }
 
-            publishMqtt(*coil, msg->readResponse.value);
-            publishMetric(*coil, msg->readResponse.value);
+            publishMqtt(*reg, msg->readResponse.value);
+            publishMetric(*reg, msg->readResponse.value);
             break;
         }
 
@@ -211,15 +211,15 @@ void NibeMqttGw::onMessageReceived(const NibeResponseMessage* const msg, int len
 }
 
 const NibeRegister* NibeMqttGw::findNibeRegister(uint16_t address) {
-    auto iter = config->coils.find(address);
-    if (iter == config->coils.end()) {
+    auto iter = config->registers.find(address);
+    if (iter == config->registers.end()) {
         ESP_LOGW(TAG, "Received data for unknown register %d", address);
         return nullptr;
     }
     return &iter->second;
 }
 
-// send coils as mqtt messages, announce new coils for HA auto-discovery
+// send registers as mqtt messages, announce new registers for HA auto-discovery
 void NibeMqttGw::publishMqtt(const NibeRegister& _register, const uint8_t* const data) {
     // TODO: should check data consistency (len vs data type)
     // decode raw data
@@ -233,7 +233,7 @@ void NibeMqttGw::publishMqtt(const NibeRegister& _register, const uint8_t* const
     }
 }
 
-// send coil as metrics, create metric if not exists but only for coils that are configured as metrics
+// send registers as metrics, create metric if not exists but only for registers that are configured as metrics
 void NibeMqttGw::publishMetric(const NibeRegister& _register, const uint8_t* const data) {
     auto iter2 = nibeRegisterMetrics.find(_register.id);
     if (iter2 == nibeRegisterMetrics.end()) {
@@ -274,7 +274,7 @@ int NibeMqttGw::onReadTokenReceived(NibeReadRequestMessage* readRequest) {
     size_t item_size;
     uint16_t* readRegisterPtr = (uint16_t*)xRingbufferReceive(readNibeRegistersRingBuffer, &item_size, 0);
     if (readRegisterPtr == nullptr) {
-        // no more coils to read
+        // no more registers to read
         // calculate time to publish state
         uint32_t startTime = lastPublishStateStartTime.exchange(0);
         if (startTime > 0) {
@@ -301,7 +301,7 @@ int NibeMqttGw::onWriteTokenReceived(NibeWriteRequestMessage* writeRequest) {
     size_t item_size;
     NibeMqttGwWriteRequest* writeRegisterPtr = (NibeMqttGwWriteRequest*)xRingbufferReceive(writeNibeRegistersRingBuffer, &item_size, 0);
     if (writeRegisterPtr == nullptr) {
-        // no more coils to write
+        // no more registers to write
         return 0;
     }
     uint16_t address = writeRegisterPtr->address;

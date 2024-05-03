@@ -420,7 +420,7 @@ std::string NibeRegister::promMetricName() const {
     return name;
 }
 
-// append coil attributes to promMetricName
+// append register attributes to promMetricName
 void NibeRegister::appendPromAttributes(std::string& promMetricName) const {
     size_t attrPos = promMetricName.find("{");
     if (attrPos == std::string::npos) {

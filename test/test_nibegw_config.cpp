@@ -246,7 +246,8 @@ TEST_CASE("parseUnsignedNumber", "[nibegw_config]") {
 
 TEST_CASE("homeassistantDiscoveryMessage Temperature", "[nibegw_config]") {
     NibeMqttConfig config;
-    NibeRegister r = {1, "Temperature", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
+    NibeRegister r = {1, "Temperature",         NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0, 0,
+                      0, NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
 
@@ -279,7 +280,8 @@ TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
 
 TEST_CASE("homeassistantDiscoveryMessage Read/write", "[nibegw_config]") {
     NibeMqttConfig config;
-    NibeRegister r = {1, "Temperature", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 10, 0, 100, 0, NibeRegisterMode::ReadWrite};
+    NibeRegister r = {
+        1, "Temperature", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 10, 0, 100, 0, NibeRegisterMode::ReadWrite};
     std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
 
@@ -301,7 +303,8 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
     NibeMqttConfig config;
     config.homeassistantDiscoveryOverrides[1] =
         R"({"_component_":"mysensor","unit_of_meas":"Grad Celsius", "dev_cla":null, "added":123, "removeNonexistingKey":null})";
-    NibeRegister r = {1, "Override", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
+    NibeRegister r = {1, "Override", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0,
+                      0, 0,          NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
 
@@ -320,7 +323,8 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
 TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     NibeMqttConfig config;
     config.homeassistantDiscoveryOverrides[43005] = R"({"stat_cla":"measurement"})";
-    NibeRegister r = {43005, "Degree Minutes", NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
+    NibeRegister r = {43005, "Degree Minutes",      NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0,
+                      0,     NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
 
@@ -391,9 +395,9 @@ TEST_CASE("appendPromAttributes", "[nibegw_config]") {
 TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
     NibeRegister r = {1, "", NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
     NibeMqttConfig config;
-    config.metrics[1] = {"test123", 10, 1};
-    config.metrics[2] = {"", 10, 10};
-    config.metrics[3] = {R"(test123{node="nibegw"})", 0, 0};
+    config.metrics[1] = {"test123", 10, 1, false};
+    config.metrics[2] = {"", 10, 10, false};
+    config.metrics[3] = {R"(test123{node="nibegw"})", 0, 0, false};
 
     NibeRegisterMetricConfig metricCfg = r.toPromMetricConfig(config);
     TEST_ASSERT_EQUAL_STRING(R"(test123{coil="1"})", metricCfg.name.c_str());

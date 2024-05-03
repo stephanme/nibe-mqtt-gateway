@@ -13,14 +13,14 @@
         "deviceConfigurationUrl": "http://nibegw.fritz.box"
     },
     "nibe": {
-        // list of coil ids to poll every 30s
-        // 1 coil takes ~1s
-        "coilsToPoll": [44302, 44308, 44300, 44306, 44298, 44069],
-        // list of coils to poll with low frequency, every 30s one coil of this list is polled
-        // should include R/W coils announced to Home Assistant
-        "coilsToPollLowFrequency": [44071, 44073, 40737, 48043, 48130, 48085],
+        // list of registers ids to poll every 30s
+        // 1 register takes ~1s
+        "pollRegisters": [44302, 44308, 44300, 44306, 44298, 44069],
+        // list of registers to poll with low frequency, every 30s one coil of this list is polled
+        // should include R/W registers announced to Home Assistant
+        "pollRegistersSlow": [44071, 44073, 40737, 48043, 48130, 48085],
 
-        // Prometheus metrics for coils: metric = value * scale / factor
+        // Prometheus metrics for registers: metric = value * scale / factor
         "metrics": {
             /*
             Format:
@@ -33,8 +33,8 @@
                                                                 // counter metrics must not decrease (unless they are reset), nibe heat meter was observed to decrease during defrosting
             }
             */
-            // coils sent automatically as data message, configured in ModbusManager (LOG.SET file)
-            // max 20 coils, only 8 and 16 bit data types supported (u8, s8, u16, s16)
+            // registers sent automatically as data message, configured in ModbusManager (LOG.SET file)
+            // max 20 registers, only 8 and 16 bit data types supported (u8, s8, u16, s16)
             "45001": { "name":"nibe_alarm"},
             "40004": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1\"}"},
             "40067": { "name":"nibe_outdoor_temperature_celsius{sensor=\"BT1 avg\"}"},
@@ -53,7 +53,7 @@
             "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
             "44874": { "name":"nibe_sg_ready"},
 
-            // polled coils
+            // polled registers
             "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100, "counter": true},
             "44308": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr\"}", "factor": 1, "scale": 100, "counter": true},
             "44300": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 heating cpr+add\"}", "factor": 1, "scale": 100, "counter": true},
@@ -61,7 +61,7 @@
             "44298": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 hotwater cpr+add\"}", "factor": 1, "scale": 100, "counter": true},
             "44069": { "name":"nibe_compressor_starts_total{sensor=\"EB101-EP14\"}", "counter": true},
 
-            // polled coils, low frequency
+            // polled registers, low frequency
             "44071": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 total\"}", "scale": 3600, "counter": true},
             "44073": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 hotwater\"}", "scale": 3600, "counter": true},
             "40737": { "name":"nibe_compressor_operating_time_seconds_total{sensor=\"EB101-EP14 cooling\"}", "scale": 3600, "counter": true},
