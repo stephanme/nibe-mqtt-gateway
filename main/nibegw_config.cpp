@@ -425,14 +425,14 @@ void NibeRegister::appendPromAttributes(std::string& promMetricName) const {
     size_t attrPos = promMetricName.find("{");
     if (attrPos == std::string::npos) {
         // no attributes yet
-        promMetricName += R"({coil=")";
+        promMetricName += R"({register=")";
         promMetricName += std::to_string(id);
         promMetricName += R"("})";
     } else {
         // append to existing attributes
-        std::string coilAttr = R"(coil=")";
-        coilAttr += std::to_string(id);
-        coilAttr += R"(",)";
-        promMetricName.insert(attrPos + 1, coilAttr);
+        std::string registerAttr = R"(register=")";
+        registerAttr += std::to_string(id);
+        registerAttr += R"(",)";
+        promMetricName.insert(attrPos + 1, registerAttr);
     }
 }

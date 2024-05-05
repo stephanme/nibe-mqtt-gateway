@@ -52,9 +52,9 @@ static const char* configJson = R"({
         "pollRegisters": [1,2],
         "pollRegistersSlow": [3,4],
         "metrics": {
-            "1": {"name": "prom_name_1{coil=\"1\"}", "factor": 10},
-            "2": {"name": "prom_name_2{coil=\"2\"}"},
-            "3": {"name": "prom_name_3{coil=\"3\"}", "scale": 10}
+            "1": {"name": "prom_name_1{register=\"1\"}", "factor": 10},
+            "2": {"name": "prom_name_2{register=\"2\"}"},
+            "3": {"name": "prom_name_3{register=\"3\"}", "scale": 10}
         },
         "homeassistantDiscoveryOverrides": {
             "1": {"override1": "value1"},
@@ -105,15 +105,15 @@ TEST_CASE("saveConfig", "[config]") {
 
     TEST_ASSERT_EQUAL(3, config.nibe.metrics.size());
     const NibeRegisterMetricConfig& metric1 = config.nibe.metrics.at(1);
-    TEST_ASSERT_EQUAL_STRING(R"(prom_name_1{coil="1"})", metric1.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(prom_name_1{register="1"})", metric1.name.c_str());
     TEST_ASSERT_EQUAL(10, metric1.factor);
     TEST_ASSERT_EQUAL(0, metric1.scale);
     const NibeRegisterMetricConfig& metric2 = config.nibe.metrics.at(2);
-    TEST_ASSERT_EQUAL_STRING(R"(prom_name_2{coil="2"})", metric2.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(prom_name_2{register="2"})", metric2.name.c_str());
     TEST_ASSERT_EQUAL(0, metric2.factor);
     TEST_ASSERT_EQUAL(0, metric2.scale);
     const NibeRegisterMetricConfig& metric3 = config.nibe.metrics.at(3);
-    TEST_ASSERT_EQUAL_STRING(R"(prom_name_3{coil="3"})", metric3.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(prom_name_3{register="3"})", metric3.name.c_str());
     TEST_ASSERT_EQUAL(0, metric3.factor);
     TEST_ASSERT_EQUAL(10, metric3.scale);
 
@@ -194,28 +194,28 @@ Title;Info;ID;Unit;Size;Factor;Min;Max;Default;Mode
                                       R"(C";s16;10;0;0;0;R;)";
 
 TEST_CASE("parseNibeModbusCSV", "[config]") {
-    std::unordered_map<uint16_t, NibeRegister> coils;
+    std::unordered_map<uint16_t, NibeRegister> registers;
     auto is = nonstd::icharbufstream("");
-    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
+    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers));
     std::string badConfig = std::string(nibeModbusConfig);
     badConfig = std::regex_replace(badConfig, std::regex(";Factor;"), ";XFactor;");
     is = nonstd::istringstream(badConfig);
-    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
+    TEST_ASSERT_EQUAL(ESP_FAIL, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers));
 
     is = nonstd::icharbufstream(nibeModbusConfig);
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
-    TEST_ASSERT_EQUAL(1, coils.size());
-    TEST_ASSERT(coils[40004] == NibeRegister(40004, "BT1 Outdoor Temperature", NibeRegisterUnit::GradCelcius,
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers));
+    TEST_ASSERT_EQUAL(1, registers.size());
+    TEST_ASSERT(registers[40004] == NibeRegister(40004, "BT1 Outdoor Temperature", NibeRegisterUnit::GradCelcius,
                                              NibeRegisterDataType::Int16, 10, 0, 0, 0, NibeRegisterMode::Read));
 
-    coils.clear();
+    registers.clear();
     is = nonstd::icharbufstream(nibeModbusConfig);
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils, [](uint16_t id) { return false; }));
-    TEST_ASSERT_EQUAL(0, coils.size());
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers, [](uint16_t id) { return false; }));
+    TEST_ASSERT_EQUAL(0, registers.size());
 
     is = nonstd::icharbufstream(nibeModbusConfig);
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils, [](uint16_t id) { return id == 40004; }));
-    TEST_ASSERT_EQUAL(1, coils.size());
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers, [](uint16_t id) { return id == 40004; }));
+    TEST_ASSERT_EQUAL(1, registers.size());
 }
 
 TEST_CASE("parseNibeModbusCSV, validate only", "[config]") {
@@ -224,29 +224,29 @@ TEST_CASE("parseNibeModbusCSV, validate only", "[config]") {
 }
 
 TEST_CASE("parseNibeModbusCSVLine", "[config]") {
-    NibeRegister coil;
+    NibeRegister _register;
 
-    TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine("", coil));
-    TEST_ASSERT_EQUAL(2, NibeMqttGwConfigManager::parseNibeModbusCSVLine("bad csv", coil));
-    TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"(;"info";40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";XXX;"%";s16;10;0;0;0;R;)", coil));
+    TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine("", _register));
+    TEST_ASSERT_EQUAL(2, NibeMqttGwConfigManager::parseNibeModbusCSVLine("bad csv", _register));
+    TEST_ASSERT_EQUAL(1, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"(;"info";40004;"%";s16;10;0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";XXX;"%";s16;10;0;0;0;R;)", _register));
     // quoting error in info -> id is missing
-    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info;40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(4, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"XX";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(5, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";X16;10;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(6, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;;0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(7, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;X0;0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(8, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;X0;0;R;)", coil));
-    TEST_ASSERT_EQUAL(9, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;0;X0;R;)", coil));
-    TEST_ASSERT_EQUAL(10, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;X;)", coil));
+    TEST_ASSERT_EQUAL(3, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info;40004;"%";s16;10;0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(4, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"XX";s16;10;0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(5, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";X16;10;0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(6, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;;0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(7, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;X0;0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(8, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;X0;0;R;)", _register));
+    TEST_ASSERT_EQUAL(9, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;1;0;0;X0;R;)", _register));
+    TEST_ASSERT_EQUAL(10, NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;X;)", _register));
 
     TEST_ASSERT_EQUAL(ESP_OK,
-                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;R;)", coil));
-    TEST_ASSERT(coil == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::Int16, 10, 0, 0, 0,
+                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;"%";s16;10;0;0;0;R;)", _register));
+    TEST_ASSERT(_register == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::Int16, 10, 0, 0, 0,
                                      NibeRegisterMode::Read));
     TEST_ASSERT_EQUAL(ESP_OK,
-                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;%;u32;1;100;200;1;R/W;)", coil));
-    TEST_ASSERT(coil == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::UInt32, 1, 100, 200, 1,
+                      NibeMqttGwConfigManager::parseNibeModbusCSVLine(R"("title";"info";40004;%;u32;1;100;200;1;R/W;)", _register));
+    TEST_ASSERT(_register == NibeRegister(40004, "title", NibeRegisterUnit::Percent, NibeRegisterDataType::UInt32, 1, 100, 200, 1,
                                      NibeRegisterMode::ReadWrite));
 }
 
@@ -296,15 +296,15 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv", "[config]") {
 
     std::ifstream ifs("config/nibe-modbus-vvm310.csv");
     nonstd::istdstream is(ifs);
-    std::unordered_map<uint16_t, NibeRegister> coils;
+    std::unordered_map<uint16_t, NibeRegister> registers;
 
-    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &coils));
-    TEST_ASSERT_GREATER_THAN(800, coils.size());
+    TEST_ASSERT_EQUAL(ESP_OK, NibeMqttGwConfigManager::parseNibeModbusCSV(is, &registers));
+    TEST_ASSERT_GREATER_THAN(800, registers.size());
 
-    printf("nibe-modbus-vvm310.csv contains %lu coils\n", coils.size());
+    printf("nibe-modbus-vvm310.csv contains %lu registers\n", registers.size());
 }
 
-TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv, filter configured coils", "[config]") {
+TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv, filter configured registers", "[config]") {
     std::ifstream ifs("config/config.json.template");
     std::stringstream buffer;
     buffer << ifs.rdbuf();
@@ -319,14 +319,14 @@ TEST_CASE("parseNibeModbusCSV - nibe-modbus-vvm310.csv, filter configured coils"
 
     ifs.open("config/nibe-modbus-vvm310.csv");
     nonstd::istdstream is(ifs);
-    std::unordered_map<uint16_t, NibeRegister> coils;
+    std::unordered_map<uint16_t, NibeRegister> registers;
 
     TEST_ASSERT_EQUAL(
         ESP_OK,
         NibeMqttGwConfigManager::parseNibeModbusCSV(
-            is, &coils, std::bind(&NibeMqttGwConfigManager::nibeRegisterFilterConfigured, configManager, std::placeholders::_1)));
-    TEST_ASSERT_GREATER_THAN(20, coils.size());
-    TEST_ASSERT_LESS_THAN(50, coils.size());
+            is, &registers, std::bind(&NibeMqttGwConfigManager::nibeRegisterFilterConfigured, configManager, std::placeholders::_1)));
+    TEST_ASSERT_GREATER_THAN(20, registers.size());
+    TEST_ASSERT_LESS_THAN(50, registers.size());
 
-    printf("config.json.template references %lu coils\n", coils.size());
+    printf("config.json.template references %lu registers\n", registers.size());
 }

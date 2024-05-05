@@ -385,11 +385,11 @@ TEST_CASE("appendPromAttributes", "[nibegw_config]") {
     NibeRegister r = {1, "", NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
     std::string s = "test";
     r.appendPromAttributes(s);
-    TEST_ASSERT_EQUAL_STRING(R"(test{coil="1"})", s.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(test{register="1"})", s.c_str());
 
     s = R"(test{attr="value"})";
     r.appendPromAttributes(s);
-    TEST_ASSERT_EQUAL_STRING(R"(test{coil="1",attr="value"})", s.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(test{register="1",attr="value"})", s.c_str());
 }
 
 TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
@@ -400,21 +400,21 @@ TEST_CASE("toPromMetricConfig", "[nibegw_config]") {
     config.metrics[3] = {R"(test123{node="nibegw"})", 0, 0, false};
 
     NibeRegisterMetricConfig metricCfg = r.toPromMetricConfig(config);
-    TEST_ASSERT_EQUAL_STRING(R"(test123{coil="1"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(test123{register="1"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
     TEST_ASSERT_EQUAL(1, metricCfg.scale);
     TEST_ASSERT_TRUE(metricCfg.isValid());
 
     r.id = 2;
     metricCfg = r.toPromMetricConfig(config);
-    TEST_ASSERT_EQUAL_STRING(R"(nibe{coil="2"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(nibe{register="2"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(10, metricCfg.factor);
     TEST_ASSERT_EQUAL(10, metricCfg.scale);
     TEST_ASSERT_TRUE(metricCfg.isValid());
 
     r.id = 3;
     metricCfg = r.toPromMetricConfig(config);
-    TEST_ASSERT_EQUAL_STRING(R"(test123{coil="3",node="nibegw"})", metricCfg.name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"(test123{register="3",node="nibegw"})", metricCfg.name.c_str());
     TEST_ASSERT_EQUAL(1, metricCfg.factor);
     TEST_ASSERT_EQUAL(1, metricCfg.scale);
     TEST_ASSERT_TRUE(metricCfg.isValid());

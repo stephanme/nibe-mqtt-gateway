@@ -16,7 +16,7 @@
         // list of registers ids to poll every 30s
         // 1 register takes ~1s
         "pollRegisters": [44302, 44308, 44300, 44306, 44298, 44069],
-        // list of registers to poll with low frequency, every 30s one coil of this list is polled
+        // list of registers to poll with low frequency, every 30s one register of this list is polled
         // should include R/W registers announced to Home Assistant
         "pollRegistersSlow": [44071, 44073, 40737, 48043, 48130, 48085],
 
@@ -25,7 +25,7 @@
             /*
             Format:
             "<register id>": { 
-                "name":"<metric name including attributes>",    // default: nibe_<metric title>{coil="<coil id>"}, coil attribute is always added
+                "name":"<metric name including attributes>",    // default: nibe_<metric title>{register="<register id>"}, register attribute is always added
                 "factor": <factor>,                             // default: factor from nibe-modbus.csv
                 "scale": <scaling>                              // default: 1
                 "counter": true|false                           // default: false
