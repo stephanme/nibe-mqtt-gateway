@@ -24,7 +24,7 @@
         "metrics": {
             /*
             Format:
-            "<coid id>": { 
+            "<register id>": { 
                 "name":"<metric name including attributes>",    // default: nibe_<metric title>{coil="<coil id>"}, coil attribute is always added
                 "factor": <factor>,                             // default: factor from nibe-modbus.csv
                 "scale": <scaling>                              // default: 1
@@ -77,27 +77,27 @@
             Default: see nibegw_config.cpp, <...> is taken from ModbusManager csv file
             Uses appreviations: https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery
             _component_ is removed from mqtt discovery message but is part of the mqtt topic
-            Read coils:
+            Read registers:
             {
                 "_component_":"sensor", // MQTT integration like sensor, binary_sensor, switch, ...
-                "obj_id":"nibegw-coil-<id>",
-                "uniq_id":"nibegw-coil-<id>",
+                "obj_id":"nibe-<id>",
+                "uniq_id":"nibe-<id>",
                 "name":"<title>",
-                "stat_t":"nibegw/coils/<id>",
+                "stat_t":"nibegw/nibe/<id>",
                 "unit_of_meas":"<unit>",
                 "dev_cla":"temperature|duration|energy...", // depends on <unit>
                 "stat_cla":"measurement|total",  // depends on <unit>
                 "avty_t":"nibegw/availability",
                 "dev":{"ids":["nibegw-<mac>"]}
             }
-            Read/Write coils:
+            Read/Write registers:
             {
                 "_component_":"number", // MQTT integration like sensor, binary_sensor, switch, ...
-                "obj_id":"nibegw-coil-<id>",
-                "uniq_id":"nibegw-coil-<id>",
+                "obj_id":"nibe-<id>",
+                "uniq_id":"nibe-<id>",
                 "name":"<title>",
-                "stat_t":"nibegw/coils/<id>",
-                "cmd_t":"nibegw/coils/<id>/set",
+                "stat_t":"nibegw/nibe/<id>",
+                "cmd_t":"nibegw/nibe/<id>/set",
                 "unit_of_meas":"<unit>",
                 "dev_cla":"temperature|duration|energy...", // depends on <unit>
                 "min":<min>,
@@ -112,22 +112,25 @@
                 "stat_cla":"measurement",
                 "unit_of_meas": "GM"
             },
+            "44069": { // compressor starts, has no unit in csv
+                "stat_cla":"measurement"
+            },
             "44703": { // defrosting, 0=No, 1=Active, 2 = Passive
                "dev_cla": "enum",
                "val_tpl": "{% set mapping = {'0':'Off','1':'Active','2':'Passive'} %}{{ mapping[value] if value in mapping.keys() else 'off' }}"
             },
-            "48043": { // Holiday - Activated, 0=inactive, 10=active
+            "48043": { // Holiday - Activated, 0=inactive, 10=active, R/W
                 "_component_": "switch",
                 "pl_on": "10",
                 "pl_off": "0"
             },
-            "48130": { // Manual heat medium pump speed, 0=off, 1=on
+            "48130": { // Manual heat medium pump speed, 0=off, 1=on, R/W
                 "_component_": "switch",
                 "pl_on": "1",
                 "pl_off": "0",
                 "unit_of_meas": null // bug in csv
             },
-            "48085": { // Heat medium pump speed if manual, [%]
+            "48085": { // Heat medium pump speed if manual, [%], R/W
             }
         }
     },

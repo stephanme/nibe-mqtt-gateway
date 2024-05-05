@@ -28,7 +28,7 @@ esp_err_t NibeMqttGw::begin(const NibeMqttConfig& config, MqttClient& mqttClient
         return ESP_FAIL;
     }
 
-    nibeRootTopic = mqttClient.getConfig().rootTopic + "/coils/";
+    nibeRootTopic = mqttClient.getConfig().rootTopic + "/nibe/";
 
     // subscribe to 'set' topic of all registers
     std::string commandTopic = nibeRootTopic + "+/set";
@@ -84,7 +84,7 @@ void NibeMqttGw::publishState() {
     }
 }
 
-// topic: nibegw/coils/<id>/set
+// topic: nibegw/nibe/<id>/set
 // payload: new value
 void NibeMqttGw::onMqttMessage(const std::string& topic, const std::string& payload) {
     ESP_LOGI(TAG, "Received MQTT message: %s: %s", topic.c_str(), payload.c_str());
@@ -260,7 +260,7 @@ void NibeMqttGw::announceNibeRegister(const NibeRegister& _register) {
     // !!! if crash (strlen in ROM) -> stack too small (nibegw.h: NIBE_GW_TASK_STACK_SIZE) or incorrect format string!!!
     char discoveryTopic[64];
     const char* component = discoveryDoc["_component_"] | "sensor";
-    snprintf(discoveryTopic, sizeof(discoveryTopic), "%s/%s/nibegw/coil-%u/config",
+    snprintf(discoveryTopic, sizeof(discoveryTopic), "%s/%s/nibegw/nibe-%u/config",
              mqttClient->getConfig().discoveryPrefix.c_str(), component, _register.id);
 
     discoveryDoc.remove("_component_");

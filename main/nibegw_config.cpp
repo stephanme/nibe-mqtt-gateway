@@ -306,7 +306,7 @@ JsonDocument NibeRegister::defaultHomeassistantDiscoveryMessage(const std::strin
     }
 
     char objId[64];
-    snprintf(objId, sizeof(objId), "nibegw-coil-%u", id);
+    snprintf(objId, sizeof(objId), "nibe-%u", id);
     discoveryDoc["obj_id"] = objId;
     discoveryDoc["uniq_id"] = objId;
 

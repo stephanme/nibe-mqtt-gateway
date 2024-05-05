@@ -249,13 +249,13 @@ TEST_CASE("homeassistantDiscoveryMessage Temperature", "[nibegw_config]") {
     NibeRegister r = {1, "Temperature",         NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0, 0,
                       0, NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
-    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["obj_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["uniq_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Temperature", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1", doc["stat_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
     TEST_ASSERT_EQUAL_STRING("°C", doc["unit_of_meas"]);
     TEST_ASSERT_EQUAL_STRING("temperature", doc["dev_cla"]);
     TEST_ASSERT_EQUAL_STRING("measurement", doc["stat_cla"]);
@@ -266,13 +266,13 @@ TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
     NibeMqttConfig config;
     NibeRegister r = {1, "No Unit", NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
-    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["obj_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["uniq_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("No Unit", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1", doc["stat_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
     TEST_ASSERT_TRUE(doc["unit_of_meas"].isUnbound());
     TEST_ASSERT_TRUE(doc["stat_cla"].isUnbound());
     TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
@@ -283,14 +283,14 @@ TEST_CASE("homeassistantDiscoveryMessage Read/write", "[nibegw_config]") {
     NibeRegister r = {
         1, "Temperature", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 10, 0, 100, 0, NibeRegisterMode::ReadWrite};
     std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
-    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("number", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["obj_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["uniq_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Temperature", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1", doc["stat_t"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1/set", doc["cmd_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1/set", doc["cmd_t"]);
     TEST_ASSERT_EQUAL_STRING("°C", doc["unit_of_meas"]);
     TEST_ASSERT_EQUAL_STRING("temperature", doc["dev_cla"]);
     TEST_ASSERT_EQUAL(0, doc["min"]);
@@ -306,13 +306,13 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
     NibeRegister r = {1, "Override", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0,
                       0, 0,          NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
-    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("mysensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["obj_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-1", doc["uniq_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Override", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/1", doc["stat_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
     TEST_ASSERT_EQUAL_STRING("Grad Celsius", doc["unit_of_meas"]);  // changed by override
     TEST_ASSERT_TRUE(doc["dev_cla"].isUnbound());                   // removed by override
     TEST_ASSERT_EQUAL(123, doc["added"]);                           // added by override, integer type
@@ -326,13 +326,13 @@ TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     NibeRegister r = {43005, "Degree Minutes",      NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0,
                       0,     NibeRegisterMode::Read};
     std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
-    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/coils/", deviceDiscoveryInfo);
+    auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-43005", doc["obj_id"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw-coil-43005", doc["uniq_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-43005", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("nibe-43005", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Degree Minutes", doc["name"]);
-    TEST_ASSERT_EQUAL_STRING("nibegw/coils/43005", doc["stat_t"]);
+    TEST_ASSERT_EQUAL_STRING("nibegw/nibe/43005", doc["stat_t"]);
     TEST_ASSERT_TRUE(doc["unit_of_meas"].isUnbound());
     TEST_ASSERT_EQUAL_STRING("measurement", doc["stat_cla"]);
     TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
