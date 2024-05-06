@@ -29,10 +29,11 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [PRODINo ESP32 Ethernet v1 board](https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/) - other boards might be possible but have not been tested
 - USB adapter for debugging (via serial output, no real JTAG debugging unfortunately) and initial uploading of firmware
 - Nibe heatpump VVM310/S2125 - other models might work but have not been tested
-- ESP-IDF v5.1.3, use branch release-5.1 until released
-  - since the PRODINo ESP32 Ethernet v1 board doesn't wire the W5500 interrupt line, [PR #12692](https://github.com/espressif/esp-idf/pull/12692) needs to be cherry-picked on top, TODO: check
+- ESP-IDF v5.1.3, use branch release-5.1 until released (used commit was [7cbee80](https://github.com/espressif/esp-idf/commit/7cbee80fb9fe8310cefccb320e2c1189c13619c2))
+  - since the PRODINo ESP32 Ethernet v1 board doesn't wire the W5500 interrupt line, [PR #12692](https://github.com/espressif/esp-idf/pull/12692) needs to be cherry-picked on top
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
 - energy meter with [S0 interface](https://de.wikipedia.org/wiki/S0-Schnittstelle), e.g. DRT 428D
+- a safe, well-protected home network. nibe-mqtt-gateway is lacking even the most basic security measures. Never expose nibe-mqtt-gateway to the internet.
 
 Additionally helpful:
 - Visual Studio Code + [ESP-IDF Visual Studio Code Extension](https://github.com/espressif/vscode-esp-idf-extension)
@@ -69,15 +70,15 @@ The configuration consists of:
 When uploading a configuration file, nibe-mqtt-gateway stores it in flash memory and reboots to activate the configuration change.
 
 General configuration:
-- see `config/config.json.template` for format and configuration options, json file allows comments
+- see [config/config.json.template](config/config.json.template) for format and configuration options, json file allows comments
 - http://nibegw/config shows the current configuration as uploaded
 - http://nibegw/config?runtime=true shows the current runtime configuration (internal data structures translated back to json, for debugging)
 - upload `config.json`: `curl -X POST -H "Content-Type: application/json" --data-binary @config.json http://nibegw/config`
 
 Nibe Modbus configuration:
 - http://nibegw/config/nibe shows the current nibe modbus configuration. A csv file in Nibe ModbusManager format.
-- use Nibe ModbusManager to get a CSV with all registers. Save e.g. as `nibe-modbus.csv`
-- upload `nibe-modbus.csv`: `curl -F "upload=@nibe-modbus.csv" http://nibegw/config/nibe`
+- use Nibe ModbusManager to get a CSV with all registers. Save e.g. as [config/nibe-modbus-vvm310.csv](config/nibe-modbus-vvm310.csv).
+- upload `nibe-modbus-vvm310.csv`: `curl -F "upload=@nibe-modbus-vvm310.csv" http://nibegw/config/nibe`
 
 Energy Meter configuration (also via UI):
 - adjusting energy meter
@@ -85,9 +86,9 @@ Energy Meter configuration (also via UI):
   - to prevent misconfiguration: value can only be changed by +-10kWh
   - increases are set immediately
   - decreases are waited, i.e. energy counter stops counting for the diff to avoid breaking counter metrics
-- set energy counter to an initial value, no checks, can break counter metrics
+- set energy counter to an initial value without any checks - can break counter metrics
   - `curl -X POST -H "Content-Type: application/json" -d <energy in wh> http://nibegw/config/energymeter?init=true`
-- no reboot
+- no reboot when adjusting the energy meter
 
 ### Trouble Shooting
 
@@ -156,11 +157,12 @@ Implementation:
 
 ## To Do
 
-- [ ] replace [PR #12692](https://github.com/espressif/esp-idf/pull/12692) by better solution mentioned in [#12682](https://github.com/espressif/esp-idf/issues/12682) once available on branch release-5.1
-- [ ] switch to esp-dif 5.1.3 once released
-- [ ] use arduino-esp32 as managed component once version >=3.0.0-alpha3 is available
+- [ ] switch to esp-idf 5.1.3 or newer which includes W5500 ethernet without interrupt, [#12682](https://github.com/espressif/esp-idf/issues/12682)
+- [ ] use arduino-esp32 3.0.0 RC1 or newer (as managed component)
 - [ ] smoother unit testing development cycle: vscode task, less Arduino dependencies
 - [ ] debugging, at least for unit tests on host
+- [ ] authentication for admin operations (OTA, config uploads etc.)
+- [ ] replace arduino-esp32 by native esp-idf (less dependencies, should save up to 90k)
  
 ## Credits
 
@@ -171,7 +173,7 @@ Used source code and libraries
 - [esp-idf-net-logging](https://github.com/nopnop2002/esp-idf-net-logging) - Redirect esp-idf logging to the network, [MIT License](https://github.com/nopnop2002/esp-idf-net-logging/blob/main/LICENSE)
 - [org.openhab.binding.nibeheatpump](https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.nibeheatpump) - nibegw, [Eclipse Public License 2.0](https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.nibeheatpump/NOTICE)
 - [ProDinoESP32](https://github.com/kmpelectronics/ProDinoESP32) - KMP ProDino ESP32 examples library
-- [Unity](https://www.throwtheswitch.org/unity) - Unit testing for C
+- [Unity](https://www.throwtheswitch.org/unity) - Unit testing for C, [MIT License](https://github.com/ThrowTheSwitch/Unity/blob/master/LICENSE.txt)
 
 Inspiration and ideas
 - [nibe-mqtt](https://github.com/yozik04/nibe-mqtt) - Nibe MQTT integration, [GPL 3.0](https://github.com/yozik04/nibe-mqtt/blob/master/LICENSE)
