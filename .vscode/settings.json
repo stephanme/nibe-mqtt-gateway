@@ -85,7 +85,14 @@
         "locale": "cpp",
         "optional": "cpp",
         "queue": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "strstream": "cpp",
+        "__errc": "cpp",
+        "__locale": "cpp",
+        "__mutex_base": "cpp",
+        "execution": "cpp",
+        "__memory": "cpp"
     },
-    "C_Cpp.default.cppStandard": "gnu++23"
+    "C_Cpp.default.cppStandard": "gnu++23",
+    "cmake.configureOnOpen": true
 }

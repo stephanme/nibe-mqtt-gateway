@@ -16,6 +16,8 @@
 // Date: 20.12.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
+// requires arduino-esp >=3.0.0-rc3
+
 #include "KMPProDinoESP32.h"
 
 #include <ETH.h>
@@ -79,11 +81,6 @@ const int OPTOIN_PINS[OPTOIN_COUNT] = {IN1PIN, IN2PIN, IN3PIN, IN4PIN};
 // W5500 pins.
 #define W5500ResetPin 12  // I12
 #define W5500CSPin 33     // IO33
-// Prodino doesn't use IRQ but polling
-// But esp-idf 5.1 branch + https://github.com/espressif/esp-idf/pull/12692 + arduino-esp 3.0.0-alpha3 needs one configured
-// which is not used by other hardware.
-// TODO: remove when real W5500 polling support is available (esp-idf 5.1.3+)
-#define W5500IRQPin 15
 
 // RS485 pins. Serial1.
 #define RS485Pin 2     // IO12
@@ -151,7 +148,7 @@ bool _ledState = false;
 
 static bool eth_connected = false;
 
-void _wifi_onEvent(arduino_event_id_t event, arduino_event_info_t info) {
+void _network_onEvent(arduino_event_id_t event, arduino_event_info_t info) {
     switch (event) {
         case ARDUINO_EVENT_ETH_START:
             ESP_LOGI(TAG, "ETH Started");
@@ -252,7 +249,7 @@ void KMPProDinoESP32Class::begin(BoardType board, bool startEthernet, bool start
 void KMPProDinoESP32Class::beginEthernet(bool startEthernet) {
     // To be called before ETH.begin()
     // esp_read_mac(_mac, ESP_MAC_ETH);
-    WiFi.onEvent(_wifi_onEvent);
+    Network.onEvent(_network_onEvent);
 
     // configure SNTP
     esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG_MULTIPLE(0, {});
@@ -261,7 +258,7 @@ void KMPProDinoESP32Class::beginEthernet(bool startEthernet) {
     esp_netif_sntp_init(&config);
 
     // ProdDino W5500 is not connected to IRQ -> must configure polling mode
-    if (!ETH.begin(ETH_PHY_W5500, -1, W5500CSPin, W5500IRQPin, W5500ResetPin, SPI, ETH_PHY_SPI_FREQ_MHZ)) {
+    if (!ETH.begin(ETH_PHY_W5500, -1, W5500CSPin, -1, W5500ResetPin, SPI, ETH_PHY_SPI_FREQ_MHZ)) {
         ESP_LOGE(TAG, "Failed to initialize Ethernet controller");
     }
 }

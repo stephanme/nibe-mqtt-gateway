@@ -29,8 +29,7 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [PRODINo ESP32 Ethernet v1 board](https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/) - other boards might be possible but have not been tested
 - USB adapter for debugging (via serial output, no real JTAG debugging unfortunately) and initial uploading of firmware
 - Nibe heatpump VVM310/S2125 - other models might work but have not been tested
-- ESP-IDF v5.1.3, use branch release-5.1 until released (used commit was [7cbee80](https://github.com/espressif/esp-idf/commit/7cbee80fb9fe8310cefccb320e2c1189c13619c2))
-  - since the PRODINo ESP32 Ethernet v1 board doesn't wire the W5500 interrupt line, [PR #12692](https://github.com/espressif/esp-idf/pull/12692) needs to be cherry-picked on top
+- ESP-IDF v5.1.4
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
 - energy meter with [S0 interface](https://de.wikipedia.org/wiki/S0-Schnittstelle), e.g. DRT 428D
 - a safe, well-protected home network. nibe-mqtt-gateway is lacking even the most basic security measures. Never expose nibe-mqtt-gateway to the internet.
@@ -46,7 +45,7 @@ Additionally helpful:
 
 ### Build Firmware
 
-- install ESP-IDF v5.1.3 (or release-5.1 branch)
+- install ESP-IDF v5.1.4
 - clone this project
 - adapt settings, especially `idf.espIdfPath` to point to ESP-IDF installation
 - generate sdkconfig and adapt if necessary
@@ -157,8 +156,6 @@ Implementation:
 
 ## To Do
 
-- [ ] switch to esp-idf 5.1.3 or newer which includes W5500 ethernet without interrupt, [#12682](https://github.com/espressif/esp-idf/issues/12682)
-- [ ] use arduino-esp32 3.0.0 RC1 or newer (as managed component)
 - [ ] smoother unit testing development cycle: vscode task, less Arduino dependencies
 - [ ] debugging, at least for unit tests on host
 - [ ] authentication for admin operations (OTA, config uploads etc.)
