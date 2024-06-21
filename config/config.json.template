@@ -41,6 +41,7 @@
             "40013": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT7 top\"}"},
             "40014": { "name":"nibe_hotwater_temperature_celsius{sensor=\"BT6 load\"}"},
             "43009": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"calculated\"}"},
+            "44270": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"calculated cooling\"}"},
             "40008": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT2 supply\"}"},
             "40012": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"BT3 return\"}"},
             "44055": { "name":"nibe_heat_medium_temperature_celsius{sensor=\"EB101-BT3 return\"}"},
@@ -48,10 +49,12 @@
             "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14 GP1\"}"},
             "44396": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EB101 GP12\"}"},
             "40072": { "name":"nibe_heat_medium_flow_liter_per_min{sensor=\"BF1 EP14\"}"},
-            "43005": { "name":"nibe_degree_minutes"},
+            "43005": { "name":"nibe_degree_minutes{sensor=\"heating\"}"},
+            "44266": { "name":"nibe_degree_minutes{sensor=\"cooling\"}"},
             "44701": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 actual\"}"},
             "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
             "44874": { "name":"nibe_sg_ready"},
+            "43086": { "name":"nibe_operation_mode"},
 
             // polled registers
             "44302": { "name":"nibe_heat_meter_wh_total{sensor=\"EP14 cooling cpr\"}", "factor": 1, "scale": 100, "counter": true},
@@ -112,12 +115,21 @@
                 "stat_cla":"measurement",
                 "unit_of_meas": "GM"
             },
+            "44266": { // degree minutes cooling, has no unit in csv, R/W
+                "_component_": "sensor",
+                "stat_cla":"measurement",
+                "unit_of_meas": "GM"
+            },
             "44069": { // compressor starts, has no unit in csv
                 "stat_cla":"measurement"
             },
             "44703": { // defrosting, 0=No, 1=Active, 2 = Passive
                "dev_cla": "enum",
                "val_tpl": "{% set mapping = {'0':'Off','1':'Active','2':'Passive'} %}{{ mapping[value] if value in mapping.keys() else 'off' }}"
+            },
+            "43086": { // prio = operation mode, 10=Off 20=Hot Water 30=Heat 40=Pool 41=Pool 2 50=Transfer 60=Cooling
+                "dev_cla": "enum",
+                "val_tpl": "{% set mapping = {'10':'Off','20':'Hot Water','30':'Heating','60':'Cooling'} %}{{ mapping[value] if value in mapping.keys() else value }}" 
             },
             "48043": { // Holiday - Activated, 0=inactive, 10=active, R/W
                 "_component_": "switch",
