@@ -18,7 +18,7 @@
 // This avoids any SPI communication with MCP23S08C but there can be only one S0 device attached.
 class EnergyMeter {
    public:
-    EnergyMeter(Metrics& metrics) : metricEnergyInWh(metrics.addMetric("nibe_energy_meter_wh_total", 1)) {}
+    EnergyMeter(Metrics& metrics);
 
     esp_err_t begin();
     esp_err_t beginMqtt(MqttClient& mqttClient);
@@ -34,12 +34,23 @@ class EnergyMeter {
 
     static void IRAM_ATTR gpio_interrupt_handler(void* args);
     static void task(void* pvParameters);
+    void countConsumedEnergyPerOperationMode();
 
     TaskHandle_t taskHandle;
     u_int32_t pulseCounterISR = 0;
     u_int32_t lastStoredEnergyInWh = 0;
+
+    Metrics& metrics;
+    // energy meter, absolute value, stored in NVS
     Metric& metricEnergyInWh;
     int skipNextPulses = 0;
+    // consumed energy, per Nibe operation mode, not stored in NVS
+    Metric& metricEnergyConsumptionInWhUnknown;
+    Metric& metricEnergyConsumptionInWhOff;
+    Metric& metricEnergyConsumptionInWhHeating;
+    Metric& metricEnergyConsumptionInWhHotwater;
+    Metric& metricEnergyConsumptionInWhCooling;
+    Metric* metricNibeOperationMode = nullptr;
 
     MqttClient* mqttClient = nullptr;
     std::string mqttTopic;

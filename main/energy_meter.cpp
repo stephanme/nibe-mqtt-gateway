@@ -8,6 +8,15 @@
 
 static const char* TAG = "energy_meter";
 
+EnergyMeter::EnergyMeter(Metrics& metrics)
+    : metrics(metrics),
+      metricEnergyInWh(metrics.addMetric("nibe_energy_meter_wh_total", 1, 1, true)),
+      metricEnergyConsumptionInWhUnknown(metrics.addMetric("nibe_energy_consumption_wh_total{mode=\"unknown\"}", 1, 1, true)),
+      metricEnergyConsumptionInWhOff(metrics.addMetric("nibe_energy_consumption_wh_total{mode=\"off\"}", 1, 1, true)),
+      metricEnergyConsumptionInWhHeating(metrics.addMetric("nibe_energy_consumption_wh_total{mode=\"heating\"}", 1, 1, true)),
+      metricEnergyConsumptionInWhHotwater(metrics.addMetric("nibe_energy_consumption_wh_total{mode=\"hotwater\"}", 1, 1, true)),
+      metricEnergyConsumptionInWhCooling(metrics.addMetric("nibe_energy_consumption_wh_total{mode=\"cooling\"}", 1, 1, true)) {}
+
 esp_err_t EnergyMeter::begin() {
     ESP_LOGI(TAG, "begin");
 
@@ -26,6 +35,13 @@ esp_err_t EnergyMeter::begin() {
         return err;
     }
     metricEnergyInWh.setValue(lastStoredEnergyInWh);
+
+    // reset energy consumption metrics
+    metricEnergyConsumptionInWhUnknown.setValue(0);
+    metricEnergyConsumptionInWhOff.setValue(0);
+    metricEnergyConsumptionInWhHeating.setValue(0);
+    metricEnergyConsumptionInWhHotwater.setValue(0);
+    metricEnergyConsumptionInWhCooling.setValue(0);
 
     err = xTaskCreatePinnedToCore(&task, "energyMeterTask", 6 * 1024, this, ENERGY_METER_TASK_PRIORITY, &taskHandle, 1);
     if (err != pdPASS) {
@@ -112,6 +128,7 @@ void EnergyMeter::task(void* pvParameters) {
         } else {
             // regular operation
             energyInWh = meter->metricEnergyInWh.incrementValue(1);
+            meter->countConsumedEnergyPerOperationMode();
         }
         ESP_LOGV(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
 
@@ -119,6 +136,39 @@ void EnergyMeter::task(void* pvParameters) {
         vTaskDelay(150 / portTICK_PERIOD_MS);
         // reset interrupt by reading GPIO register
         MCP23S08.GetPinState();
+    }
+}
+
+void EnergyMeter::countConsumedEnergyPerOperationMode() {
+    int mode = 0;
+    if (metricNibeOperationMode == nullptr) {
+        // TODO: hardcode metric name, might want to make this configurable
+        metricNibeOperationMode = metrics.findMetric("nibe_operation_mode{register=\"43086\"}");
+        if (metricNibeOperationMode != nullptr) {
+            mode = metricNibeOperationMode->getValue();
+        }
+    } else {
+        mode = metricNibeOperationMode->getValue();
+    }
+    // nibe register 43086: prio = operation mode, 10=Off 20=Hot Water 30=Heat 40=Pool 41=Pool 2 50=Transfer 60=Cooling
+    switch (mode) {
+        case 10:
+            metricEnergyConsumptionInWhOff.incrementValue(1);
+            break;
+        case 20:
+            metricEnergyConsumptionInWhHotwater.incrementValue(1);
+            break;
+        case 30:
+            metricEnergyConsumptionInWhHeating.incrementValue(1);
+            break;
+        case 60:
+            metricEnergyConsumptionInWhCooling.incrementValue(1);
+            break;
+        default:
+            // Unknown = nibe_operation_mode metric not found (yet)
+            // includes Pool and Transfer which is not used normally
+            metricEnergyConsumptionInWhUnknown.incrementValue(1);
+            break;
     }
 }
 

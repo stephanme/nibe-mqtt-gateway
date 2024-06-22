@@ -14,6 +14,7 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [x] supports Modbus Data Messages (fast reading of up to 20 registeres preconfigured by Modbus Manager, no 32 bit registers)
 - [x] supports writing to Nibe registers
 - [x] energy meter connected via S0 interface to OptIn1, persisted in NVS
+- [x] energy consumption metrics split by Nibe operation mode (register 43086 aka prio)
 - [x] exposes the 4 relays of the PRODIno ESP32 board via MQTT
 - [x] supports Home Assistant MQTT auto-discovery
 - [x] simple web UI for info and administration
