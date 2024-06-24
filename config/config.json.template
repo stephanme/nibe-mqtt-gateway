@@ -49,8 +49,7 @@
             "43437": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EP14 GP1\"}"},
             "44396": { "name":"nibe_heat_medium_pump_speed_percent{sensor=\"EB101 GP12\"}"},
             "40072": { "name":"nibe_heat_medium_flow_liter_per_min{sensor=\"BF1 EP14\"}"},
-            "43005": { "name":"nibe_degree_minutes{sensor=\"heating\"}"},
-            "44266": { "name":"nibe_degree_minutes{sensor=\"cooling\"}"},
+            "43005": { "name":"nibe_degree_minutes"},
             "44701": { "name":"nibe_compressor_frequency_hertz{sensor=\"EB101 actual\"}"},
             "44703": { "name":"nibe_defrosting{sensor=\"EB101-EP14\"}"},
             "44874": { "name":"nibe_sg_ready"},
@@ -111,11 +110,6 @@
             }
             */
             "43005": { // degree minutes (16bit), has no unit in csv, R/W
-                "_component_": "sensor",
-                "stat_cla":"measurement",
-                "unit_of_meas": "GM"
-            },
-            "44266": { // degree minutes cooling, has no unit in csv, R/W
                 "_component_": "sensor",
                 "stat_cla":"measurement",
                 "unit_of_meas": "GM"
