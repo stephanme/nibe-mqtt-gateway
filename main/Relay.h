@@ -1,27 +1,40 @@
 #ifndef _Relay_h_
 #define _Relay_h_
 
-#include <Arduino.h>
+#include "config.h"
+// include config.h before ArduinoJson.h to enable comments in JSON
+#include <ArduinoJson.h>
 
 #include <string>
 
 #include "KMPProDinoESP32.h"
 #include "mqtt.h"
 
+struct MqttRelayConfig {
+    std::string name;
+    std::string homeassistantDiscoveryOverride;
+};
+
 class MqttRelay : MqttSubscriptionCallback {
    public:
-    MqttRelay(const std::string& mqttTopic, const std::string& name, Relay relay);
+    MqttRelay(Relay relay, const std::string& name);
 
-    int begin(MqttClient* mqttClient);
+    int begin(const MqttRelayConfig& config, MqttClient* mqttClient);
 
     void setRelayState(bool state);
     bool getRelayState(void);
     void publishState();
 
     const std::string& getName(void) { return name; }
+    const std::string& getStateTopic(void) { return stateTopic; }
+
+    // public for for testing only
+    JsonDocument homeassistantDiscoveryMessage(const MqttRelayConfig& config, const std::string& nibeRootTopic,
+                                               const std::string& deviceDiscoveryInfo) const;
+    JsonDocument defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
+                                                      const std::string& deviceDiscoveryInfo) const;
 
    private:
-    std::string mqttTopic;
     std::string name;
     enum Relay relay;
     MqttClient* mqttClient;

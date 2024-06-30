@@ -155,6 +155,24 @@ Implementation:
 - tests are located in a special `test` component, this component picks source files from `main` that can be tested 
 - any code that depends on `arduino-esp32` can't run on the host emulation and therefore is not testable easily, this includes any usage of the Arduino String class
 
+## Tips and Tricks
+
+### Home Assistant Switches for writing to Nibe
+
+Nibe R/W registers have a state and a command topic. When a switch in HA sends a command, it takes some time until the new state is confirmed via the state topic depending on how the register is polled:
+- ~20s for registers preconfigured by Modbus Manager (Nibe Data Messages are sent every 2s and 2 registers are published to MQTT for every received data message)
+- 30s for registers configured in `pollRegisters`
+- n * 30s for registers configured in `pollRegistersSlow` (n = length of `pollRegistersSlow` array)
+
+As a result, the toggle button in HA UI may flicker/bounce. To prevent this, configured `optimistic: true` in `homeassistantDiscoveryOverrides` and add the following customization to your HA `configuration.yaml`:
+```
+homeassistant:
+  customize_domain:
+    # show switches as toggle and never as two lightning buttons
+    switch:
+      assumed_state: false
+```
+
 ## To Do
 
 - [ ] smoother unit testing development cycle: vscode task, less Arduino dependencies

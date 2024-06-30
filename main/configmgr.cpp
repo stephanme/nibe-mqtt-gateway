@@ -39,6 +39,25 @@ NibeMqttGwConfigManager::NibeMqttGwConfigManager() {
                 .metrics = {},
                 .homeassistantDiscoveryOverrides = {},
             },
+        .relays =
+            {
+                {
+                    .name = "relay-1",
+                    .homeassistantDiscoveryOverride = "",
+                },
+                {
+                    .name = "relay-2",
+                    .homeassistantDiscoveryOverride = "",
+                },
+                {
+                    .name = "relay-3",
+                    .homeassistantDiscoveryOverride = "",
+                },
+                {
+                    .name = "relay-4",
+                    .homeassistantDiscoveryOverride = "",
+                },
+            },
         .logging =
             {
                 .mqttLoggingEnabled = false,
@@ -169,6 +188,13 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
         }
     }
 
+    JsonArray relays = doc["relays"].to<JsonArray>();
+    for (auto relay : config.relays) {
+        JsonObject r = relays.add<JsonObject>();
+        r["name"] = relay.name;
+        r["homeassistantDiscoveryOverride"] = relay.homeassistantDiscoveryOverride;
+    }
+
     doc["logging"]["mqttLoggingEnabled"] = config.logging.mqttLoggingEnabled;
     doc["logging"]["stdoutLoggingEnabled"] = config.logging.stdoutLoggingEnabled;
     doc["logging"]["logTopic"] = config.logging.logTopic;
@@ -271,6 +297,17 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
             // log and skip
             ESP_LOGE(TAG, "nibe.homeassistantDiscoveryOverrides: invalid register address %s", override.key().c_str());
         }
+    }
+
+    JsonArray relays = doc["relays"].as<JsonArray>();
+    for (int i = 0; i < RELAY_COUNT; i++) {
+        config.relays[i].name = relays[i]["name"] | ("relay-" + std::to_string(i + 1));
+        std::string overrideJson;
+        serializeJson(relays[i]["homeassistantDiscoveryOverride"].as<JsonObject>(), overrideJson);
+        if (overrideJson == "null") {
+            overrideJson = "";
+        }
+        config.relays[i].homeassistantDiscoveryOverride = overrideJson;
     }
 
     config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;

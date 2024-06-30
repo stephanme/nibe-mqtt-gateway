@@ -27,6 +27,12 @@ TEST_CASE("default config", "[config]") {
     TEST_ASSERT_EQUAL(0, config.nibe.metrics.size());
     TEST_ASSERT_EQUAL(0, config.nibe.homeassistantDiscoveryOverrides.size());
 
+    for (int i = 0; i < RELAY_COUNT; i++) {
+        std::string name = "relay-" + std::to_string(i+1);
+        TEST_ASSERT_EQUAL_STRING(name.c_str(), config.relays[i].name.c_str());
+        TEST_ASSERT_EQUAL_STRING("", config.relays[i].homeassistantDiscoveryOverride.c_str());
+    }
+
     TEST_ASSERT_FALSE(config.logging.mqttLoggingEnabled);
     TEST_ASSERT_TRUE(config.logging.stdoutLoggingEnabled);
     TEST_ASSERT_EQUAL_STRING("nibegw/log", config.logging.logTopic.c_str());
@@ -61,6 +67,10 @@ static const char* configJson = R"({
             "2": {"override2": {"sub2": "value2"}}
         }
     },
+    "relays": [
+        {"name": "myrelay-1", "homeassistantDiscoveryOverride": {"overrideR1": "valueR1"}},
+        {"name": "myrelay-2", "homeassistantDiscoveryOverride": {"overrideR2": {"subR2": "valueR2"}}}
+    ],
     "logging": {
         "mqttLoggingEnabled": true,
         "stdoutLoggingEnabled": true,
@@ -123,6 +133,15 @@ TEST_CASE("saveConfig", "[config]") {
     const std::string& override2 = config.nibe.homeassistantDiscoveryOverrides.at(2);
     TEST_ASSERT_EQUAL_STRING(R"({"override2":{"sub2":"value2"}})", override2.c_str());
 
+    TEST_ASSERT_EQUAL_STRING("myrelay-1", config.relays[0].name.c_str());
+    TEST_ASSERT_EQUAL_STRING("myrelay-2", config.relays[1].name.c_str());
+    TEST_ASSERT_EQUAL_STRING("relay-3", config.relays[2].name.c_str());
+    TEST_ASSERT_EQUAL_STRING("relay-4", config.relays[3].name.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"({"overrideR1":"valueR1"})", config.relays[0].homeassistantDiscoveryOverride.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"({"overrideR2":{"subR2":"valueR2"}})", config.relays[1].homeassistantDiscoveryOverride.c_str());
+    TEST_ASSERT_EQUAL_STRING("", config.relays[2].homeassistantDiscoveryOverride.c_str());
+    TEST_ASSERT_EQUAL_STRING("", config.relays[3].homeassistantDiscoveryOverride.c_str());
+
     TEST_ASSERT_TRUE(config.logging.mqttLoggingEnabled);
     TEST_ASSERT_TRUE(config.logging.stdoutLoggingEnabled);
     TEST_ASSERT_EQUAL_STRING("nibegw/logs", config.logging.logTopic.c_str());
@@ -155,6 +174,15 @@ TEST_CASE("getConfigAsJson", "[config]") {
     TEST_ASSERT_TRUE(json.contains("override2"));
     TEST_ASSERT_TRUE(json.contains("sub2"));
     TEST_ASSERT_TRUE(json.contains("value2"));
+    TEST_ASSERT_TRUE(json.contains("myrelay-1"));
+    TEST_ASSERT_TRUE(json.contains("myrelay-2"));
+    TEST_ASSERT_TRUE(json.contains("relay-3"));
+    TEST_ASSERT_TRUE(json.contains("relay-4"));
+    TEST_ASSERT_TRUE(json.contains("overrideR1"));
+    TEST_ASSERT_TRUE(json.contains("valueR1"));
+    TEST_ASSERT_TRUE(json.contains("overrideR2"));
+    TEST_ASSERT_TRUE(json.contains("subR2"));
+    TEST_ASSERT_TRUE(json.contains("valueR2"));
 
     // test that returned json can be saved again
     TEST_ASSERT_EQUAL(ESP_OK, configManager.saveConfig(json.c_str()));

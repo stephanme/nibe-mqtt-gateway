@@ -3,6 +3,8 @@
 #ifndef _config_h_
 #define _config_h_
 
+#include <sdkconfig.h>
+
 #define ARDUINOJSON_ENABLE_COMMENTS 1
 
 // shared file names (configmgr and web)

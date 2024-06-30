@@ -48,10 +48,10 @@ NibeMqttGwConfigManager configManager;
 MqttClient mqttClient(metrics);
 
 MqttRelay relays[] = {
-    MqttRelay("relay1", "Relay 1", Relay1),
-    MqttRelay("relay2", "Relay 2", Relay2),
-    MqttRelay("relay3", "Relay 3", Relay3),
-    MqttRelay("relay4", "Relay 4", Relay4),
+    MqttRelay(Relay1, "relay-1"),
+    MqttRelay(Relay2, "relay-2"),
+    MqttRelay(Relay3, "relay-3"),
+    MqttRelay(Relay4, "relay-4"),
 };
 
 EnergyMeter energyMeter(metrics);
@@ -216,7 +216,7 @@ void setupNormalBoot() {
 
     // relays
     for (uint8_t i = 0; i < RELAY_COUNT; i++) {
-        err = relays[i].begin(&mqttClient);
+        err = relays[i].begin(config.relays[i], &mqttClient);
         if (err != 0) {
             ESP_LOGE(TAG, "Could not initialize relay %d", i);
             metricInitStatus.setValue((int32_t)InitStatus::ErrRelay);

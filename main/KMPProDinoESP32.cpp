@@ -25,6 +25,9 @@
 #include <esp_log.h>
 #include <esp_netif_sntp.h>
 
+#include "MCP23S08.h"
+#include "esp32-hal-rgb-led.h"
+
 static const char* TAG = "prodino";
 
 struct BoardConfig_t {

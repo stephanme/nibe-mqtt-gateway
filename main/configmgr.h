@@ -9,11 +9,13 @@
 #include "mqtt.h"
 #include "mqtt_logging.h"
 #include "nibegw_config.h"
+#include "Relay.h"
 #include "nonstd_stream.h"
 
 struct NibeMqttGwConfig {
     MqttConfig mqtt;
     NibeMqttConfig nibe;
+    MqttRelayConfig relays[RELAY_COUNT];
     LogConfig logging;
 };
 

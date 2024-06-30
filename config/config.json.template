@@ -128,18 +128,57 @@
             "48043": { // Holiday - Activated, 0=inactive, 10=active, R/W
                 "_component_": "switch",
                 "pl_on": "10",
-                "pl_off": "0"
+                "pl_off": "0",
+                "optimistic": true
             },
             "48130": { // Manual heat medium pump speed, 0=off, 1=on, R/W
                 "_component_": "switch",
                 "pl_on": "1",
                 "pl_off": "0",
+                "optimistic": true,
                 "unit_of_meas": null // bug in csv
             },
             "48085": { // Heat medium pump speed if manual, [%], R/W
             }
         }
     },
+    "relays": [ // array of 4 relays
+        /* Defaults: relay-1..4
+        {
+            "name": "relay-1",
+            "homeassistantDiscoveryOverride": {
+                "_component_": "switch",
+                "obj_id":"nibegw-<name>",
+                "uniq_id":"nibegw-<name>",
+                "name": "<name>",
+                "stat_t": "nibegw/relay/<name>",
+                "cmd_t": "nibegw/relay/<name>/set",
+                "pl_on":"ON",
+                "pl_off":"OFF",      
+                "avty_t":"nibegw/availability",
+                "dev": {"ids":["nibegw-<mac>"]}
+            }
+        }
+        */
+        {
+            "name": "aux-sg-ready-b",
+            "homeassistantDiscoveryOverride": {
+                "name": "AUX SG Ready B"
+            }
+        },
+        {
+            "name": "aux-ext-adjustment",
+            "homeassistantDiscoveryOverride": {
+                "name": "AUX Ext. Adjustment"
+            }
+        },
+        {
+            "name": "aux-enable-cooling",
+            "homeassistantDiscoveryOverride": {
+                "name": "AUX Enable Cooling"
+            }
+        }
+    ],
     "logging": {
         "mqttLoggingEnabled": true,     // whether to log to mqtt
         "stdoutLoggingEnabled": true,   // whether to log to serial in addition to mqtt
