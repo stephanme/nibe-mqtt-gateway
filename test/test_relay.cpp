@@ -1,8 +1,9 @@
-#include <ArduinoJson.h>
 #include <unity.h>
 
 #include "Relay.h"
 #include "mqtt_mock.h"
+//
+#include <ArduinoJson.h>
 
 TEST_CASE("configuration", "[relay]") {
     MqttConfig mqttConfig = {.brokerUri = "mqtt://localhost",
@@ -17,7 +18,7 @@ TEST_CASE("configuration", "[relay]") {
     MqttClient mqttClient = MqttClient(metrics);
     mqttClient.begin(mqttConfig);
 
-    MqttRelay relay = MqttRelay(Relay1, "r");
+    MqttRelay relay = MqttRelay(Relay1, "r", metrics);
     MqttRelayConfig config = {.name = "myrelay-1", .homeassistantDiscoveryOverride = R"({"name":"Relay 1"})"};
     mqttmock_publishData.clear();
     relay.begin(config, &mqttClient);
@@ -38,4 +39,7 @@ TEST_CASE("configuration", "[relay]") {
     TEST_ASSERT_EQUAL_STRING("ON", discoveryDoc["pl_on"]);
     TEST_ASSERT_EQUAL_STRING("OFF", discoveryDoc["pl_off"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/availability", discoveryDoc["avty_t"]);
+
+    Metric* m = metrics.findMetric(R"(nibegw_relay_state{relay="1",name="myrelay-1"})");
+    TEST_ASSERT_NOT_NULL(m);
 }

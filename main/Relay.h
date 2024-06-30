@@ -9,6 +9,7 @@
 
 #include "KMPProDinoESP32.h"
 #include "mqtt.h"
+#include "metrics.h"
 
 struct MqttRelayConfig {
     std::string name;
@@ -17,7 +18,7 @@ struct MqttRelayConfig {
 
 class MqttRelay : MqttSubscriptionCallback {
    public:
-    MqttRelay(Relay relay, const std::string& name);
+    MqttRelay(Relay relay, const std::string& name, Metrics& metrics);
 
     int begin(const MqttRelayConfig& config, MqttClient* mqttClient);
 
@@ -38,8 +39,10 @@ class MqttRelay : MqttSubscriptionCallback {
     std::string name;
     enum Relay relay;
     MqttClient* mqttClient;
-
     std::string stateTopic;
+
+    Metrics& metrics;
+    Metric* metricRelayState = nullptr;
 
     void onMqttMessage(const std::string& topic, const std::string& payload);
     void publishState(bool state);

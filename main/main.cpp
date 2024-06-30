@@ -48,10 +48,10 @@ NibeMqttGwConfigManager configManager;
 MqttClient mqttClient(metrics);
 
 MqttRelay relays[] = {
-    MqttRelay(Relay1, "relay-1"),
-    MqttRelay(Relay2, "relay-2"),
-    MqttRelay(Relay3, "relay-3"),
-    MqttRelay(Relay4, "relay-4"),
+    MqttRelay(Relay1, "relay-1", metrics),
+    MqttRelay(Relay2, "relay-2", metrics),
+    MqttRelay(Relay3, "relay-3", metrics),
+    MqttRelay(Relay4, "relay-4", metrics),
 };
 
 EnergyMeter energyMeter(metrics);

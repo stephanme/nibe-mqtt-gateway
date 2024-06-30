@@ -4,7 +4,7 @@
 
 static const char* TAG = "relay";
 
-MqttRelay::MqttRelay(enum Relay relay, const std::string& name) {
+MqttRelay::MqttRelay(enum Relay relay, const std::string& name, Metrics& metrics): metrics(metrics) {
     this->relay = relay;
     this->name = name;
 }
@@ -13,6 +13,12 @@ MqttRelay::MqttRelay(enum Relay relay, const std::string& name) {
 int MqttRelay::begin(const MqttRelayConfig& config, MqttClient* mqttClient) {
     this->mqttClient = mqttClient;
     name = config.name;
+    
+    char metricName[64];
+    snprintf(metricName, sizeof(metricName), R"(nibegw_relay_state{relay="%d",name="%s"})", relay + 1, name.c_str());
+    metricRelayState = &metrics.addMetric(metricName);
+    metricRelayState->setValue(getRelayState() ? 1 : 0);
+
     ESP_LOGI(TAG, "begin relay %s, channel %d", name.c_str(), relay);
 
     JsonDocument discoveryDoc =
@@ -33,6 +39,7 @@ int MqttRelay::begin(const MqttRelayConfig& config, MqttClient* mqttClient) {
     std::string discoveryMsg;
     serializeJson(discoveryDoc, discoveryMsg);
     mqttClient->publish(discoveryTopic, discoveryMsg, QOS0, true);
+
     return 0;
 }
 
@@ -100,6 +107,14 @@ bool MqttRelay::getRelayState(void) { return KMPProDinoESP32.getRelayState(relay
 
 void MqttRelay::publishState() { publishState(getRelayState()); }
 
-void MqttRelay::publishState(bool state) { mqttClient->publish(stateTopic, state ? "ON" : "OFF"); }
+void MqttRelay::publishState(bool state) {
+    if (state) {
+        metricRelayState->setValue(1);
+        mqttClient->publish(stateTopic, "ON"); 
+    } else {
+        metricRelayState->setValue(0);
+        mqttClient->publish(stateTopic, "OFF"); 
+    } 
+}
 
 void MqttRelay::onMqttMessage(const std::string& topic, const std::string& payload) { setRelayState(payload == "ON"); }
