@@ -152,8 +152,8 @@ Description assumes standard configuration, see [config.json.template](config/co
 
 |Description|MQTT topic|MQTT discovery|Metric|Comment|
 |---|---|---|---|---|
-|Nibe register read|nibegw/nibe/&lt;id>|homeassistant/sensor/nibegw/nibe-&lt;id>/config|nibe_&lt;title>{register="&lt;id>"}|Metric name is configurable|
-|Nibe register write|nibegw/nibe/&lt;id>/set|homeassistant/switch/nibegw/nibe-&lt;id>/config| |only for R/W registers|
+|Nibe register read|nibegw/nibe/&lt;id>|homeassistant/sensor/nibegw/<br>nibe-&lt;id>/config|nibe_&lt;title> {register="&lt;id>"}|Metric name is configurable|
+|Nibe register write|nibegw/nibe/&lt;id>/set|homeassistant/switch/nibegw/<br>nibe-&lt;id>/config| |only for R/W registers|
 
 Legend/Info
 - `<id>` = Nibe register ID
@@ -165,7 +165,7 @@ Legend/Info
 
 |Description|MQTT topic|MQTT discovery|Metric|Comment|
 |---|---|---|---|---|
-|Energy Meter|nibegw/energy-meter|homeassistant/sensor/nibegw/energy-meter/config|nibe_energy_meter_wh_total|absolute value, stored in NVS|
+|Energy Meter|nibegw/energy-meter|homeassistant/sensor/nibegw/<br>energy-meter/config|nibe_energy_meter_wh_total|absolute value, stored in NVS|
 |Energy consumption per Nibe operating mode/prio| | |nibe_energy_consumption_wh_total {mode="unknown\|off\|heating\|hotwater\|cooling"}|metric reset on reboot|
 
 
@@ -173,8 +173,8 @@ Legend/Info
 
 |Description|MQTT topic|MQTT discovery|Metric|Comment|
 |---|---|---|---|---|
-|Relay 1..4|nibegw/relay/&lt;name>/state|homeassistant/switch/nibegw/&lt;name>/config|nibegw_relay_state {relay="1..4",name="&lt;name>"}|relay state|
-|Relay 1..4|nibegw/relay/&lt;name>/set|homeassistant/switch/nibegw/&lt;name>/config| |set state|
+|Relay 1..4|nibegw/relay/&lt;name>/state|homeassistant/switch/nibegw/<br>&lt;name>/config|nibegw_relay_state {relay="1..4",name="&lt;name>"}|relay state|
+|Relay 1..4|nibegw/relay/&lt;name>/set|homeassistant/switch/nibegw/<br>&lt;name>/config| |set state|
 
 Legend/Info
 - `<name>` = relay name is configurable, defaults to `relay-1..4` 
