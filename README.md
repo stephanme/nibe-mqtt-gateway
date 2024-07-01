@@ -139,10 +139,10 @@ Description assumes standard configuration, see [config.json.template](config/co
 |---|---|---|---|---|
 |Device availability|nibegw/availability| | |last will topic|
 |Logs| nibegw/log | | |see trouble shooting section|
-|Status nibegw initialization| | |nibegw_status_info{category="init"}|0=OK, otherwise check logs|
-|Status nibegw MQTT| | |nibegw_status_info{category="mqtt"}|0=OK, otherwise check logs|
-|Time to poll Nibe registers| | |nibegw_task_runtime_seconds{task="publishNibeRegisters"}|~1s per polled register|
-|Runtime for 30s cyclic task| | |nibegw_task_runtime_seconds{task="pollingTask"}|should be <1s|
+|Status nibegw initialization| | |nibegw_status_info {category="init"}|0=OK, otherwise check logs|
+|Status nibegw MQTT| | |nibegw_status_info {category="mqtt"}|0=OK, otherwise check logs|
+|Time to poll Nibe registers| | |nibegw_task_runtime_seconds {task="publishNibeRegisters"}|~1s per polled register|
+|Runtime for 30s cyclic task| | |nibegw_task_runtime_seconds {task="pollingTask"}|should be <1s|
 |Free heap| | |nibegw_total_free_bytes| |
 |Minumum free heap| | |nibegw_minimum_free_bytes| |
 |Uptime| | |nibegw_uptime_seconds_total|reset on boot|
@@ -166,14 +166,14 @@ Legend/Info
 |Description|MQTT topic|MQTT discovery|Metric|Comment|
 |---|---|---|---|---|
 |Energy Meter|nibegw/energy-meter|homeassistant/sensor/nibegw/energy-meter/config|nibe_energy_meter_wh_total|absolute value, stored in NVS|
-|Energy consumption per Nibe operating mode/prio| | |nibe_energy_consumption_wh_total{ mode="unknown\|off\|heating\|hotwater\|cooling"}|metric reset on reboot|
+|Energy consumption per Nibe operating mode/prio| | |nibe_energy_consumption_wh_total {mode="unknown\|off\|heating\|hotwater\|cooling"}|metric reset on reboot|
 
 
 ### Relays
 
 |Description|MQTT topic|MQTT discovery|Metric|Comment|
 |---|---|---|---|---|
-|Relay 1..4|nibegw/relay/&lt;name>/state|homeassistant/switch/nibegw/&lt;name>/config|nibegw_relay_state{relay="1..4",name="&lt;name>"}|relay state|
+|Relay 1..4|nibegw/relay/&lt;name>/state|homeassistant/switch/nibegw/&lt;name>/config|nibegw_relay_state {relay="1..4",name="&lt;name>"}|relay state|
 |Relay 1..4|nibegw/relay/&lt;name>/set|homeassistant/switch/nibegw/&lt;name>/config| |set state|
 
 Legend/Info
