@@ -2,9 +2,11 @@
 
 #include <esp_log.h>
 
+#include "mqtt_helper.h"
+
 static const char* TAG = "relay";
 
-MqttRelay::MqttRelay(enum Relay relay, const std::string& name, Metrics& metrics): metrics(metrics) {
+MqttRelay::MqttRelay(enum Relay relay, const std::string& name, Metrics& metrics) : metrics(metrics) {
     this->relay = relay;
     this->name = name;
 }
@@ -13,7 +15,7 @@ MqttRelay::MqttRelay(enum Relay relay, const std::string& name, Metrics& metrics
 int MqttRelay::begin(const MqttRelayConfig& config, MqttClient* mqttClient) {
     this->mqttClient = mqttClient;
     name = config.name;
-    
+
     char metricName[64];
     snprintf(metricName, sizeof(metricName), R"(nibegw_relay_state{relay="%d",name="%s"})", relay + 1, name.c_str());
     metricRelayState = &metrics.addMetric(metricName);
@@ -21,8 +23,7 @@ int MqttRelay::begin(const MqttRelayConfig& config, MqttClient* mqttClient) {
 
     ESP_LOGI(TAG, "begin relay %s, channel %d", name.c_str(), relay);
 
-    JsonDocument discoveryDoc =
-        homeassistantDiscoveryMessage(config, mqttClient->getConfig().rootTopic, mqttClient->getDeviceDiscoveryInfoRef());
+    JsonDocument discoveryDoc = homeassistantDiscoveryMessage(config, *mqttClient);
 
     stateTopic = discoveryDoc["stat_t"].as<std::string>();
     ESP_LOGI(TAG, "MQTT topic: %s", stateTopic.c_str());
@@ -43,45 +44,9 @@ int MqttRelay::begin(const MqttRelayConfig& config, MqttClient* mqttClient) {
     return 0;
 }
 
-// TODO: quite some code duplication with nibegw_config.cpp, move e.g. to mqtt.cpp
-JsonDocument MqttRelay::homeassistantDiscoveryMessage(const MqttRelayConfig& config, const std::string& nibeRootTopic,
-                                                      const std::string& deviceDiscoveryInfo) const {
-    auto discoveryDoc = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
-    if (!config.homeassistantDiscoveryOverride.empty()) {
-        // parse override json and defDiscoveryMsg and merge them
-        JsonDocument overrideDoc;
-        DeserializationError errOverride = deserializeJson(overrideDoc, config.homeassistantDiscoveryOverride);
-        if (errOverride) {
-            ESP_LOGE(TAG, "Failed to parse override discovery message for relay %s: %s", name.c_str(), errOverride.c_str());
-            return discoveryDoc;
-        }
-        // merge overrideDoc into discoveryMsgDoc
-        for (auto kv : overrideDoc.as<JsonObject>()) {
-            if (kv.value().isNull()) {
-                discoveryDoc.remove(kv.key());
-            } else {
-                discoveryDoc[kv.key()] = kv.value();
-            }
-        }
-    }
-    return discoveryDoc;
-}
-
-JsonDocument MqttRelay::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                             const std::string& deviceDiscoveryInfo) const {
-    JsonDocument discoveryDoc;
-
-    // TODO: ugly, maybe treat discovery info as json everywhere
-    char str[deviceDiscoveryInfo.size() + 3];
-    str[0] = '{';
-    strcpy(str + 1, deviceDiscoveryInfo.c_str());
-    str[deviceDiscoveryInfo.size() + 1] = '}';
-    str[deviceDiscoveryInfo.size() + 2] = '\0';
-    DeserializationError err = deserializeJson(discoveryDoc, str);
-    if (err) {
-        // should not happen
-        ESP_LOGE(TAG, "Failed to parse device discovery info for relay %s: %s", name.c_str(), err.c_str());
-    }
+JsonDocument MqttRelay::homeassistantDiscoveryMessage(const MqttRelayConfig& config, const MqttClient& mqttClient) const {
+    JsonDocument discoveryDoc = mqttClient.getDeviceDiscoveryInfoRef();
+    const std::string& nibeRootTopic = mqttClient.getConfig().rootTopic;
 
     discoveryDoc["_component_"] = "switch";
     char objId[64];
@@ -94,6 +59,7 @@ JsonDocument MqttRelay::defaultHomeassistantDiscoveryMessage(const std::string& 
     discoveryDoc["pl_on"] = "ON";
     discoveryDoc["pl_off"] = "OFF";
 
+    MqttHelper::mergeMqttDiscoveryInfoOverride(discoveryDoc, config.homeassistantDiscoveryOverride);
     return discoveryDoc;
 }
 
@@ -110,11 +76,11 @@ void MqttRelay::publishState() { publishState(getRelayState()); }
 void MqttRelay::publishState(bool state) {
     if (state) {
         metricRelayState->setValue(1);
-        mqttClient->publish(stateTopic, "ON"); 
+        mqttClient->publish(stateTopic, "ON");
     } else {
         metricRelayState->setValue(0);
-        mqttClient->publish(stateTopic, "OFF"); 
-    } 
+        mqttClient->publish(stateTopic, "OFF");
+    }
 }
 
 void MqttRelay::onMqttMessage(const std::string& topic, const std::string& payload) { setRelayState(payload == "ON"); }

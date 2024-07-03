@@ -248,7 +248,8 @@ TEST_CASE("homeassistantDiscoveryMessage Temperature", "[nibegw_config]") {
     NibeMqttConfig config;
     NibeRegister r = {1, "Temperature",         NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0, 0,
                       0, NibeRegisterMode::Read};
-    std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
+    JsonDocument deviceDiscoveryInfo;
+    deviceDiscoveryInfo["dev"]["name"] = "Nibe GW";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
@@ -265,7 +266,8 @@ TEST_CASE("homeassistantDiscoveryMessage Temperature", "[nibegw_config]") {
 TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
     NibeMqttConfig config;
     NibeRegister r = {1, "No Unit", NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0, 0, NibeRegisterMode::Read};
-    std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
+    JsonDocument deviceDiscoveryInfo;
+    deviceDiscoveryInfo["dev"]["name"] = "Nibe GW";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
@@ -275,14 +277,15 @@ TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
     TEST_ASSERT_TRUE(doc["unit_of_meas"].isUnbound());
     TEST_ASSERT_TRUE(doc["stat_cla"].isUnbound());
-    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["dev"]["name"]);
 }
 
 TEST_CASE("homeassistantDiscoveryMessage Read/write", "[nibegw_config]") {
     NibeMqttConfig config;
     NibeRegister r = {
         1, "Temperature", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 10, 0, 100, 0, NibeRegisterMode::ReadWrite};
-    std::string deviceDiscoveryInfo = R"("dev":{"name":"Nibe GW"})";
+    JsonDocument deviceDiscoveryInfo;
+    deviceDiscoveryInfo["dev"]["name"] = "Nibe GW";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("number", doc["_component_"]);
@@ -305,7 +308,8 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
         R"({"_component_":"mysensor","unit_of_meas":"Grad Celsius", "dev_cla":null, "added":123, "removeNonexistingKey":null})";
     NibeRegister r = {1, "Override", NibeRegisterUnit::GradCelcius, NibeRegisterDataType::UInt8, 1, 0,
                       0, 0,          NibeRegisterMode::Read};
-    std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
+    JsonDocument deviceDiscoveryInfo;
+    deviceDiscoveryInfo["dev"]["name"] = "Nibe GW";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("mysensor", doc["_component_"]);
@@ -317,7 +321,7 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
     TEST_ASSERT_TRUE(doc["dev_cla"].isUnbound());                   // removed by override
     TEST_ASSERT_EQUAL(123, doc["added"]);                           // added by override, integer type
     TEST_ASSERT_TRUE(doc["removeNonexistingKey"].isUnbound());      // ignore removing of nonexisting key
-    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["dev"]["name"]);
 }
 
 TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
@@ -325,7 +329,8 @@ TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     config.homeassistantDiscoveryOverrides[43005] = R"({"stat_cla":"measurement"})";
     NibeRegister r = {43005, "Degree Minutes",      NibeRegisterUnit::NoUnit, NibeRegisterDataType::UInt8, 1, 0, 0,
                       0,     NibeRegisterMode::Read};
-    std::string deviceDiscoveryInfo = R"("device":{"name":"Nibe GW"})";
+    JsonDocument deviceDiscoveryInfo;
+    deviceDiscoveryInfo["dev"]["name"] = "Nibe GW";
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
@@ -335,7 +340,7 @@ TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/43005", doc["stat_t"]);
     TEST_ASSERT_TRUE(doc["unit_of_meas"].isUnbound());
     TEST_ASSERT_EQUAL_STRING("measurement", doc["stat_cla"]);
-    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["device"]["name"]);
+    TEST_ASSERT_EQUAL_STRING("Nibe GW", doc["dev"]["name"]);
 }
 
 TEST_CASE("decodeDataRaw", "[nibegw_config]") {

@@ -30,10 +30,7 @@ class MqttRelay : MqttSubscriptionCallback {
     const std::string& getStateTopic(void) { return stateTopic; }
 
     // public for for testing only
-    JsonDocument homeassistantDiscoveryMessage(const MqttRelayConfig& config, const std::string& nibeRootTopic,
-                                               const std::string& deviceDiscoveryInfo) const;
-    JsonDocument defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                      const std::string& deviceDiscoveryInfo) const;
+    JsonDocument homeassistantDiscoveryMessage(const MqttRelayConfig& config, const MqttClient& mqttClient) const;
 
    private:
     std::string name;

@@ -4,18 +4,9 @@
 #include <esp_log.h>
 
 #include "config.h"
+#include "mqtt_helper.h"
 
 static const char* TAG = "mqtt";
-
-// https://www.home-assistant.io/integrations/mqtt/#discovery-payload
-static const char* DEVICE_DISCOVERY_INFO_FULL = R"(
-"avty_t":"%s",
-"dev":{"name":"%s","ids":["%s"],"mf":"%s","mdl":"%s","sw":"%s","cu":"%s"}
-)";
-static const char* DEVICE_DISCOVERY_INFO_REF = R"(
-"avty_t":"%s",
-"dev":{"ids":["%s"]}
-)";
 
 MqttClient::MqttClient(Metrics& metrics) : metricMqttStatus(metrics.addMetric(METRIC_NAME_MQTT_STATUS, 1)) {
     metricMqttStatus.setValue((int32_t)MqttStatus::Disconnected);
@@ -51,13 +42,18 @@ esp_err_t MqttClient::begin(const MqttConfig& config) {
     availabilityTopic += "/availability";
 
     const esp_app_desc_t* app_desc = esp_app_get_description();
-    char str[512];
-    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO_FULL, availabilityTopic.c_str(), config.deviceName.c_str(),
-             config.clientId.c_str(), config.deviceManufacturer.c_str(), config.deviceModel.c_str(), app_desc->version,
-             config.deviceConfigurationUrl.c_str());
-    deviceDiscoveryInfo = str;
-    snprintf(str, sizeof(str), DEVICE_DISCOVERY_INFO_REF, availabilityTopic.c_str(), config.clientId.c_str());
-    deviceDiscoveryInfoRef = str;
+
+    // https://www.home-assistant.io/integrations/mqtt/#discovery-payload
+    deviceDiscoveryInfo["avty_t"] = availabilityTopic;
+    deviceDiscoveryInfo["dev"]["name"] = config.deviceName;
+    deviceDiscoveryInfo["dev"]["ids"].add(config.clientId);
+    deviceDiscoveryInfo["dev"]["mf"] = config.deviceManufacturer;
+    deviceDiscoveryInfo["dev"]["mdl"] = config.deviceModel;
+    deviceDiscoveryInfo["dev"]["sw"] = app_desc->version;
+    deviceDiscoveryInfo["dev"]["cu"] = config.deviceConfigurationUrl;
+
+    deviceDiscoveryInfoRef["avty_t"] = availabilityTopic;
+    deviceDiscoveryInfoRef["dev"]["ids"].add(config.clientId);
 
     ESP_LOGI(TAG, "MQTT Broker URL: %s", config.brokerUri.c_str());
     esp_mqtt_client_config_t mqtt_cfg = {};
@@ -156,7 +152,7 @@ void MqttClient::onDataEvent(esp_mqtt_event_handle_t event) {
     std::string topic = std::string((char*)event->topic, event->topic_len);
     std::string data = std::string((char*)event->data, event->data_len);
     for (size_t i = 0; i < subscriptionCount; i++) {
-        if (mqtt_match_topic(topic.c_str(), subscriptions[i].topic.c_str())) {
+        if (MqttHelper::matchTopic(topic.c_str(), subscriptions[i].topic.c_str())) {
             subscriptions[i].callback->onMqttMessage(topic, data);
             return;
         }

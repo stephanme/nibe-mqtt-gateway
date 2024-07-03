@@ -76,8 +76,8 @@ class NibeRegister {
     NibeRegisterMode mode;
 
     NibeRegister() = default;
-    NibeRegister(uint16_t id, const std::string& title, NibeRegisterUnit unit, NibeRegisterDataType dataType, int factor, int minValue, int maxValue,
-         int defaultValue, NibeRegisterMode mode)
+    NibeRegister(uint16_t id, const std::string& title, NibeRegisterUnit unit, NibeRegisterDataType dataType, int factor,
+                 int minValue, int maxValue, int defaultValue, NibeRegisterMode mode)
         : id(id),
           title(title),
           unit(unit),
@@ -98,17 +98,13 @@ class NibeRegister {
     static NibeRegisterUnit stringToUnit(const char* unit);
 
     JsonDocument homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
-                                               const std::string& deviceDiscoveryInfo) const;
+                                               const JsonDocument& deviceDiscoveryInfo) const;
 
     NibeRegisterMetricConfig toPromMetricConfig(const NibeMqttConfig& config) const;
     std::string promMetricName() const;
     void appendPromAttributes(std::string& promMetricName) const;
 
     bool operator==(const NibeRegister& other) const = default;
-
-   private:
-    JsonDocument defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                      const std::string& deviceDiscoveryInfo) const;
 };
 
 struct NibeRegisterMetricConfig {

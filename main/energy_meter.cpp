@@ -80,26 +80,23 @@ esp_err_t EnergyMeter::begin() {
     return err;
 }
 
-static const char* DISCOVERY_PAYLOAD = R"({
-"obj_id":"nibegw-energy-meter",
-"uniq_id":"nibegw-energy-meter",
-"name":"Nibe Energy Meter",
-"stat_t":"%s",
-"unit_of_meas":"kWh",
-"dev_cla":"energy",
-"stat_cla":"total_increasing",
-%s
-})";
-
 esp_err_t EnergyMeter::beginMqtt(MqttClient& mqttClient) {
     ESP_LOGI(TAG, "EnergyMeter::beginMqtt");
     this->mqttClient = &mqttClient;
 
     mqttTopic = mqttClient.getConfig().rootTopic + "/energy-meter";
     // announce energy meter, use full device info
-    char discoveryPayload[strlen(DISCOVERY_PAYLOAD) + mqttTopic.length() + mqttClient.getDeviceDiscoveryInfo().length() + 1];
-    snprintf(discoveryPayload, sizeof(discoveryPayload), DISCOVERY_PAYLOAD, mqttTopic.c_str(),
-             mqttClient.getDeviceDiscoveryInfo().c_str());
+    JsonDocument deviceDiscovery = mqttClient.getDeviceDiscoveryInfo();
+    deviceDiscovery["name"] = "Nibe Energy Meter";
+    deviceDiscovery["obj_id"] = "nibegw-energy-meter";
+    deviceDiscovery["uniq_id"] = "nibegw-energy-meter";
+    deviceDiscovery["stat_t"] = mqttTopic;
+    deviceDiscovery["unit_of_meas"] = "kWh";
+    deviceDiscovery["dev_cla"] = "energy";
+    deviceDiscovery["stat_cla"] = "total_increasing";
+
+    std::string discoveryPayload;
+    serializeJson(deviceDiscovery, discoveryPayload);
     mqttClient.publish(mqttClient.getConfig().discoveryPrefix + "/sensor/nibegw/energy-meter/config", discoveryPayload, QOS0,
                        true);
 

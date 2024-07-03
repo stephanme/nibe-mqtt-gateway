@@ -6,12 +6,12 @@
 
 #include <string>
 
+#include "config.h"
 #include "metrics.h"
+//
+#include <ArduinoJson.h>
 
 #define MAX_SUBSCRIPTIONS 10
-
-// mqtt_helper.cpp
-bool mqtt_match_topic(const char* topic, const char* filter);
 
 enum class MqttStatus {
     OK = 0,
@@ -60,10 +60,10 @@ typedef void (MqttSubscriptionCallback::*MqttCallbackFunction)(std::string, std:
 class MqttClient {
    public:
     MqttClient(Metrics& metrics);
-    const MqttConfig& getConfig() { return *config; }
-    const std::string& getAvailabilityTopic() { return availabilityTopic; }
-    const std::string& getDeviceDiscoveryInfo() { return deviceDiscoveryInfo; }
-    const std::string& getDeviceDiscoveryInfoRef() { return deviceDiscoveryInfoRef; }
+    const MqttConfig& getConfig() const { return *config; }
+    const std::string& getAvailabilityTopic() const { return availabilityTopic; }
+    const JsonDocument& getDeviceDiscoveryInfo() const { return deviceDiscoveryInfo; }
+    const JsonDocument& getDeviceDiscoveryInfoRef() const { return deviceDiscoveryInfoRef; }
 
     esp_err_t begin(const MqttConfig& config);
     MqttStatus status() const { return (MqttStatus)metricMqttStatus.getValue(); }
@@ -80,8 +80,8 @@ class MqttClient {
     Metric& metricMqttStatus;
     const MqttConfig* config;
     std::string availabilityTopic;
-    std::string deviceDiscoveryInfo;
-    std::string deviceDiscoveryInfoRef;
+    JsonDocument deviceDiscoveryInfo;
+    JsonDocument deviceDiscoveryInfoRef;
     esp_mqtt_client_handle_t client;
     MqttClientLifecycleCallback* lifecycleCallbacks[MAX_SUBSCRIPTIONS];
     int lifecycleCallbackCount = 0;

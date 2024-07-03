@@ -4,6 +4,8 @@
 
 #include <cstring>
 
+#include "mqtt_helper.h"
+
 static const char* TAG = "nibegw_config";
 
 int32_t NibeRegister::decodeDataRaw(const uint8_t* const data) const {
@@ -262,48 +264,8 @@ const char* NibeRegister::unitAsString() const {
 }
 
 JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& config, const std::string& nibeRootTopic,
-                                                 const std::string& deviceDiscoveryInfo) const {
-    auto discoveryDoc = defaultHomeassistantDiscoveryMessage(nibeRootTopic, deviceDiscoveryInfo);
-    auto iter = config.homeassistantDiscoveryOverrides.find(id);
-    if (iter == config.homeassistantDiscoveryOverrides.end()) {
-        return discoveryDoc;
-    } else {
-        auto override = iter->second;
-        // parse override json and defDiscoveryMsg and merge them
-        JsonDocument overrideDoc;
-        DeserializationError errOverride = deserializeJson(overrideDoc, override);
-        if (errOverride) {
-            ESP_LOGE(TAG, "Failed to parse override discovery message for register %d: %s", id, errOverride.c_str());
-            return discoveryDoc;
-        }
-        // merge overrideDoc into discoveryMsgDoc
-        for (auto kv : overrideDoc.as<JsonObject>()) {
-            if (kv.value().isNull()) {
-                discoveryDoc.remove(kv.key());
-            } else {
-                discoveryDoc[kv.key()] = kv.value();
-            }
-        }
-        // return merged doc
-        return discoveryDoc;
-    }
-}
-
-JsonDocument NibeRegister::defaultHomeassistantDiscoveryMessage(const std::string& nibeRootTopic,
-                                                        const std::string& deviceDiscoveryInfo) const {
-    JsonDocument discoveryDoc;
-
-    // TODO: ugly, maybe treat discovery info as json everywhere
-    char str[deviceDiscoveryInfo.size() + 3];
-    str[0] = '{';
-    strcpy(str + 1, deviceDiscoveryInfo.c_str());
-    str[deviceDiscoveryInfo.size() + 1] = '}';
-    str[deviceDiscoveryInfo.size() + 2] = '\0';
-    DeserializationError err = deserializeJson(discoveryDoc, str);
-    if (err) {
-        // should not happen
-        ESP_LOGE(TAG, "Failed to parse device discovery info for register %d: %s", id, err.c_str());
-    }
+                                                         const JsonDocument& deviceDiscoveryInfo) const {
+    JsonDocument discoveryDoc = deviceDiscoveryInfo;
 
     char objId[64];
     snprintf(objId, sizeof(objId), "nibe-%u", id);
@@ -375,7 +337,14 @@ JsonDocument NibeRegister::defaultHomeassistantDiscoveryMessage(const std::strin
         discoveryDoc["_component_"] = "sensor";
     }
 
-    return discoveryDoc;
+    auto iter = config.homeassistantDiscoveryOverrides.find(id);
+    if (iter == config.homeassistantDiscoveryOverrides.end()) {
+        return discoveryDoc;
+    } else {
+        auto override = iter->second;
+        MqttHelper::mergeMqttDiscoveryInfoOverride(discoveryDoc, override);
+        return discoveryDoc;
+    }
 }
 
 // prom metric config must be configured explicitly (i.e. register id) but there are defaults for all config values
