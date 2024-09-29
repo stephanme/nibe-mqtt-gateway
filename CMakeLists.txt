@@ -14,8 +14,3 @@ if(IDF_TARGET STREQUAL "linux")
 endif()
 
 project(nibe-mqtt-gateway)
-
-# compilation flag to support W5500 ETH SPI driver without IRQ
-# removed with arduino-esp32 >=3.0.0-rc4
-# fixed by https://github.com/espressif/arduino-esp32/pull/9659
-idf_build_set_property(COMPILE_DEFINITIONS "ETH_SPI_SUPPORTS_NO_IRQ=1" APPEND)

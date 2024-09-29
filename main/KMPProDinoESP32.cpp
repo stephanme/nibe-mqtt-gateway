@@ -364,7 +364,7 @@ uint32_t KMPProDinoESP32Class::getStatusLed() { return _statusLedColor; }
 
 void KMPProDinoESP32Class::setStatusLed(uint32_t color) {
     _statusLedColor = color;
-    neopixelWrite(StatusLedPixelNumber, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+    rgbLedWrite(StatusLedPixelNumber, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
 }
 
 // void KMPProDinoESP32Class::OnStatusLed()
@@ -374,7 +374,7 @@ void KMPProDinoESP32Class::setStatusLed(uint32_t color) {
 
 void KMPProDinoESP32Class::offStatusLed() {
     _statusLedColor = black;
-    neopixelWrite(StatusLedPixelNumber, 0, 0, 0);
+    rgbLedWrite(StatusLedPixelNumber, 0, 0, 0);
 }
 
 void KMPProDinoESP32Class::processStatusLed(uint32_t color, int blinkInterval) {
