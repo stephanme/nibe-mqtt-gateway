@@ -10,6 +10,7 @@
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include "MCP23S08.h"
+#include <esp_log.h>
 
 #define READ_CMD 0x41
 #define WRITE_CMD 0x40
@@ -28,6 +29,8 @@
 
 #define MAX_PIN_POS 7
 
+static const char* TAG = "MCP23S08";
+
 int _cs;
 
 uint8_t _expTxData[16] __attribute__((aligned(4)));
@@ -45,6 +48,7 @@ void MCP23S08Class::init(int cs) {
 
     pinMode(_cs, OUTPUT);
     digitalWrite(_cs, HIGH);
+    ESP_LOGI(TAG, "init");
 }
 
 void MCP23S08Class::ConfigureInterrupt(uint8_t pinNumber, bool enable, bool defVal, bool intCon) {
@@ -52,9 +56,10 @@ void MCP23S08Class::ConfigureInterrupt(uint8_t pinNumber, bool enable, bool defV
         return;
     }
 
+    ESP_LOGI(TAG, "ConfigureInterrupt: pinNumber=%d, enable=%d, defVal=%d, intCon=%d", pinNumber, enable, defVal, intCon);
     uint8_t _gpinten = ReadRegister(GPINTEN);
     uint8_t _defval = ReadRegister(DEFVAL);
-    uint8_t _iocon = ReadRegister(IOCON);
+    uint8_t _intcon = ReadRegister(INTCON);
 
     if (enable) {
         _gpinten |= (1 << pinNumber);
@@ -69,14 +74,15 @@ void MCP23S08Class::ConfigureInterrupt(uint8_t pinNumber, bool enable, bool defV
     }
 
     if (intCon) {
-        _iocon |= (1 << pinNumber);
+        _intcon |= (1 << pinNumber);
     } else {
-        _iocon &= ~(1 << pinNumber);
+        _intcon &= ~(1 << pinNumber);
     }
 
     WriteRegister(DEFVAL, _defval);
-    WriteRegister(IOCON, _iocon);
+    WriteRegister(INTCON, _intcon);
     WriteRegister(GPINTEN, _gpinten);
+    ESP_LOGI(TAG, "GPINTEN=%02X DEFVAL=%02X INTCON=%02X", _gpinten, _defval, _intcon);
 }
 
 /**
@@ -131,6 +137,19 @@ uint8_t MCP23S08Class::GetPinState(void) {
     uint8_t registerData = ReadRegister(GPIO);
 
     return registerData;
+}
+
+bool MCP23S08Class::GetInterruptCaptureState(uint8_t pinNumber) {
+    if (pinNumber > MAX_PIN_POS) {
+        return false;
+    }
+
+    uint8_t registerData = ReadRegister(INTCAP);
+    return registerData & (1 << pinNumber);
+}
+
+uint8_t MCP23S08Class::GetInterruptCaptureState(void) {
+    return ReadRegister(INTCAP);
 }
 
 /**

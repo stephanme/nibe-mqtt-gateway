@@ -9,13 +9,19 @@
 
 #define ENERGY_METER_TASK_PRIORITY 11
 
+// OPTOIN_PINS[OptoIn1] = 3 (not exposed by KMPProDinoESP32, abstraction is broken)
+#define OPTO_IN_1_PIN 3
+
 #define NIBEGW_NVS_KEY_ENERGY_IN_WH "energyInWh"
 
 // Uses OptoIn1 to read S0 interface of an energy meter (e.g. DRT-428D).
 // DRT-428D spec: 1000 impulses/kWh, impulse length 90ms.
 // -> max impulses: 3x 20A * 230V / 3600s/h = 3.833 impulses/s = 1 impulse every ~260ms
-// S0 impulse counting is based on MCP23S08C interrupts (on GPIO36), every interrupt increments.
-// This avoids any SPI communication with MCP23S08C but there can be only one S0 device attached.
+// S0 pulse = 0 on input pin
+// S0 impulse counting is based on MCP23S08C interrupts (on GPIO36)
+// INTCON: interrupt-on-pin-change, i.e. 2 interrupts for every S0 pulse
+// INTCAP=0 means start of S0 pulse (and resets interrupt) -> increment energy by 1 Wh
+// Attention: interrupt is also reset by reading pin stage (GPIO) which happens on relay state publishing
 class EnergyMeter {
    public:
     EnergyMeter(Metrics& metrics);
@@ -37,7 +43,7 @@ class EnergyMeter {
     void countConsumedEnergyPerOperationMode();
 
     TaskHandle_t taskHandle;
-    u_int32_t pulseCounterISR = 0;
+    u_int32_t isrCounter = 0;
     u_int32_t lastStoredEnergyInWh = 0;
 
     Metrics& metrics;

@@ -28,6 +28,8 @@ class MCP23S08Class
 	void SetPinState(uint8_t pinNumber, bool state);
 	bool GetPinState(uint8_t pinNumber);
 	uint8_t GetPinState(void);
+	bool GetInterruptCaptureState(uint8_t pinNumber);
+	uint8_t GetInterruptCaptureState(void);
 	void SetPinDirection(uint8_t pinNumber, uint8_t mode);
 };
 

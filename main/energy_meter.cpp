@@ -71,10 +71,9 @@ esp_err_t EnergyMeter::begin() {
         return err;
     }
 
-    // configure MCP23S08C interrupt for OptoIn1
-    // OPTOIN_PINS[OptoIn1] = 3 (not exposed by KMPProDinoESP32, abstraction is broken)
+    // configure MCP23S08C interrupt for OptoIn1, interrupt-on-pin-change (INTCON=0)
     MCP23S08.GetPinState();  // clears any old pending interrupt, TODO: is this really safe?
-    MCP23S08.ConfigureInterrupt(3, true, false, true);
+    MCP23S08.ConfigureInterrupt(OPTO_IN_1_PIN, true, false, false);
 
     ESP_LOGI(TAG, "init from NVS: %lu", lastStoredEnergyInWh);
     return err;
@@ -103,9 +102,12 @@ esp_err_t EnergyMeter::beginMqtt(MqttClient& mqttClient) {
     return ESP_OK;
 }
 
+// interrupt-on-pin-change -> 2 interrupts for every S0 pulse
+// (S0 impulse is 90ms according to meter spec, max freq is 3.3/s for 12kW -> 300ms is shortest time between pulses)
+// notify EnergyMeter::task which evaluates pin state and counts energy, no SPI communication in ISR
 void IRAM_ATTR EnergyMeter::gpio_interrupt_handler(void* args) {
     EnergyMeter* meter = (EnergyMeter*)args;
-    meter->pulseCounterISR++;
+    meter->isrCounter++;
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xTaskNotifyFromISR(meter->taskHandle, 0, eNoAction, &xHigherPriorityTaskWoken);
@@ -117,23 +119,23 @@ void EnergyMeter::task(void* pvParameters) {
     while (1) {
         xTaskNotifyWait(0, ULONG_MAX, 0, portMAX_DELAY);
 
-        u_int32_t energyInWh;
-        if (meter->skipNextPulses > 0) {
-            // adjust energyInWh by skipping pulses
-            // counter metric must not decrease
-            meter->skipNextPulses--;
-            energyInWh = meter->metricEnergyInWh.getValue();
-        } else {
-            // regular operation
-            energyInWh = meter->metricEnergyInWh.incrementValue(1);
-            meter->countConsumedEnergyPerOperationMode();
+        // read INTCAP (state at interrupt time), resets interrupt
+        // 0 = start of S0 pulse
+        bool intcapState = MCP23S08.GetInterruptCaptureState(OPTO_IN_1_PIN);
+        if (!intcapState) {
+            u_int32_t energyInWh;
+            if (meter->skipNextPulses > 0) {
+                // adjust energyInWh by skipping pulses
+                // counter metric must not decrease
+                meter->skipNextPulses--;
+                energyInWh = meter->metricEnergyInWh.getValue();
+            } else {
+                // regular operation
+                energyInWh = meter->metricEnergyInWh.incrementValue(1);
+                meter->countConsumedEnergyPerOperationMode();
+            }
+            ESP_LOGV(TAG, "EnergyMeter::task: isrCounter=%lu, energyInWh=%lu", meter->isrCounter, energyInWh);
         }
-        ESP_LOGV(TAG, "EnergyMeter::task: isr=%lu, task=%lu", meter->pulseCounterISR, energyInWh);
-
-        // wait 150ms (S0 impulse is 90ms according to spec, max freq is 3.3/s for 12kW -> 300ms is shortest time between pulses)
-        vTaskDelay(150 / portTICK_PERIOD_MS);
-        // reset interrupt by reading GPIO register
-        MCP23S08.GetPinState();
     }
 }
 
@@ -177,7 +179,7 @@ esp_err_t EnergyMeter::publishState() {
     }
 
     auto energyInWh = metricEnergyInWh.getValue();
-    ESP_LOGD(TAG, "EnergyMeter::publishState: isr=%lu, task=%lu", pulseCounterISR, energyInWh);
+    ESP_LOGD(TAG, "EnergyMeter::publishState: isrCounter=%lu, energyInWh=%lu", isrCounter, energyInWh);
 
     // store in nvs if changed
     if (energyInWh != lastStoredEnergyInWh) {
