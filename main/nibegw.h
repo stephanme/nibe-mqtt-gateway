@@ -90,7 +90,7 @@ enum class NibeDeviceAddress : uint16_t {
     Heatpump1 = 0xC941,
 };
 
-enum class NibeCmd : u_int8_t {
+enum class NibeCmd : uint8_t {
     ModbusDataMsg = 0x68,
     ModbusReadReq = 0x69,
     ModbusReadResp = 0x6A,

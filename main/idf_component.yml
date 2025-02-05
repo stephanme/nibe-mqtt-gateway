@@ -2,7 +2,10 @@
 ## https://docs.espressif.com/projects/idf-component-manager/en/latest/reference/manifest_file.html
 dependencies:
   bblanchon/arduinojson: "7.2.0"
-  espressif/arduino-esp32: "3.0.5"
+  espressif/arduino-esp32:
+    version: "3.1.1"
+    rules:
+      - if: "target !=linux"
   ## Required IDF version
   idf:
-    version: "5.1.4"
+    version: "5.3.2"

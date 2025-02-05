@@ -30,7 +30,7 @@ Additionally, nibe-mqtt-gateway publishes heapump monitoring data as Prometheus 
 - [PRODINo ESP32 Ethernet v1 board](https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/) - other boards might be possible but have not been tested
 - USB adapter for debugging (via serial output, no real JTAG debugging unfortunately) and initial uploading of firmware
 - Nibe heatpump VVM310/S2125 - other models might work but have not been tested
-- ESP-IDF v5.1.4
+- ESP-IDF v5.3.2
 - MQTT broker like [Mosquitto](https://mosquitto.org/)
 - energy meter with [S0 interface](https://de.wikipedia.org/wiki/S0-Schnittstelle), e.g. DRT 428D
 - a safe, well-protected home network. nibe-mqtt-gateway is lacking even the most basic security measures. Never expose nibe-mqtt-gateway to the internet.
@@ -46,7 +46,7 @@ Additionally helpful:
 
 ### Build Firmware
 
-- install ESP-IDF v5.1.4
+- install ESP-IDF v5.3.2
 - clone this project
 - adapt settings, especially `idf.espIdfPath` to point to ESP-IDF installation
 - generate sdkconfig and adapt if necessary
@@ -199,7 +199,6 @@ Parts of the code base have unit tests using [Unity](https://www.throwtheswitch.
 
 How to run unit tests using vscode:
 - switch target to `linux`
-- delete `sdkconfig` file
 - 'Full Clean' (delete `build` directory)
 - 'Build' project, ignore the error by `esp_idf_size`
 - 'Monitor' runs the unit tests and prints results to console
