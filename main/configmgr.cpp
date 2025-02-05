@@ -181,11 +181,12 @@ const std::string NibeMqttGwConfigManager::getRuntimeConfigAsJson() {
     }
     JsonObject homeassistantDiscoveryOverrides = doc["nibe"]["homeassistantDiscoveryOverrides"].to<JsonObject>();
     for (auto [id, override] : config.nibe.homeassistantDiscoveryOverrides) {
-        JsonObject o = homeassistantDiscoveryOverrides[std::to_string(id)].to<JsonObject>();
-        DeserializationError err = deserializeJson(o, override);
+        JsonDocument _doc;
+        DeserializationError err = deserializeJson(_doc, override);
         if (err) {
             ESP_LOGE(TAG, "deserializeJson() of homeassistantDiscoveryOverrides[%u] failed: %s", id, err.c_str());
         }
+        homeassistantDiscoveryOverrides[std::to_string(id)] = _doc.as<JsonObject>();
     }
 
     JsonArray relays = doc["relays"].to<JsonArray>();
