@@ -6,7 +6,6 @@
     ],
     "idf.port": "/dev/cu.usbserial-A50285BI",
     "idf.flashType": "UART",
-    "idf.otaHost": "nibegw.fritz.box",
     "files.associations": {
         "functional": "cpp",
         "bit": "cpp",
