@@ -18,7 +18,7 @@
         "pollRegisters": [44302, 44308, 44300, 44306, 44298, 44069],
         // list of registers to poll with low frequency, every 30s one register of this list is polled
         // should include R/W registers announced to Home Assistant
-        "pollRegistersSlow": [44071, 44073, 40737, 48043, 48130, 48085],
+       "pollRegistersSlow": [47011, 48043, 48130, 48085, 44071, 44073, 40737],
 
         // Prometheus metrics for registers: metric = value * scale / factor
         "metrics": {
@@ -139,6 +139,8 @@
                 "unit_of_meas": null // bug in csv
             },
             "48085": { // Heat medium pump speed if manual, [%], R/W
+            },
+            "47011": { // Heat Offset S1, R/W
             }
         }
     },
