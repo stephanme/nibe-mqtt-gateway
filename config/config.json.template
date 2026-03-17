@@ -82,7 +82,7 @@
             Read registers:
             {
                 "_component_":"sensor", // MQTT integration like sensor, binary_sensor, switch, ...
-                "obj_id":"nibe-<id>",
+                "def_ent_id":"sensor.nibe-<id>",
                 "uniq_id":"nibe-<id>",
                 "name":"<title>",
                 "stat_t":"nibegw/nibe/<id>",
@@ -95,7 +95,7 @@
             Read/Write registers:
             {
                 "_component_":"number", // MQTT integration like sensor, binary_sensor, switch, ...
-                "obj_id":"nibe-<id>",
+                "def_ent_id":"number.nibe-<id>",
                 "uniq_id":"nibe-<id>",
                 "name":"<title>",
                 "stat_t":"nibegw/nibe/<id>",
@@ -150,7 +150,7 @@
             "name": "relay-1",
             "homeassistantDiscoveryOverride": {
                 "_component_": "switch",
-                "obj_id":"nibegw-<name>",
+                "def_ent_id":"switch.nibegw-<name>",
                 "uniq_id":"nibegw-<name>",
                 "name": "<name>",
                 "stat_t": "nibegw/relay/<name>",

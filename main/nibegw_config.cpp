@@ -269,7 +269,6 @@ JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& c
 
     char objId[64];
     snprintf(objId, sizeof(objId), "nibe-%u", id);
-    discoveryDoc["obj_id"] = objId;
     discoveryDoc["uniq_id"] = objId;
 
     discoveryDoc["name"] = title;
@@ -322,6 +321,7 @@ JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& c
 
     if (mode != NibeRegisterMode::Read) {
         discoveryDoc["_component_"] = "number";
+        discoveryDoc["def_ent_id"] = std::string("number.") + objId;
         discoveryDoc.remove("stat_cla");
         char cmdTopic[68];
         snprintf(cmdTopic, sizeof(cmdTopic), "%s/set", stateTopic);
@@ -335,6 +335,7 @@ JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& c
         }
     } else {
         discoveryDoc["_component_"] = "sensor";
+        discoveryDoc["def_ent_id"] = std::string("sensor.") + objId;
     }
 
     auto iter = config.homeassistantDiscoveryOverrides.find(id);
@@ -343,6 +344,8 @@ JsonDocument NibeRegister::homeassistantDiscoveryMessage(const NibeMqttConfig& c
     } else {
         auto override = iter->second;
         MqttHelper::mergeMqttDiscoveryInfoOverride(discoveryDoc, override);
+        // fix def_ent_id because _component_ might have changed
+        discoveryDoc["def_ent_id"] = std::string(discoveryDoc["_component_"]) + "." + objId;
         return discoveryDoc;
     }
 }

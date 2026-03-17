@@ -31,7 +31,7 @@ TEST_CASE("configuration", "[relay]") {
     JsonDocument discoveryDoc;
     DeserializationError error = deserializeJson(discoveryDoc, mqttmock_publishData[0].payload);
     TEST_ASSERT(error == DeserializationError::Ok);
-    TEST_ASSERT_EQUAL_STRING("nibegw-myrelay-1", discoveryDoc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("switch.nibegw-myrelay-1", discoveryDoc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibegw-myrelay-1", discoveryDoc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Relay 1", discoveryDoc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/relay/myrelay-1/state", discoveryDoc["stat_t"]);

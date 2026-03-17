@@ -253,7 +253,7 @@ TEST_CASE("homeassistantDiscoveryMessage Temperature", "[nibegw_config]") {
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("sensor.nibe-1", doc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Temperature", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
@@ -271,7 +271,7 @@ TEST_CASE("homeassistantDiscoveryMessage NoUnit", "[nibegw_config]") {
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("sensor.nibe-1", doc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("No Unit", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
@@ -289,7 +289,7 @@ TEST_CASE("homeassistantDiscoveryMessage Read/write", "[nibegw_config]") {
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("number", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("number.nibe-1", doc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Temperature", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
@@ -313,7 +313,7 @@ TEST_CASE("homeassistantDiscoveryMessage Override", "[nibegw_config]") {
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("mysensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibe-1", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("mysensor.nibe-1", doc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibe-1", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Override", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/1", doc["stat_t"]);
@@ -334,7 +334,7 @@ TEST_CASE("homeassistantDiscoveryMessage Degree Minutes", "[nibegw_config]") {
     auto doc = r.homeassistantDiscoveryMessage(config, "nibegw/nibe/", deviceDiscoveryInfo);
 
     TEST_ASSERT_EQUAL_STRING("sensor", doc["_component_"]);
-    TEST_ASSERT_EQUAL_STRING("nibe-43005", doc["obj_id"]);
+    TEST_ASSERT_EQUAL_STRING("sensor.nibe-43005", doc["def_ent_id"]);
     TEST_ASSERT_EQUAL_STRING("nibe-43005", doc["uniq_id"]);
     TEST_ASSERT_EQUAL_STRING("Degree Minutes", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("nibegw/nibe/43005", doc["stat_t"]);

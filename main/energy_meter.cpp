@@ -87,7 +87,7 @@ esp_err_t EnergyMeter::beginMqtt(MqttClient& mqttClient) {
     // announce energy meter, use full device info
     JsonDocument deviceDiscovery = mqttClient.getDeviceDiscoveryInfo();
     deviceDiscovery["name"] = "Nibe Energy Meter";
-    deviceDiscovery["obj_id"] = "nibegw-energy-meter";
+    deviceDiscovery["def_ent_id"] = "sensor.nibegw-energy-meter";
     deviceDiscovery["uniq_id"] = "nibegw-energy-meter";
     deviceDiscovery["stat_t"] = mqttTopic;
     deviceDiscovery["unit_of_meas"] = "kWh";

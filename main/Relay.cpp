@@ -51,7 +51,7 @@ JsonDocument MqttRelay::homeassistantDiscoveryMessage(const MqttRelayConfig& con
     discoveryDoc["_component_"] = "switch";
     char objId[64];
     snprintf(objId, sizeof(objId), "nibegw-%s", name.c_str());
-    discoveryDoc["obj_id"] = objId;
+    discoveryDoc["def_ent_id"] = std::string("switch.") + objId;
     discoveryDoc["uniq_id"] = objId;
     discoveryDoc["name"] = name.c_str();
     discoveryDoc["stat_t"] = nibeRootTopic + "/relay/" + name + "/state";
