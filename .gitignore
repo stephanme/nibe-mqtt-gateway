@@ -5,3 +5,4 @@ sdkconfig
 dependencies.lock
 sdkconfig.old
 config/config.json
+eim_config.toml

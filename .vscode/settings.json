@@ -1,6 +1,5 @@
 {
     "C_Cpp.intelliSenseEngine": "default",
-    "idf.adapterTargetName": "esp32",
     "idf.openOcdConfigs": [
         "board/esp32-bridge.cfg"
     ],
@@ -93,5 +92,5 @@
         "__memory": "cpp"
     },
     "C_Cpp.default.cppStandard": "gnu++23",
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
 }

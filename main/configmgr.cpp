@@ -266,14 +266,17 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
         config.mqtt.deviceConfigurationUrl = defaultConfigUrl;
     }
 
-    for (auto reg : doc["nibe"]["pollRegisters"].as<JsonArray>()) {
+    JsonArray pollRegisters = doc["nibe"]["pollRegisters"].as<JsonArray>();
+    for (auto reg : pollRegisters) {
         config.nibe.pollRegisters.push_back(reg.as<uint16_t>());
     }
-    for (auto reg : doc["nibe"]["pollRegistersSlow"].as<JsonArray>()) {
+    JsonArray pollRegistersSlow = doc["nibe"]["pollRegistersSlow"].as<JsonArray>();
+    for (auto reg : pollRegistersSlow) {
         config.nibe.pollRegistersSlow.push_back(reg.as<uint16_t>());
     }
 
-    for (auto metric : doc["nibe"]["metrics"].as<JsonObject>()) {
+    JsonObject metrics = doc["nibe"]["metrics"].as<JsonObject>();
+    for (auto metric : metrics) {
         uint16_t id = atoi(metric.key().c_str());
         if (id > 0) {
             config.nibe.metrics[id] = {
@@ -288,7 +291,8 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
         }
     }
 
-    for (auto override : doc["nibe"]["homeassistantDiscoveryOverrides"].as<JsonObject>()) {
+    JsonObject homeassistantDiscoveryOverrides = doc["nibe"]["homeassistantDiscoveryOverrides"].as<JsonObject>();
+    for (auto override : homeassistantDiscoveryOverrides) {
         uint16_t id = atoi(override.key().c_str());
         if (id > 0) {
             std::string overrideJson;
@@ -314,7 +318,8 @@ esp_err_t NibeMqttGwConfigManager::parseJson(const char* jsonString, NibeMqttGwC
     config.logging.mqttLoggingEnabled = doc["logging"]["mqttLoggingEnabled"] | false;
     config.logging.stdoutLoggingEnabled = doc["logging"]["stdoutLoggingEnabled"] | true;
     config.logging.logTopic = doc["logging"]["logTopic"] | "nibegw/log";
-    for (auto metric : doc["logging"]["logLevels"].as<JsonObject>()) {
+    JsonObject logLevels = doc["logging"]["logLevels"].as<JsonObject>();
+    for (auto metric : logLevels) {
         config.logging.logLevels[metric.key().c_str()] = metric.value().as<std::string>();
     }
 
