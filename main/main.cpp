@@ -163,6 +163,9 @@ void setupNormalBoot() {
     ESP_LOGI(TAG, "Nibe MQTT Gateway is starting...");
     const esp_app_desc_t* app_desc = esp_app_get_description();
     ESP_LOGI(TAG, "version=%s, idf_ver=%s", app_desc->version, app_desc->idf_ver);
+    // repeat logging of MAC and host because mqtt logging is not yet working for ARDUINO_EVENT_ETH_START
+    ESP_LOGI(TAG, "ETH MAC: %s", ETH.macAddress().c_str());
+    ESP_LOGI(TAG, "ETH hostname: %s", ETH.getHostname());
 
     // energy meter, init early to not miss pulses on reboot
     err = energyMeter.begin();
